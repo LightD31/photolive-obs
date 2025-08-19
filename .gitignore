@@ -1,0 +1,37 @@
+# Fichiers et dossiers à ignorer
+
+# Dépendances
+node_modules/
+package-lock.json
+
+# Fichiers de distribution
+dist/
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*.log
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers d'environnement
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Photos de test (garder le README.md)
+photos/*.jpg
+photos/*.jpeg
+photos/*.png
+photos/*.gif
+photos/*.bmp
+photos/*.tiff
+photos/*.webp

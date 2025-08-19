@@ -1,0 +1,53 @@
+{
+  "server": {
+    "port": 3001,
+    "photosPath": "./photos",
+    "allowedOrigins": ["*"]
+  },
+  "slideshow": {
+    "defaultInterval": 5000,
+    "minInterval": 1000,
+    "maxInterval": 30000,
+    "supportedFormats": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+    "maxImageSize": "10MB",
+    "thumbnailSize": 200
+  },
+  "features": {
+    "transitions": [
+      { "id": "none", "name": "Aucune", "duration": 0 },
+      { "id": "fade", "name": "Fondu", "duration": 1000 },
+      { "id": "slide", "name": "Glissement", "duration": 1000 },
+      { "id": "zoom", "name": "Zoom", "duration": 1500 }
+    ],
+    "filters": [
+      { "id": "none", "name": "Aucun" },
+      { "id": "sepia", "name": "Sépia" },
+      { "id": "grayscale", "name": "Noir & Blanc" },
+      { "id": "blur", "name": "Flou" },
+      { "id": "brightness", "name": "Luminosité" },
+      { "id": "contrast", "name": "Contraste" },
+      { "id": "vintage", "name": "Vintage" },
+      { "id": "cool", "name": "Froid" },
+      { "id": "warm", "name": "Chaud" }
+    ],
+    "watermarkPositions": [
+      { "id": "top-left", "name": "Haut gauche" },
+      { "id": "top-right", "name": "Haut droit" },
+      { "id": "bottom-left", "name": "Bas gauche" },
+      { "id": "bottom-right", "name": "Bas droit" },
+      { "id": "center", "name": "Centre" }
+    ]
+  },
+  "defaults": {
+    "interval": 5000,
+    "transition": "none",
+    "filter": "none",
+    "showWatermark": false,
+    "watermarkText": "PhotoLive OBS",
+    "watermarkPosition": "bottom-right",
+    "shuffleImages": true,
+    "repeatLatest": false,
+    "latestCount": 5,
+    "transparentBackground": true
+  }
+}

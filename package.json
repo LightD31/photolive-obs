@@ -1,0 +1,36 @@
+{
+  "name": "photolive-obs",
+  "version": "1.0.0",
+  "description": "Application de diaporama photo en temps réel pour OBS Studio avec surveillance automatique de dossier et interface web",
+  "main": "server.js",
+  "homepage": ".",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "clean": "rimraf dist node_modules package-lock.json",
+    "reinstall": "npm run clean && npm install"
+  },
+  "keywords": [
+    "slideshow",
+    "photos",
+    "obs",
+    "streaming",
+    "realtime",
+    "websocket",
+    "express"
+  ],
+  "author": "PhotoLive OBS",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "sharp": "^0.34.3",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.5"
+  }
+}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoLive OBS - Contrôle</title>
+    <link rel="stylesheet" href="css/control.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📸 PhotoLive OBS - Contrôle</h1>
+            <div class="status">
+                <span id="connection-status" class="status-disconnected">Déconnecté</span>
+                <span id="images-count">0 images</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Contrôles de lecture -->
+            <section class="control-section">
+                <h2>🎮 Contrôles de lecture</h2>
+                <div class="control-buttons">
+                    <button id="prev-btn" class="btn btn-secondary">⏮️ Précédent</button>
+                    <button id="play-pause-btn" class="btn btn-primary">⏸️ Pause</button>
+                    <button id="next-btn" class="btn btn-secondary">⏭️ Suivant</button>
+                </div>
+            </section>
+
+            <!-- Paramètres du diaporama -->
+            <section class="control-section">
+                <h2>⚙️ Paramètres du diaporama</h2>
+                <div class="settings-grid">
+                    <div class="setting-group">
+                        <label for="interval-slider">Intervalle (secondes):</label>
+                        <div class="slider-container">
+                            <input type="range" id="interval-slider" min="1" max="30" step="1" value="5">
+                            <span id="interval-value">5</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="transition-select">Transition:</label>
+                        <select id="transition-select">
+                            <option value="none">Aucune</option>
+                            <option value="fade">Fondu</option>
+                            <option value="slide">Glissement</option>
+                            <option value="zoom">Zoom</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="filter-select">Filtre:</label>
+                        <select id="filter-select">
+                            <option value="none">Aucun</option>
+                            <option value="sepia">Sépia</option>
+                            <option value="grayscale">Noir & Blanc</option>
+                            <option value="blur">Flou</option>
+                            <option value="brightness">Luminosité</option>
+                            <option value="contrast">Contraste</option>
+                            <option value="vintage">Vintage</option>
+                            <option value="cool">Froid</option>
+                            <option value="warm">Chaud</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filigrane -->
+            <section class="control-section">
+                <h2>🏷️ Filigrane</h2>
+                <div class="settings-grid">
+                    <div class="setting-group full-width">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="watermark-enabled">
+                            <span class="checkmark"></span>
+                            Afficher le filigrane
+                        </label>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="watermark-text">Texte:</label>
+                        <input type="text" id="watermark-text" value="PhotoLive OBS" placeholder="Votre texte...">
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="watermark-position">Position:</label>
+                        <select id="watermark-position">
+                            <option value="top-left">Haut gauche</option>
+                            <option value="top-right">Haut droit</option>
+                            <option value="bottom-left">Bas gauche</option>
+                            <option value="bottom-right" selected>Bas droit</option>
+                            <option value="center">Centre</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Options avancées -->
+            <section class="control-section">
+                <h2>🔧 Options avancées</h2>
+                <div class="settings-grid">
+                    <div class="setting-group full-width">
+                        <label for="photos-path">📁 Dossier des photos:</label>
+                        <div class="path-input-container">
+                            <input type="text" id="photos-path" placeholder="Ex: C:\MesPhotos ou /home/user/photos">
+                            <button id="change-folder-btn" class="btn btn-primary">✅ Changer</button>
+                        </div>
+                        <small class="help-text">Entrez le chemin complet vers un dossier contenant vos images</small>
+                    </div>
+
+                    <div class="setting-group full-width">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="repeat-latest">
+                            <span class="checkmark"></span>
+                            Répéter uniquement les dernières images
+                        </label>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="latest-count">Nombre d'images récentes:</label>
+                        <div class="slider-container">
+                            <input type="range" id="latest-count" min="1" max="20" step="1" value="5">
+                            <span id="latest-count-value">5</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-group full-width">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="shuffle-images">
+                            <span class="checkmark"></span>
+                            Mélanger les images
+                        </label>
+                    </div>
+
+                    <div class="setting-group full-width">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="transparent-background">
+                            <span class="checkmark"></span>
+                            Arrière-plan transparent (pour OBS)
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Aperçu des images -->
+            <section class="control-section">
+                <h2>🖼️ Images dans le dossier</h2>
+                <div id="images-preview" class="images-grid">
+                    <!-- Les images seront ajoutées dynamiquement -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Instructions -->
+        <section class="control-section">
+            <h2>📖 Instructions</h2>
+            <div class="instructions">
+                <h3>Pour utiliser avec OBS:</h3>
+                <ol>
+                    <li>Ajoutez une source "Navigateur" dans OBS</li>
+                    <li>Utilisez l'URL: <code id="slideshow-url">http://localhost:3000</code></li>
+                    <li>Réglez la largeur et hauteur selon vos besoins</li>
+                    <li>Ajoutez vos images dans le dossier "photos"</li>
+                </ol>
+                
+                <h3>Raccourcis clavier (sur la page du diaporama):</h3>
+                <ul>
+                    <li><kbd>→</kbd> ou <kbd>Espace</kbd> : Image suivante</li>
+                    <li><kbd>←</kbd> : Image précédente</li>
+                    <li><kbd>P</kbd> : Pause/Lecture</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/control.js"></script>
+</body>
+</html>
