@@ -472,3 +472,8 @@ header h1 {
         max-width: 200px;
     }
 }
+
+/* Utilitaires */
+.hidden {
+    display: none !important;
+}

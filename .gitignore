@@ -35,3 +35,14 @@ photos/*.gif
 photos/*.bmp
 photos/*.tiff
 photos/*.webp
+public/js/control.js
+
+# Watermarks (Garder le README.md)
+watermarks/*.png
+watermarks/*.jpg
+watermarks/*.jpeg
+watermarks/*.gif
+watermarks/*.bmp
+watermarks/*.tiff
+watermarks/*.webp
+

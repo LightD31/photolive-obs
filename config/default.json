@@ -36,6 +36,16 @@
       { "id": "bottom-left", "name": "Bas gauche" },
       { "id": "bottom-right", "name": "Bas droit" },
       { "id": "center", "name": "Centre" }
+    ],
+    "watermarkTypes": [
+      { "id": "text", "name": "Texte" },
+      { "id": "image", "name": "Image PNG" }
+    ],
+    "watermarkSizes": [
+      { "id": "small", "name": "Petit", "scale": 0.5 },
+      { "id": "medium", "name": "Moyen", "scale": 1.0 },
+      { "id": "large", "name": "Grand", "scale": 1.5 },
+      { "id": "xlarge", "name": "Très grand", "scale": 2.0 }
     ]
   },
   "defaults": {
@@ -44,7 +54,11 @@
     "filter": "none",
     "showWatermark": false,
     "watermarkText": "PhotoLive OBS",
+    "watermarkType": "text",
+    "watermarkImage": "",
     "watermarkPosition": "bottom-right",
+    "watermarkSize": "medium",
+    "watermarkOpacity": 80,
     "shuffleImages": true,
     "repeatLatest": false,
     "latestCount": 5,

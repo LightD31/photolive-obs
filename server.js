@@ -30,6 +30,16 @@ function loadConfig() {
       transitions: configData.features.transitions,
       filters: configData.features.filters,
       watermarkPositions: configData.features.watermarkPositions,
+      watermarkTypes: configData.features.watermarkTypes || [
+        { id: 'text', name: 'Texte' },
+        { id: 'image', name: 'Image PNG' }
+      ],
+      watermarkSizes: configData.features.watermarkSizes || [
+        { id: 'small', name: 'Petit', scale: 0.5 },
+        { id: 'medium', name: 'Moyen', scale: 1.0 },
+        { id: 'large', name: 'Grand', scale: 1.5 },
+        { id: 'xlarge', name: 'Très grand', scale: 2.0 }
+      ],
       defaults: configData.defaults
     };
   } catch (error) {
@@ -58,7 +68,11 @@ function loadConfig() {
         filter: 'none',
         showWatermark: false,
         watermarkText: 'PhotoLive OBS',
+        watermarkType: 'text',
+        watermarkImage: '',
         watermarkPosition: 'bottom-right',
+        watermarkSize: 'medium',
+        watermarkOpacity: 80,
         shuffleImages: false,
         repeatLatest: false,
         latestCount: 5,
@@ -82,6 +96,8 @@ console.log('- Mélange des images par défaut:', config.defaults.shuffleImages)
 app.use(cors());
 app.use(express.json());
 app.use(express.static(config.publicPath));
+// Servir les filigranes statiquement
+app.use('/watermarks', express.static(path.join(__dirname, 'watermarks')));
 // Note: La route /photos est maintenant gérée dynamiquement
 
 // Variables globales
@@ -206,6 +222,28 @@ app.post('/api/settings', (req, res) => {
   io.emit('settings-updated', slideshowSettings);
   
   res.json(slideshowSettings);
+});
+
+// Route pour lister les filigranes disponibles
+app.get('/api/watermarks', async (req, res) => {
+  try {
+    const watermarksPath = path.join(__dirname, 'watermarks');
+    const files = await fs.readdir(watermarksPath);
+    
+    const watermarkImages = files.filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
+    }).map(filename => ({
+      filename,
+      name: path.parse(filename).name,
+      path: `/watermarks/${filename}`
+    }));
+    
+    res.json(watermarkImages);
+  } catch (error) {
+    console.error('Erreur lors de la lecture des filigranes:', error);
+    res.json([]);
+  }
 });
 
 // Route pour changer le dossier de photos

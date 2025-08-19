@@ -79,8 +79,23 @@
                     </div>
 
                     <div class="setting-group">
+                        <label for="watermark-type">Type:</label>
+                        <select id="watermark-type">
+                            <option value="text">Texte</option>
+                            <option value="image">Image PNG</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-group" id="watermark-text-group">
                         <label for="watermark-text">Texte:</label>
                         <input type="text" id="watermark-text" value="PhotoLive OBS" placeholder="Votre texte...">
+                    </div>
+
+                    <div class="setting-group hidden" id="watermark-image-group">
+                        <label for="watermark-image">Image:</label>
+                        <select id="watermark-image">
+                            <option value="">Sélectionnez une image...</option>
+                        </select>
                     </div>
 
                     <div class="setting-group">
@@ -92,6 +107,24 @@
                             <option value="bottom-right" selected>Bas droit</option>
                             <option value="center">Centre</option>
                         </select>
+                    </div>
+
+                    <div class="setting-group" id="watermark-size-group">
+                        <label for="watermark-size">Taille:</label>
+                        <select id="watermark-size">
+                            <option value="small">Petit</option>
+                            <option value="medium" selected>Moyen</option>
+                            <option value="large">Grand</option>
+                            <option value="xlarge">Très grand</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="watermark-opacity">Opacité:</label>
+                        <div class="slider-container">
+                            <input type="range" id="watermark-opacity" min="10" max="100" step="10" value="80">
+                            <span id="watermark-opacity-value">80%</span>
+                        </div>
                     </div>
                 </div>
             </section>

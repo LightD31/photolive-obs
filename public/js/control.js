@@ -8,7 +8,11 @@ class PhotoLiveControl {
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
+            watermarkType: 'text',
+            watermarkImage: '',
             watermarkPosition: 'bottom-right',
+            watermarkSize: 'medium',
+            watermarkOpacity: 80,
             shuffleImages: false,
             repeatLatest: false,
             latestCount: 5,
@@ -46,8 +50,18 @@ class PhotoLiveControl {
         
         // Watermark elements
         this.watermarkEnabled = document.getElementById('watermark-enabled');
+        this.watermarkType = document.getElementById('watermark-type');
         this.watermarkText = document.getElementById('watermark-text');
+        this.watermarkImage = document.getElementById('watermark-image');
         this.watermarkPosition = document.getElementById('watermark-position');
+        this.watermarkSize = document.getElementById('watermark-size');
+        this.watermarkOpacity = document.getElementById('watermark-opacity');
+        this.watermarkOpacityValue = document.getElementById('watermark-opacity-value');
+        
+        // Watermark groups
+        this.watermarkTextGroup = document.getElementById('watermark-text-group');
+        this.watermarkImageGroup = document.getElementById('watermark-image-group');
+        this.watermarkSizeGroup = document.getElementById('watermark-size-group');
         
         // Advanced options
         this.repeatLatest = document.getElementById('repeat-latest');
@@ -128,12 +142,31 @@ class PhotoLiveControl {
             this.updateSetting('showWatermark', e.target.checked);
         });
 
+        this.watermarkType.addEventListener('change', (e) => {
+            this.updateSetting('watermarkType', e.target.value);
+            this.toggleWatermarkInputs(e.target.value);
+        });
+
         this.watermarkText.addEventListener('input', (e) => {
             this.updateSetting('watermarkText', e.target.value);
         });
 
+        this.watermarkImage.addEventListener('change', (e) => {
+            this.updateSetting('watermarkImage', e.target.value);
+        });
+
         this.watermarkPosition.addEventListener('change', (e) => {
             this.updateSetting('watermarkPosition', e.target.value);
+        });
+
+        this.watermarkSize.addEventListener('change', (e) => {
+            this.updateSetting('watermarkSize', e.target.value);
+        });
+
+        this.watermarkOpacity.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.watermarkOpacityValue.textContent = value + '%';
+            this.updateSetting('watermarkOpacity', value);
         });
 
         // Advanced options
@@ -202,6 +235,9 @@ class PhotoLiveControl {
             
             this.updateImages(data.images);
             this.updateSettings(data.settings);
+            
+            // Load watermark images
+            await this.loadWatermarkImages();
         } catch (error) {
             console.error('Erreur lors du chargement initial:', error);
         }
@@ -241,8 +277,16 @@ class PhotoLiveControl {
         
         // Update watermark
         this.watermarkEnabled.checked = this.settings.showWatermark;
+        this.watermarkType.value = this.settings.watermarkType || 'text';
         this.watermarkText.value = this.settings.watermarkText;
+        this.watermarkImage.value = this.settings.watermarkImage || '';
         this.watermarkPosition.value = this.settings.watermarkPosition;
+        this.watermarkSize.value = this.settings.watermarkSize || 'medium';
+        this.watermarkOpacity.value = this.settings.watermarkOpacity || 80;
+        this.watermarkOpacityValue.textContent = (this.settings.watermarkOpacity || 80) + '%';
+        
+        // Toggle watermark inputs based on type
+        this.toggleWatermarkInputs(this.settings.watermarkType || 'text');
         
         // Update advanced options
         this.repeatLatest.checked = this.settings.repeatLatest;
@@ -467,6 +511,38 @@ class PhotoLiveControl {
                 console.error('Fallback copy failed:', err);
             }
             document.body.removeChild(textArea);
+        }
+    }
+
+    toggleWatermarkInputs(type) {
+        if (type === 'text') {
+            this.watermarkTextGroup.classList.remove('hidden');
+            this.watermarkImageGroup.classList.add('hidden');
+            this.watermarkSizeGroup.classList.add('hidden');
+        } else if (type === 'image') {
+            this.watermarkTextGroup.classList.add('hidden');
+            this.watermarkImageGroup.classList.remove('hidden');
+            this.watermarkSizeGroup.classList.remove('hidden');
+        }
+    }
+
+    async loadWatermarkImages() {
+        try {
+            const response = await fetch('/api/watermarks');
+            const watermarks = await response.json();
+            
+            // Clear existing options
+            this.watermarkImage.innerHTML = '<option value="">Sélectionnez une image...</option>';
+            
+            // Add watermark options
+            watermarks.forEach(watermark => {
+                const option = document.createElement('option');
+                option.value = watermark.path;
+                option.textContent = watermark.name;
+                this.watermarkImage.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Erreur lors du chargement des filigranes:', error);
         }
     }
 }

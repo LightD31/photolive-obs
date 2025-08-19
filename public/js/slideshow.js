@@ -10,7 +10,11 @@ class PhotoLiveSlideshow {
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
+            watermarkType: 'text',
+            watermarkImage: '',
             watermarkPosition: 'bottom-right',
+            watermarkSize: 'medium',
+            watermarkOpacity: 80,
             shuffleImages: false,
             repeatLatest: false,
             latestCount: 5,
@@ -34,7 +38,6 @@ class PhotoLiveSlideshow {
         this.currentImage = document.getElementById('current-image');
         this.nextImage = document.getElementById('next-image');
         this.watermark = document.getElementById('watermark');
-        this.watermarkText = document.getElementById('watermark-text');
         this.overlay = document.getElementById('overlay');
         this.loading = document.getElementById('loading');
         this.noImages = document.getElementById('no-images');
@@ -229,18 +232,60 @@ class PhotoLiveSlideshow {
     }
 
     updateWatermark() {
-        if (this.settings.showWatermark && this.settings.watermarkText) {
-            this.watermarkText.textContent = this.settings.watermarkText;
-            
-            // Supprimer les anciennes classes de position
-            this.watermark.className = 'watermark';
-            
-            // Ajouter la nouvelle position
-            this.watermark.classList.add(`position-${this.settings.watermarkPosition}`);
-            this.watermark.classList.remove('hidden');
-        } else {
+        if (!this.settings.showWatermark) {
             this.watermark.classList.add('hidden');
+            return;
         }
+
+        // Reset watermark content
+        this.watermark.innerHTML = '';
+        
+        // Apply opacity
+        this.watermark.style.opacity = (this.settings.watermarkOpacity || 80) / 100;
+        
+        // Reset classes and add base classes
+        this.watermark.className = 'watermark';
+        this.watermark.classList.add(`position-${this.settings.watermarkPosition}`);
+        
+        if (this.settings.watermarkType === 'image' && this.settings.watermarkImage) {
+            // Image watermark
+            const img = document.createElement('img');
+            img.src = this.settings.watermarkImage;
+            img.alt = 'Filigrane';
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '100%';
+            img.style.display = 'block';
+            
+            // Apply size based on setting
+            const sizeScale = this.getSizeScale(this.settings.watermarkSize || 'medium');
+            const baseSize = 150; // Base size in pixels
+            const finalSize = baseSize * sizeScale;
+            
+            img.style.width = `${finalSize}px`;
+            img.style.height = 'auto';
+            
+            this.watermark.appendChild(img);
+            this.watermark.classList.add('watermark-image');
+        } else {
+            // Text watermark
+            const textSpan = document.createElement('span');
+            textSpan.textContent = this.settings.watermarkText || 'PhotoLive OBS';
+            textSpan.id = 'watermark-text';
+            this.watermark.appendChild(textSpan);
+            this.watermark.classList.add('watermark-text');
+        }
+        
+        this.watermark.classList.remove('hidden');
+    }
+
+    getSizeScale(size) {
+        const sizeMap = {
+            'small': 0.5,
+            'medium': 1.0,
+            'large': 1.5,
+            'xlarge': 2.0
+        };
+        return sizeMap[size] || 1.0;
     }
 
     updateOverlay() {

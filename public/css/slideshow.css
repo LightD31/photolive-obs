@@ -135,14 +135,33 @@ body.transparent {
 .watermark {
     position: absolute;
     z-index: 10;
+    padding: 10px 15px;
+    border-radius: 5px;
+    backdrop-filter: blur(5px);
+    transition: opacity 0.3s ease;
+}
+
+/* Filigrane texte */
+.watermark.watermark-text {
     color: white;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     font-size: 24px;
     font-weight: bold;
-    padding: 10px 15px;
     background: rgba(0,0,0,0.3);
-    border-radius: 5px;
-    backdrop-filter: blur(5px);
+}
+
+/* Filigrane image */
+.watermark.watermark-image {
+    background: transparent;
+    padding: 10px;
+}
+
+.watermark.watermark-image img {
+    display: block;
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: contain;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
 }
 
 .watermark.position-top-left {
