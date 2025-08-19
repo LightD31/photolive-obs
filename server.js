@@ -5,14 +5,14 @@ const path = require('path');
 const fs = require('fs').promises;
 const chokidar = require('chokidar');
 const cors = require('cors');
-const sharp = require('sharp');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ["http://localhost:3001", "http://127.0.0.1:3001"],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -25,7 +25,7 @@ function loadConfig() {
       port: process.env.PORT || configData.server.port,
       photosPath: path.resolve(__dirname, configData.server.photosPath),
       publicPath: path.join(__dirname, 'public'),
-      slideInterval: configData.defaults.interval,
+      slideInterval: configData.slideshow.interval,
       supportedFormats: configData.slideshow.supportedFormats,
       transitions: configData.features.transitions,
       filters: configData.features.filters,
@@ -94,7 +94,25 @@ console.log('- Mélange des images par défaut:', config.defaults.shuffleImages)
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' })); // Limiter la taille des requêtes JSON
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Middleware de sécurité basique
+app.use((req, res, next) => {
+  // Headers de sécurité
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // Logging des requêtes suspectes
+  if (req.url.includes('..') || req.url.includes('%2e%2e')) {
+    console.warn(`Tentative de path traversal détectée: ${req.url} depuis ${req.ip}`);
+    return res.status(400).json({ error: 'Requête invalide' });
+  }
+  
+  next();
+});
+
 app.use(express.static(config.publicPath));
 // Servir les filigranes statiquement
 app.use('/watermarks', express.static(path.join(__dirname, 'watermarks')));
@@ -170,35 +188,60 @@ function setupFileWatcher() {
 
   fileWatcher
     .on('add', (filePath) => {
-      const filename = path.basename(filePath);
-      const ext = path.extname(filename).toLowerCase();
-      
-      if (config.supportedFormats.includes(ext)) {
-        console.log(`Nouvelle image détectée: ${filename}`);
+      try {
+        const filename = path.basename(filePath);
+        const ext = path.extname(filename).toLowerCase();
         
-        // Marquer comme nouvelle image
-        newlyAddedImages.add(filename);
-        
-        // Rescanner avec information de la nouvelle image
-        scanImages(filename);
-        
-        // Nettoyer le marquage après 5 minutes
-        setTimeout(() => {
-          newlyAddedImages.delete(filename);
-          console.log(`Image ${filename} n'est plus considérée comme nouvelle`);
-        }, 5 * 60 * 1000);
+        if (config.supportedFormats.includes(ext)) {
+          console.log(`Nouvelle image détectée: ${filename}`);
+          
+          // Marquer comme nouvelle image
+          newlyAddedImages.add(filename);
+          
+          // Rescanner avec information de la nouvelle image
+          scanImages(filename);
+          
+          // Nettoyer le marquage après 5 minutes avec gestion d'erreurs
+          setTimeout(() => {
+            try {
+              newlyAddedImages.delete(filename);
+              console.log(`Image ${filename} n'est plus considérée comme nouvelle`);
+              
+              // Nettoyage périodique pour éviter les fuites mémoire
+              if (newlyAddedImages.size > 100) {
+                console.warn(`Nettoyage forcé du tracker d'images: ${newlyAddedImages.size} entrées`);
+                newlyAddedImages.clear();
+              }
+            } catch (error) {
+              console.error('Erreur lors du nettoyage du tracker d\'images:', error);
+            }
+          }, 5 * 60 * 1000);
+        }
+      } catch (error) {
+        console.error('Erreur lors du traitement d\'ajout de fichier:', error);
       }
     })
     .on('unlink', (filePath) => {
-      const filename = path.basename(filePath);
-      console.log(`Image supprimée: ${filename}`);
-      
-      // Retirer du tracker des nouvelles images si présent
-      newlyAddedImages.delete(filename);
-      
-      scanImages(); // Rescanner toutes les images
+      try {
+        const filename = path.basename(filePath);
+        console.log(`Image supprimée: ${filename}`);
+        
+        // Retirer du tracker des nouvelles images si présent
+        newlyAddedImages.delete(filename);
+        
+        scanImages(); // Rescanner toutes les images
+      } catch (error) {
+        console.error('Erreur lors du traitement de suppression de fichier:', error);
+      }
     })
-    .on('error', error => console.error('Erreur du watcher:', error));
+    .on('error', error => {
+      console.error('Erreur du watcher:', error);
+      // Tentative de redémarrage du watcher en cas d'erreur critique
+      setTimeout(() => {
+        console.log('Tentative de redémarrage du watcher...');
+        setupFileWatcher();
+      }, 5000);
+    });
 
   console.log(`Surveillance du dossier: ${currentPhotosPath}`);
 }
@@ -216,12 +259,66 @@ app.get('/api/settings', (req, res) => {
 });
 
 app.post('/api/settings', (req, res) => {
-  slideshowSettings = { ...slideshowSettings, ...req.body };
-  
-  // Émettre les nouveaux réglages aux clients
-  io.emit('settings-updated', slideshowSettings);
-  
-  res.json(slideshowSettings);
+  try {
+    // Validation des données d'entrée
+    const allowedSettings = [
+      'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
+      'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
+      'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
+      'transparentBackground', 'photosPath'
+    ];
+    
+    const newSettings = {};
+    for (const [key, value] of Object.entries(req.body)) {
+      if (allowedSettings.includes(key)) {
+        // Validation spécifique par type
+        switch (key) {
+          case 'interval':
+            if (typeof value === 'number' && value >= 1000 && value <= 60000) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'watermarkOpacity':
+            if (typeof value === 'number' && value >= 0 && value <= 100) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'latestCount':
+            if (typeof value === 'number' && value >= 1 && value <= 50) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'watermarkText':
+            if (typeof value === 'string' && value.length <= 200) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'showWatermark':
+          case 'shuffleImages':
+          case 'repeatLatest':
+          case 'transparentBackground':
+            if (typeof value === 'boolean') {
+              newSettings[key] = value;
+            }
+            break;
+          default:
+            if (typeof value === 'string' && value.length <= 100) {
+              newSettings[key] = value;
+            }
+        }
+      }
+    }
+    
+    slideshowSettings = { ...slideshowSettings, ...newSettings };
+    
+    // Émettre les nouveaux réglages aux clients
+    io.emit('settings-updated', slideshowSettings);
+    
+    res.json(slideshowSettings);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des paramètres:', error);
+    res.status(400).json({ error: 'Données de paramètres invalides' });
+  }
 });
 
 // Route pour lister les filigranes disponibles
@@ -253,8 +350,13 @@ app.post('/api/photos-path', async (req, res) => {
     
     console.log('Demande de changement de dossier:', photosPath);
     
-    if (!photosPath) {
-      return res.status(400).json({ error: 'Chemin du dossier requis' });
+    if (!photosPath || typeof photosPath !== 'string') {
+      return res.status(400).json({ error: 'Chemin du dossier requis et doit être une chaîne' });
+    }
+    
+    // Validation supplémentaire du chemin
+    if (photosPath.includes('..') || photosPath.length > 500) {
+      return res.status(400).json({ error: 'Chemin de dossier invalide' });
     }
 
     // Résoudre le chemin pour obtenir le chemin absolu
@@ -302,22 +404,40 @@ app.post('/api/photos-path', async (req, res) => {
 
 // Route dynamique pour servir les photos du dossier actuel
 app.get('/photos/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(currentPhotosPath, filename);
-  
-  // Vérifier que le fichier existe et est dans le dossier autorisé
-  const resolvedPath = path.resolve(filePath);
-  const resolvedPhotosPath = path.resolve(currentPhotosPath);
-  
-  if (!resolvedPath.startsWith(resolvedPhotosPath)) {
-    return res.status(403).json({ error: 'Accès interdit' });
-  }
-  
-  res.sendFile(resolvedPath, (err) => {
-    if (err) {
-      res.status(404).json({ error: 'Image non trouvée' });
+  try {
+    const filename = req.params.filename;
+    
+    // Validation du nom de fichier
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Nom de fichier invalide' });
     }
-  });
+    
+    // Vérifier l'extension
+    const ext = path.extname(filename).toLowerCase();
+    if (!config.supportedFormats.includes(ext)) {
+      return res.status(400).json({ error: 'Format de fichier non supporté' });
+    }
+    
+    const filePath = path.join(currentPhotosPath, filename);
+    
+    // Vérifier que le fichier existe et est dans le dossier autorisé
+    const resolvedPath = path.resolve(filePath);
+    const resolvedPhotosPath = path.resolve(currentPhotosPath);
+    
+    if (!resolvedPath.startsWith(resolvedPhotosPath + path.sep) && resolvedPath !== resolvedPhotosPath) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+    
+    res.sendFile(resolvedPath, (err) => {
+      if (err) {
+        console.error('Erreur lors de l\'envoi du fichier:', err);
+        res.status(404).json({ error: 'Image non trouvée' });
+      }
+    });
+  } catch (error) {
+    console.error('Erreur dans la route /photos:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
 });
 
 // Route pour le diaporama OBS
@@ -384,6 +504,13 @@ async function initialize() {
       if (err.code === 'EADDRINUSE') {
         console.log(`Port ${config.port} déjà utilisé, tentative sur le port ${config.port + 1}...`);
         config.port = config.port + 1;
+        
+        // Éviter une boucle infinie
+        if (config.port > 3010) {
+          console.error('Impossible de trouver un port libre entre 3001 et 3010');
+          process.exit(1);
+        }
+        
         server.listen(config.port, () => {
           console.log(`PhotoLive OBS server démarré sur http://localhost:${config.port}`);
           console.log(`Interface de contrôle: http://localhost:${config.port}/control`);
@@ -392,6 +519,7 @@ async function initialize() {
         });
       } else {
         console.error('Erreur lors du démarrage du serveur:', err);
+        process.exit(1);
       }
     });
   } catch (error) {
@@ -401,3 +529,26 @@ async function initialize() {
 
 // Démarrage
 initialize();
+
+// Gestion propre de l'arrêt
+process.on('SIGINT', () => {
+  console.log('\nArrêt du serveur...');
+  if (fileWatcher) {
+    fileWatcher.close();
+    console.log('Surveillance des fichiers arrêtée');
+  }
+  server.close(() => {
+    console.log('Serveur arrêté proprement');
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('\nArrêt du serveur (SIGTERM)...');
+  if (fileWatcher) {
+    fileWatcher.close();
+  }
+  server.close(() => {
+    process.exit(0);
+  });
+});
