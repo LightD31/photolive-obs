@@ -1,37 +1,37 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhotoLive OBS - Diaporama</title>
+    <title>PhotoLive OBS - Slideshow</title>
     <link rel="stylesheet" href="css/slideshow.css">
 </head>
 <body>
     <div id="slideshow-container">
         <div id="image-container">
-            <img id="current-image" class="slide-image" alt="Photo en cours">
-            <img id="next-image" class="slide-image hidden" alt="Photo suivante">
+            <img id="current-image" class="slide-image" alt="Current photo">
+            <img id="next-image" class="slide-image hidden" alt="Next photo">
         </div>
         
-        <!-- Filigrane -->
+        <!-- Watermark -->
         <div id="watermark" class="watermark hidden">
-            <!-- Le contenu sera ajouté dynamiquement par JavaScript -->
+            <!-- Content will be added dynamically by JavaScript -->
         </div>
         
-        <!-- Overlay pour les effets -->
+        <!-- Overlay for effects -->
         <div id="overlay" class="overlay"></div>
     </div>
 
     <!-- Loading indicator -->
     <div id="loading" class="loading">
         <div class="spinner"></div>
-        <p>Chargement des photos...</p>
+        <p>Loading photos...</p>
     </div>
 
-    <!-- Message si aucune image -->
+    <!-- Message if no images -->
     <div id="no-images" class="no-images hidden">
-        <h2>Aucune image trouvée</h2>
-        <p>Ajoutez des images dans le dossier "photos" pour commencer le diaporama.</p>
+        <h2>No images found</h2>
+        <p>Add images to the "photos" folder to start the slideshow.</p>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

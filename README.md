@@ -1,97 +1,107 @@
 # PhotoLive OBS 📸
 
-Une application de diaporama photo en temps réel spécialement conçue pour OBS Studio. Cette application surveille automatiquement un dossier d'images et les affiche dans une page web que vous pouvez intégrer directement dans OBS comme source navigateur.
+A real-time photo slideshow application specifically designed for OBS Studio. This application automatically monitors a folder of images and displays them in a web page that you can integrate directly into OBS as a browser source.
 
-## ✨ Fonctionnalités principales
+> ⚠️ **Security Warning**: This application has been entirely "vibe coded" and may contain security vulnerabilities. It is intended for local development and testing purposes only. Do not expose this application to the internet or use it in production environments without proper security review and hardening.
 
-- 🔄 **Surveillance en temps réel** - Détecte automatiquement les nouvelles images ajoutées au dossier
-- 🌐 **Interface web pour OBS** - Page web optimisée pour l'intégration dans OBS Studio  
-- 🎛️ **Interface de contrôle** - Contrôlez le diaporama via une interface web dédiée
-- 🎬 **Transitions fluides** - Fondu, glissement, zoom avec animations CSS
-- 🎨 **Filtres visuels** - Sépia, noir & blanc, flou, luminosité, contraste, vintage, etc.
-- 🏷️ **Filigrane personnalisable** - Ajoutez votre texte ou logo avec positionnement libre
-- ⚡ **Mises à jour en temps réel** - WebSocket pour une synchronisation instantanée
-- 📱 **Interface responsive** - Compatible avec tous les appareils
-- ⌨️ **Raccourcis clavier** - Contrôle rapide du diaporama
-- 🔧 **Configuration avancée** - Répétition des dernières images, mélange, etc.
+## ✨ Main Features
 
-## 🚀 Installation et démarrage
+- 🔄 **Real-time monitoring** - Automatically detects new images added to the folder
+- 🌐 **Web interface for OBS** - Web page optimized for integration into OBS Studio  
+- 🎛️ **Control interface** - Control the slideshow via a dedicated web interface
+- 🎬 **Smooth transitions** - Fade, slide, zoom with CSS animations
+- 🎨 **Visual filters** - Sepia, black & white, blur, brightness, contrast, vintage, etc.
+- 🏷️ **Customizable watermark** - Add your text or logo with free positioning
+- ⚡ **Real-time updates** - WebSocket for instant synchronization
+- 📱 **Responsive interface** - Compatible with all devices
+- ⌨️ **Keyboard shortcuts** - Quick slideshow control
+- 🔧 **Advanced configuration** - Repeat last images, shuffle, etc.
 
-### Prérequis
-- Node.js (version 14 ou supérieure)
-- npm ou yarn
+## 🚀 Installation and startup
+
+### Prerequisites
+
+- Node.js (version 14 or higher)
+- npm or yarn
 
 ### Installation
 
-1. **Clonez ou téléchargez le projet**
+1. **Clone or download the project**
+
 ```bash
-git clone <repo-url>
+git clone https://github.com/LightD31/photolive-obs.git
 cd photolive-obs
 ```
 
-2. **Installez les dépendances**
+2. **Install dependencies**
+
 ```bash
 npm install
 ```
 
-3. **Démarrez l'application**
+3. **Start the application**
+
 ```bash
 npm start
 ```
 
-L'application sera accessible sur : `http://localhost:3000`
+The application will be accessible at: `http://localhost:3000`
 
-## 📋 Utilisation
+## 📋 Usage
 
-### Configuration dans OBS Studio
+### Configuration in OBS Studio
 
-1. **Ajoutez une source "Navigateur"** dans votre scène OBS
-2. **Configurez l'URL** : `http://localhost:3000`
-3. **Définissez les dimensions** selon vos besoins (ex: 1920x1080)
-4. **Activez "Actualiser le navigateur quand la scène devient active"** (optionnel)
+1. **Add a "Browser" source** to your OBS scene
+2. **Configure the URL**: `http://localhost:3000`
+3. **Set dimensions** according to your needs (e.g.: 1920x1080)
+4. **Enable "Refresh browser when scene becomes active"** (optional)
 
-### Gestion des photos
+### Photo management
 
-1. **Ajoutez vos images** dans le dossier `photos/` du projet
-2. **Formats supportés** : JPG, JPEG, PNG, GIF, BMP, TIFF, WebP
-3. **Surveillance automatique** - Les nouvelles images apparaîtront automatiquement
+1. **Add your images** to the `photos/` folder of the project
+2. **Supported formats**: JPG, JPEG, PNG, GIF, BMP, TIFF, WebP
+3. **Automatic monitoring** - New images will appear automatically
 
-### Interface de contrôle
+### Control interface
 
-Accédez à l'interface de contrôle sur : `http://localhost:3000/control`
+Access the control interface at: `http://localhost:3000/control`
 
-#### Contrôles disponibles :
-- ▶️ **Lecture/Pause** du diaporama
-- ⏭️ **Navigation** manuelle (précédent/suivant)
-- ⏱️ **Intervalle** de changement d'image (1-30 secondes)
-- 🎬 **Transitions** : Fondu, Glissement, Zoom
-- 🎨 **Filtres** : Aucun, Sépia, N&B, Flou, Luminosité, Contraste, Vintage, Froid, Chaud
-- 🏷️ **Filigrane** : Texte personnalisé avec positionnement
-- 🔧 **Options avancées** : Répétition des dernières images, mélange
+#### Available controls
 
-### Raccourcis clavier
+- ▶️ **Play/Pause** slideshow
+- ⏭️ **Manual navigation** (previous/next)
+- ⏱️ **Interval** for image change (1-30 seconds)
+- 🎬 **Transitions**: Fade, Slide, Zoom
+- 🎨 **Filters**: None, Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cold, Warm
+- 🏷️ **Watermark**: Custom text with positioning
+- 🔧 **Advanced options**: Repeat last images, shuffle
 
-Sur la page du diaporama (`http://localhost:3000`) :
-- `→` ou `Espace` : Image suivante
-- `←` : Image précédente  
-- `P` : Pause/Lecture
+### Keyboard shortcuts
 
-Sur l'interface de contrôle :
-- Mêmes raccourcis disponibles (sauf si vous tapez dans un champ)
+On the slideshow page (`http://localhost:3000`):
+
+- `→` or `Space`: Next image
+- `←`: Previous image  
+- `P`: Pause/Play
+
+On the control interface:
+
+- Same shortcuts available (except when typing in a field)
 
 ## 🛠️ Configuration
 
-### Structure des dossiers
-```
+### Folder structure
+
+```text
 photolive-obs/
-├── server.js              # Serveur principal
-├── package.json           # Configuration npm
+├── server.js              # Main server
+├── package.json           # npm configuration
 ├── config/
-│   └── default.json       # Configuration par défaut
-├── photos/                # Dossier des images (à créer)
-└── public/                # Fichiers web statiques
-    ├── slideshow.html     # Page diaporama pour OBS
-    ├── control.html       # Interface de contrôle
+│   └── default.json       # Default configuration
+├── photos/                # Images folder (to create)
+└── public/                # Static web files
+    ├── slideshow.html     # Slideshow page for OBS
+    ├── control.html       # Control interface
     ├── css/
     │   ├── slideshow.css
     │   └── control.css
@@ -100,9 +110,9 @@ photolive-obs/
         └── control.js
 ```
 
-### Configuration serveur
+### Server configuration
 
-Le fichier `config/default.json` contient les paramètres par défaut :
+The `config/default.json` file contains default settings:
 
 ```json
 {
@@ -117,92 +127,104 @@ Le fichier `config/default.json` contient les paramètres par défaut :
 }
 ```
 
-## 🔧 Développement
+## 🔧 Development
 
-### Scripts disponibles
+### Available scripts
 
-- `npm start` : Démarre le serveur de production
-- `npm run dev` : Démarre le serveur de développement (identique pour l'instant)
+- `npm start`: Start production server
+- `npm run dev`: Start development server (identical for now)
 
-### API REST
+### REST API
 
-L'application expose une API REST simple :
+The application exposes a simple REST API:
 
-- `GET /api/images` : Liste des images avec métadonnées
-- `GET /api/settings` : Paramètres actuels du diaporama
-- `POST /api/settings` : Mise à jour des paramètres
+- `GET /api/images`: List of images with metadata
+- `GET /api/settings`: Current slideshow settings
+- `POST /api/settings`: Update settings
 
 ### WebSocket Events
 
-Events émis par le serveur :
-- `images-updated` : Nouvelle liste d'images détectées
-- `settings-updated` : Paramètres mis à jour
+Events emitted by the server:
 
-Events reçus du client :
-- `next-image` : Afficher l'image suivante
-- `prev-image` : Afficher l'image précédente
-- `pause-slideshow` : Mettre en pause
-- `resume-slideshow` : Reprendre la lecture
+- `images-updated`: New list of detected images
+- `settings-updated`: Updated settings
 
-## 🎯 Cas d'usage
+Events received from client:
 
-### Événements en direct
-- Mariages, concerts, conférences
-- Affichage des photos prises en temps réel pendant l'événement
+- `next-image`: Show next image
+- `prev-image`: Show previous image
+- `pause-slideshow`: Pause
+- `resume-slideshow`: Resume playback
+
+## 🎯 Use cases
+
+### Live events
+
+- Weddings, concerts, conferences
+- Display photos taken in real time during the event
 
 ### Streaming
-- Intégration dans des streams Twitch/YouTube
-- Diaporama pendant les pauses ou intermissions
 
-### Présentations
-- Affichage automatique de contenus visuels
-- Support de présentation avec images dynamiques
+- Integration into Twitch/YouTube streams
+- Slideshow during breaks or intermissions
 
-### Photographie
-- Portfolio en temps réel pour photographes
-- Vitrine de travaux récents
+### Presentations
 
-## 🔍 Dépannage
+- Automatic display of visual content
+- Presentation support with dynamic images
 
-### L'application ne démarre pas
-- Vérifiez que Node.js est installé : `node --version`
-- Vérifiez que les dépendances sont installées : `npm install`
-- Vérifiez que le port 3000 n'est pas utilisé
+### Photography
 
-### Les images n'apparaissent pas
-- Vérifiez que le dossier `photos/` existe
-- Vérifiez les formats d'images supportés
-- Consultez la console de l'interface de contrôle pour les erreurs
+- Real-time portfolio for photographers
+- Showcase of recent work
 
-### OBS ne charge pas la page
-- Vérifiez l'URL : `http://localhost:3000`
-- Testez d'abord dans un navigateur web
-- Vérifiez les paramètres de la source navigateur dans OBS
+## 🔍 Troubleshooting
 
-### Problèmes de performance
-- Réduisez la taille des images (recommandé : < 2MB par image)
-- Limitez le nombre d'images dans le dossier (< 1000 recommandé)
-- Augmentez l'intervalle entre les images
+### Application won't start
 
-## 📝 Licence
+- Check that Node.js is installed: `node --version`
+- Check that dependencies are installed: `npm install`
+- Check that port 3000 is not in use
 
-MIT License - Vous êtes libre d'utiliser, modifier et distribuer cette application.
+### Images don't appear
 
-## 🤝 Contribution
+- Check that the `photos/` folder exists
+- Check supported image formats
+- Check the control interface console for errors
 
-Les contributions sont les bienvenues ! N'hésitez pas à :
-- Signaler des bugs
-- Proposer de nouvelles fonctionnalités  
-- Améliorer la documentation
-- Soumettre des pull requests
+### OBS doesn't load the page
+
+- Check the URL: `http://localhost:3000`
+- Test first in a web browser
+- Check browser source settings in OBS
+
+### Performance issues
+
+- Reduce image size (recommended: < 2MB per image)
+- Limit number of images in folder (< 1000 recommended)
+- Increase interval between images
+
+## 📝 License
+
+MIT License - You are free to use, modify and distribute this application.
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+
+- Report bugs
+- Propose new features  
+- Improve documentation
+- Submit pull requests
 
 ## 📞 Support
 
-Pour toute question ou problème :
-1. Consultez d'abord cette documentation
-2. Vérifiez les issues existantes
-3. Créez une nouvelle issue si nécessaire
+For any questions or problems:
+
+1. First consult this documentation
+2. Check existing issues
+3. Create a new issue if necessary
 
 ---
 
-**PhotoLive OBS** - Transformez vos photos en diaporama professionnel pour OBS Studio ! 🎬✨
+**PhotoLive OBS** - Transform your photos into a professional slideshow for OBS Studio! 🎬✨
