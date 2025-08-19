@@ -17,195 +17,209 @@
         </header>
 
         <main>
-            <!-- Playback controls -->
-            <section class="control-section">
-                <h2>🎮 Playback Controls</h2>
-                <div class="control-buttons">
-                    <button id="prev-btn" class="btn btn-secondary">⏮️ Previous</button>
-                    <button id="play-pause-btn" class="btn btn-primary">⏸️ Pause</button>
-                    <button id="next-btn" class="btn btn-secondary">⏭️ Next</button>
-                </div>
-            </section>
-
-            <!-- Slideshow settings -->
-            <section class="control-section">
-                <h2>⚙️ Slideshow Settings</h2>
-                <div class="settings-grid">
-                    <div class="setting-group">
-                        <label for="interval-slider">Interval (seconds):</label>
-                        <div class="slider-container">
-                            <input type="range" id="interval-slider" min="1" max="30" step="1" value="5">
-                            <span id="interval-value">5</span>
+            <!-- Two column layout for main content -->
+            <div class="main-layout">
+                <!-- Left Column -->
+                <div class="left-column">
+                    <!-- Playback controls -->
+                    <section class="control-section">
+                        <h2>🎮 Playback Controls</h2>
+                        <div class="control-buttons">
+                            <button id="prev-btn" class="btn btn-secondary">⏮️ Previous</button>
+                            <button id="play-pause-btn" class="btn btn-primary">⏸️ Pause</button>
+                            <button id="next-btn" class="btn btn-secondary">⏭️ Next</button>
                         </div>
-                    </div>
+                    </section>
 
-                    <div class="setting-group">
-                        <label for="transition-select">Transition:</label>
-                        <select id="transition-select">
-                            <option value="none">None</option>
-                            <option value="fade">Fade</option>
-                            <option value="slide">Slide</option>
-                            <option value="zoom">Zoom</option>
-                        </select>
-                    </div>
+                    <!-- Slideshow settings -->
+                    <section class="control-section">
+                        <h2>⚙️ Slideshow Settings</h2>
+                        <div class="settings-grid">
+                            <div class="setting-group">
+                                <label for="interval-slider">Interval (seconds):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="interval-slider" min="1" max="30" step="1" value="5">
+                                    <span id="interval-value">5</span>
+                                </div>
+                            </div>
 
-                    <div class="setting-group">
-                        <label for="filter-select">Filter:</label>
-                        <select id="filter-select">
-                            <option value="none">None</option>
-                            <option value="sepia">Sepia</option>
-                            <option value="grayscale">Black & White</option>
-                            <option value="blur">Blur</option>
-                            <option value="brightness">Brightness</option>
-                            <option value="contrast">Contrast</option>
-                            <option value="vintage">Vintage</option>
-                            <option value="cool">Cool</option>
-                            <option value="warm">Warm</option>
-                        </select>
-                    </div>
-                </div>
-            </section>
+                            <div class="setting-group">
+                                <label for="transition-select">Transition:</label>
+                                <select id="transition-select">
+                                    <option value="none">None</option>
+                                    <option value="fade">Fade</option>
+                                    <option value="slide">Slide</option>
+                                    <option value="zoom">Zoom</option>
+                                </select>
+                            </div>
 
-            <!-- Watermark -->
-            <section class="control-section">
-                <h2>🏷️ Watermark</h2>
-                <div class="settings-grid">
-                    <div class="setting-group full-width">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="watermark-enabled">
-                            <span class="checkmark"></span>
-                            Show watermark
-                        </label>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="watermark-type">Type:</label>
-                        <select id="watermark-type">
-                            <option value="text">Text</option>
-                            <option value="image">PNG Image</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-group" id="watermark-text-group">
-                        <label for="watermark-text">Text:</label>
-                        <input type="text" id="watermark-text" value="PhotoLive OBS" placeholder="Your text...">
-                    </div>
-
-                    <div class="setting-group hidden" id="watermark-image-group">
-                        <label for="watermark-image">Image:</label>
-                        <select id="watermark-image">
-                            <option value="">Select an image...</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="watermark-position">Position:</label>
-                        <select id="watermark-position">
-                            <option value="top-left">Top Left</option>
-                            <option value="top-right">Top Right</option>
-                            <option value="bottom-left">Bottom Left</option>
-                            <option value="bottom-right" selected>Bottom Right</option>
-                            <option value="center">Center</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-group" id="watermark-size-group">
-                        <label for="watermark-size">Size:</label>
-                        <select id="watermark-size">
-                            <option value="small">Small</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="large">Large</option>
-                            <option value="xlarge">Extra Large</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="watermark-opacity">Opacity:</label>
-                        <div class="slider-container">
-                            <input type="range" id="watermark-opacity" min="10" max="100" step="10" value="80">
-                            <span id="watermark-opacity-value">80%</span>
+                            <div class="setting-group">
+                                <label for="filter-select">Filter:</label>
+                                <select id="filter-select">
+                                    <option value="none">None</option>
+                                    <option value="sepia">Sepia</option>
+                                    <option value="grayscale">Black & White</option>
+                                    <option value="blur">Blur</option>
+                                    <option value="brightness">Brightness</option>
+                                    <option value="contrast">Contrast</option>
+                                    <option value="vintage">Vintage</option>
+                                    <option value="cool">Cool</option>
+                                    <option value="warm">Warm</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </section>
+                    </section>
 
-            <!-- Advanced options -->
-            <section class="control-section">
-                <h2>🔧 Advanced Options</h2>
-                <div class="settings-grid">
-                    <div class="setting-group full-width">
-                        <label for="photos-path">📁 Photos folder:</label>
-                        <div class="path-input-container">
-                            <input type="text" id="photos-path" placeholder="e.g. C:\MyPhotos or /home/user/photos">
-                            <button id="change-folder-btn" class="btn btn-primary">✅ Change</button>
+                    <!-- Advanced options -->
+                    <section class="control-section">
+                        <h2>🔧 Advanced Options</h2>
+                        <div class="settings-grid">
+                            <div class="setting-group full-width">
+                                <label for="photos-path">📁 Photos folder:</label>
+                                <div class="path-input-container">
+                                    <input type="text" id="photos-path" placeholder="e.g. C:\MyPhotos or /home/user/photos">
+                                    <button id="change-folder-btn" class="btn btn-primary">✅ Change</button>
+                                </div>
+                                <small class="help-text">Enter the full path to a folder containing your images</small>
+                            </div>
+
+                            <div class="setting-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="repeat-latest">
+                                    <span class="checkmark"></span>
+                                    Repeat only latest images
+                                </label>
+                            </div>
+
+                            <div class="setting-group">
+                                <label for="latest-count">Number of recent images:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="latest-count" min="1" max="20" step="1" value="5">
+                                    <span id="latest-count-value">5</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="shuffle-images">
+                                    <span class="checkmark"></span>
+                                    Shuffle images
+                                </label>
+                            </div>
+
+                            <div class="setting-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="transparent-background">
+                                    <span class="checkmark"></span>
+                                    Transparent background (for OBS)
+                                </label>
+                            </div>
                         </div>
-                        <small class="help-text">Enter the full path to a folder containing your images</small>
-                    </div>
+                    </section>
+                </div>
 
-                    <div class="setting-group full-width">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="repeat-latest">
-                            <span class="checkmark"></span>
-                            Repeat only latest images
-                        </label>
-                    </div>
+                <!-- Right Column -->
+                <div class="right-column">
+                    <!-- Watermark -->
+                    <section class="control-section">
+                        <h2>🏷️ Watermark</h2>
+                        <div class="settings-grid">
+                            <div class="setting-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="watermark-enabled">
+                                    <span class="checkmark"></span>
+                                    Show watermark
+                                </label>
+                            </div>
 
-                    <div class="setting-group">
-                        <label for="latest-count">Number of recent images:</label>
-                        <div class="slider-container">
-                            <input type="range" id="latest-count" min="1" max="20" step="1" value="5">
-                            <span id="latest-count-value">5</span>
+                            <div class="setting-group">
+                                <label for="watermark-type">Type:</label>
+                                <select id="watermark-type">
+                                    <option value="text">Text</option>
+                                    <option value="image">PNG Image</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group" id="watermark-text-group">
+                                <label for="watermark-text">Text:</label>
+                                <input type="text" id="watermark-text" value="PhotoLive OBS" placeholder="Your text...">
+                            </div>
+
+                            <div class="setting-group hidden" id="watermark-image-group">
+                                <label for="watermark-image">Image:</label>
+                                <select id="watermark-image">
+                                    <option value="">Select an image...</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group">
+                                <label for="watermark-position">Position:</label>
+                                <select id="watermark-position">
+                                    <option value="top-left">Top Left</option>
+                                    <option value="top-right">Top Right</option>
+                                    <option value="bottom-left">Bottom Left</option>
+                                    <option value="bottom-right" selected>Bottom Right</option>
+                                    <option value="center">Center</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group" id="watermark-size-group">
+                                <label for="watermark-size">Size:</label>
+                                <select id="watermark-size">
+                                    <option value="small">Small</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="large">Large</option>
+                                    <option value="xlarge">Extra Large</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group">
+                                <label for="watermark-opacity">Opacity:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="watermark-opacity" min="10" max="100" step="10" value="80">
+                                    <span id="watermark-opacity-value">80%</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div class="setting-group full-width">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="shuffle-images">
-                            <span class="checkmark"></span>
-                            Shuffle images
-                        </label>
-                    </div>
+                    <!-- Image preview -->
+                    <section class="control-section">
+                        <h2>🖼️ Images in folder</h2>
+                        <div id="images-preview" class="images-grid">
+                            <!-- Images will be added dynamically -->
+                        </div>
+                    </section>
 
-                    <div class="setting-group full-width">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="transparent-background">
-                            <span class="checkmark"></span>
-                            Transparent background (for OBS)
-                        </label>
-                    </div>
+                    <!-- Instructions -->
+                    <section class="control-section">
+                        <h2>📖 Instructions</h2>
+                        <div class="instructions">
+                            <h3>To use with OBS:</h3>
+                            <ol>
+                                <li>Add a "Browser" source in OBS</li>
+                                <li>Use the URL: <code id="slideshow-url">http://localhost:3000</code></li>
+                                <li>Set width and height according to your needs</li>
+                                <li>Add your images to the "photos" folder</li>
+                            </ol>
+                            
+                            <h3>Keyboard shortcuts (on the slideshow page):</h3>
+                            <ul>
+                                <li><kbd>→</kbd> or <kbd>Space</kbd>: Next image</li>
+                                <li><kbd>←</kbd>: Previous image</li>
+                                <li><kbd>P</kbd>: Pause/Play</li>
+                            </ul>
+                        </div>
+                    </section>
                 </div>
-            </section>
-
-            <!-- Image preview -->
-            <section class="control-section">
-                <h2>🖼️ Images in folder</h2>
-                <div id="images-preview" class="images-grid">
-                    <!-- Images will be added dynamically -->
-                </div>
-            </section>
-        </main>
-
-        <!-- Instructions -->
-        <section class="control-section">
-            <h2>📖 Instructions</h2>
-            <div class="instructions">
-                <h3>To use with OBS:</h3>
-                <ol>
-                    <li>Add a "Browser" source in OBS</li>
-                    <li>Use the URL: <code id="slideshow-url">http://localhost:3000</code></li>
-                    <li>Set width and height according to your needs</li>
-                    <li>Add your images to the "photos" folder</li>
-                </ol>
-                
-                <h3>Keyboard shortcuts (on the slideshow page):</h3>
-                <ul>
-                    <li><kbd>→</kbd> or <kbd>Space</kbd>: Next image</li>
-                    <li><kbd>←</kbd>: Previous image</li>
-                    <li><kbd>P</kbd>: Pause/Play</li>
-                </ul>
             </div>
-        </section>
+        </main>
     </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/control.js"></script>
+</body>
+</html>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/control.js"></script>
