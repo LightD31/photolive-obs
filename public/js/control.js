@@ -518,11 +518,8 @@ class PhotoLiveControl {
             return;
         }
 
-        // Limit rendering for performance with large image sets
-        const maxRender = 100; // Limit to 100 images for performance
-        const imagesToRender = this.images.slice(0, maxRender);
-        
-        imagesToRender.forEach((image, index) => {
+        // Render all images - remove the arbitrary limit
+        this.images.forEach((image, index) => {
             const imageItem = document.createElement('div');
             imageItem.className = 'image-item';
             imageItem.dataset.index = index;
@@ -563,14 +560,6 @@ class PhotoLiveControl {
         // Clear and append all at once to minimize reflows
         this.imagesPreview.innerHTML = '';
         this.imagesPreview.appendChild(fragment);
-        
-        // Show count if more images available
-        if (this.images.length > maxRender) {
-            const moreDiv = document.createElement('div');
-            moreDiv.className = 'more-images';
-            moreDiv.innerHTML = `<p>+${this.images.length - maxRender} more images...</p>`;
-            this.imagesPreview.appendChild(moreDiv);
-        }
     }
 
     formatFileSize(bytes) {
