@@ -38,6 +38,7 @@ class PhotoLiveControl {
         this.setupCollapsibleSections();
         this.loadInitialData();
         this.updateSlideshowUrl();
+        this.initializeGridZoom();
         
         // Request current slideshow state
         if (this.socket) {
@@ -90,6 +91,9 @@ class PhotoLiveControl {
         this.latestCountContainer = document.getElementById('latest-count-container');
         this.shuffleImages = document.getElementById('shuffle-images');
         this.transparentBackground = document.getElementById('transparent-background');
+        
+        // Grid zoom control
+        this.gridZoom = document.getElementById('grid-zoom');
         
         // Folder selection elements
         this.photosPath = document.getElementById('photos-path');
@@ -231,6 +235,12 @@ class PhotoLiveControl {
 
         this.transparentBackground.addEventListener('change', (e) => {
             this.updateSetting('transparentBackground', e.target.checked);
+        });
+
+        // Grid zoom control
+        this.gridZoom.addEventListener('input', (e) => {
+            const zoomLevel = parseInt(e.target.value);
+            this.updateGridZoom(zoomLevel);
         });
 
         // Folder selection
@@ -718,6 +728,38 @@ class PhotoLiveControl {
         } else {
             this.latestCountContainer.classList.add('hidden');
         }
+    }
+
+    updateGridZoom(zoomLevel) {
+        // Remove existing zoom classes
+        this.imagesPreview.classList.remove('zoom-small', 'zoom-normal', 'zoom-large', 'zoom-xlarge');
+        
+        // Add new zoom class based on level
+        const zoomClasses = {
+            1: 'zoom-small',
+            2: 'zoom-normal', 
+            3: 'zoom-large',
+            4: 'zoom-xlarge'
+        };
+        
+        if (zoomClasses[zoomLevel]) {
+            this.imagesPreview.classList.add(zoomClasses[zoomLevel]);
+        }
+        
+        // Store zoom preference locally
+        localStorage.setItem('photoLiveGridZoom', zoomLevel.toString());
+    }
+
+    initializeGridZoom() {
+        // Load saved zoom level or default to normal (level 2)
+        const savedZoom = localStorage.getItem('photoLiveGridZoom');
+        const zoomLevel = savedZoom ? parseInt(savedZoom) : 2;
+        
+        // Set slider value
+        this.gridZoom.value = zoomLevel;
+        
+        // Apply zoom level
+        this.updateGridZoom(zoomLevel);
     }
 
     async loadWatermarkImages() {

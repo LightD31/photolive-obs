@@ -594,6 +594,73 @@ header h1 {
     display: block;
 }
 
+/* Section header with controls */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 12px;
+}
+
+.section-header h2 {
+    margin: 0;
+    flex: 1;
+}
+
+.zoom-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.zoom-control label {
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.zoom-control input[type="range"] {
+    width: 60px;
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.zoom-control input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zoom-control input[type="range"]::-webkit-slider-thumb:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
+.zoom-control input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zoom-control input[type="range"]::-moz-range-thumb:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
 /* Grille d'images */
 .images-grid {
     display: grid;
@@ -617,6 +684,27 @@ header h1 {
     overflow-y: auto;
     /* Ensure items wrap to new rows properly */
     grid-auto-rows: min-content;
+}
+
+/* Zoom level classes */
+.images-grid.zoom-small {
+    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+    gap: 2px;
+}
+
+.images-grid.zoom-normal {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 4px;
+}
+
+.images-grid.zoom-large {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+}
+
+.images-grid.zoom-xlarge {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
 }
 
 /* Style de la barre de défilement pour WebKit */
@@ -825,6 +913,23 @@ header h1 {
         max-height: calc(100vh - 180px);
         grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
     }
+
+    /* Responsive zoom adjustments */
+    .images-grid.zoom-small {
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    }
+    
+    .images-grid.zoom-normal {
+        grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+    }
+    
+    .images-grid.zoom-large {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    }
+    
+    .images-grid.zoom-xlarge {
+        grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
+    }
 }
 
 @media (max-width: 1200px) {
@@ -849,6 +954,23 @@ header h1 {
     .images-grid.compact {
         max-height: calc(100vh - 160px);
         grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    }
+
+    /* Responsive zoom adjustments */
+    .images-grid.zoom-small {
+        grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+    }
+    
+    .images-grid.zoom-normal {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    }
+    
+    .images-grid.zoom-large {
+        grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    }
+    
+    .images-grid.zoom-xlarge {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     }
 }
 
@@ -880,6 +1002,23 @@ header h1 {
         max-height: calc(50vh - 100px);
         min-height: 200px;
         grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+
+    /* Responsive zoom adjustments */
+    .images-grid.zoom-small {
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    }
+    
+    .images-grid.zoom-normal {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+    
+    .images-grid.zoom-large {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    }
+    
+    .images-grid.zoom-xlarge {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
     
     .preview-section {
@@ -957,6 +1096,27 @@ header h1 {
         gap: 2px;
         max-height: calc(40vh - 80px);
         min-height: 180px;
+    }
+
+    /* Responsive zoom adjustments */
+    .images-grid.zoom-small {
+        grid-template-columns: repeat(auto-fill, minmax(35px, 1fr));
+        gap: 2px;
+    }
+    
+    .images-grid.zoom-normal {
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        gap: 3px;
+    }
+    
+    .images-grid.zoom-large {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 4px;
+    }
+    
+    .images-grid.zoom-xlarge {
+        grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+        gap: 5px;
     }
     
     .preview-container {
