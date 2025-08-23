@@ -4,14 +4,13 @@ A real-time photo slideshow application specifically designed for OBS Studio int
 
 **Version 1.0.0** - A complete web-based solution built with Node.js, Express, and WebSockets for seamless real-time photo streaming.
 
-> ℹ️ **Local Use Recommended**: This application is designed for local streaming setups. For internet-facing deployments, consider implementing additional security measures.
+> ⚠️ **Security Warning**: This application has been entirely "vibe coded" and may contain security vulnerabilities. It is intended for local development and testing purposes only. Do not expose this application to the internet or use it in production environments without proper security review and hardening.
 
 ## ✨ Main Features
 
 - 🔄 **Real-time monitoring** - Automatically detects new images added to the folder with Chokidar file watcher
 - 🌐 **Web interface for OBS** - Optimized slideshow page for seamless OBS Studio browser source integration  
 - 🎛️ **Advanced control interface** - Comprehensive web-based control panel with real-time preview
-- 🎬 **Smooth transitions** - Multiple transition types: Fade, Slide, Zoom with customizable durations
 - 🎨 **Visual filters** - 9 built-in filters: Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Dual watermark support** - Custom text watermarks OR image watermarks (PNG) with flexible positioning
 - 📁 **Dynamic folder management** - Change photo source folder on-the-fly through the control interface
@@ -74,8 +73,7 @@ Access the control interface at: `http://localhost:3001/control`
 
 - ▶️ **Play/Pause** slideshow with real-time state sync
 - ⏭️ **Manual navigation** (previous/next/jump to specific image)
-- ⏱️ **Configurable interval** for automatic image transitions (1-30 seconds)
-- 🎬 **Transition effects**: None, Fade, Slide, Zoom
+- ⏱️ **Configurable interval** for automatic image changes (1-30 seconds)
 - 🎨 **Visual filters**: None, Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Watermark options**: 
   - Text watermarks with custom content
@@ -116,7 +114,7 @@ photolive-obs/
     ├── slideshow.html     # OBS-optimized slideshow page
     ├── control.html       # Advanced control interface
     ├── css/
-    │   ├── slideshow.css  # Slideshow styling and transitions
+    │   ├── slideshow.css  # Slideshow styling and effects
     │   └── control.css    # Control interface styling
     └── js/
         ├── slideshow.js   # WebSocket client for slideshow
@@ -143,11 +141,6 @@ The `config/default.json` file contains comprehensive application settings:
     "thumbnailSize": 200
   },
   "features": {
-    "transitions": [
-      { "id": "fade", "name": "Fondu", "duration": 1000 },
-      { "id": "slide", "name": "Glissement", "duration": 1000 },
-      { "id": "zoom", "name": "Zoom", "duration": 1500 }
-    ],
     "filters": [...],
     "watermarkPositions": [...],
     "watermarkTypes": [
@@ -174,7 +167,7 @@ PhotoLive OBS is built as a modern web application using:
 - **File uploads**: Multer for handling watermark image uploads
 - **Security**: Input validation, path traversal protection, file type verification
 - **Frontend**: Vanilla JavaScript with modern ES6+ features
-- **Styling**: CSS Grid, Flexbox, and CSS animations for smooth transitions
+- **Styling**: CSS Grid, Flexbox, and CSS animations for smooth image display
 
 ### Key Dependencies
 
@@ -273,7 +266,7 @@ The application exposes a comprehensive REST API:
 
 - **Reduce image size** (recommended: < 2MB per image, max 10MB supported)
 - **Limit folder contents** (< 1000 images recommended for optimal performance)
-- **Increase transition interval** to reduce CPU usage
+- **Increase image change interval** to reduce CPU usage
 - **Disable shuffle mode** for better performance with large image sets
 - **Use SSD storage** for faster image loading
 
