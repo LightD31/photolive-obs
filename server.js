@@ -197,14 +197,9 @@ function updateSlideshowState() {
 
   slideshowState.currentImage = currentImages[slideshowState.currentIndex];
   
-  // Calculer l'image suivante pour les transitions
-  const nextIndex = (slideshowState.currentIndex + 1) % currentImages.length;
-  const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
-  
   // Émettre l'état mis à jour aux clients
   io.emit('slideshow-state', {
     currentImage: slideshowState.currentImage,
-    nextImage: nextImage,
     currentIndex: slideshowState.currentIndex,
     isPlaying: slideshowState.isPlaying,
     totalImages: currentImages.length
@@ -218,14 +213,9 @@ function changeImage(direction = 1) {
   slideshowState.currentIndex += direction;
   updateSlideshowState();
   
-  // Calculer l'image suivante pour les transitions
-  const nextIndex = (slideshowState.currentIndex + 1) % currentImages.length;
-  const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
-  
   // Émettre le changement d'image aux clients slideshow
   io.emit('image-changed', {
     currentImage: slideshowState.currentImage,
-    nextImage: nextImage,
     currentIndex: slideshowState.currentIndex,
     direction: direction
   });
@@ -556,7 +546,6 @@ io.on('connection', (socket) => {
   // Envoyer l'état actuel du diaporama
   socket.emit('slideshow-state', {
     currentImage: slideshowState.currentImage,
-    nextImage: currentImages.length > 1 ? currentImages[(slideshowState.currentIndex + 1) % currentImages.length] : null,
     currentIndex: slideshowState.currentIndex,
     isPlaying: slideshowState.isPlaying,
     totalImages: currentImages.length
@@ -591,12 +580,8 @@ io.on('connection', (socket) => {
     slideshowState.isPlaying = false;
     stopSlideshowTimer();
     
-    const nextIndex = currentImages.length > 1 ? (slideshowState.currentIndex + 1) % currentImages.length : 0;
-    const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
-    
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
-      nextImage: nextImage,
       currentIndex: slideshowState.currentIndex,
       isPlaying: slideshowState.isPlaying,
       totalImages: currentImages.length
@@ -609,12 +594,8 @@ io.on('connection', (socket) => {
     slideshowState.isPlaying = true;
     startSlideshowTimer();
     
-    const nextIndex = currentImages.length > 1 ? (slideshowState.currentIndex + 1) % currentImages.length : 0;
-    const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
-    
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
-      nextImage: nextImage,
       currentIndex: slideshowState.currentIndex,
       isPlaying: slideshowState.isPlaying,
       totalImages: currentImages.length
@@ -624,12 +605,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get-slideshow-state', () => {
-    const nextIndex = currentImages.length > 1 ? (slideshowState.currentIndex + 1) % currentImages.length : 0;
-    const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
-    
     socket.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
-      nextImage: nextImage,
       currentIndex: slideshowState.currentIndex,
       isPlaying: slideshowState.isPlaying,
       totalImages: currentImages.length

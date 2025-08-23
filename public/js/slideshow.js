@@ -23,7 +23,6 @@ class PhotoLiveSlideshow {
         
         // Données d'images fournies par le serveur
         this.serverCurrentImage = null;
-        this.serverNextImage = null;
         
         this.init();
     }
@@ -37,7 +36,6 @@ class PhotoLiveSlideshow {
 
     setupElements() {
         this.currentImage = document.getElementById('current-image');
-        this.nextImage = document.getElementById('next-image');
         this.watermark = document.getElementById('watermark');
         this.overlay = document.getElementById('overlay');
         this.loading = document.getElementById('loading');
@@ -102,10 +100,6 @@ class PhotoLiveSlideshow {
             this.nextSlide();
         });
 
-        this.nextImage.addEventListener('error', () => {
-            console.error('Erreur de chargement de l\'image suivante');
-        });
-
         // Raccourcis clavier pour le debug - garder une référence pour pouvoir les supprimer
         this.keydownHandler = (e) => {
             switch(e.key) {
@@ -158,7 +152,6 @@ class PhotoLiveSlideshow {
 
         // Stocker les données d'image fournies par le serveur
         this.serverCurrentImage = data.currentImage;
-        this.serverNextImage = data.nextImage;
         this.currentIndex = data.currentIndex;
         this.isPlaying = data.isPlaying !== undefined ? data.isPlaying : this.isPlaying;
 
@@ -176,7 +169,6 @@ class PhotoLiveSlideshow {
 
         // Stocker les données d'image fournies par le serveur
         this.serverCurrentImage = data.currentImage;
-        this.serverNextImage = data.nextImage;
         this.currentIndex = data.currentIndex;
         this.isPlaying = data.isPlaying !== undefined ? data.isPlaying : this.isPlaying;
 
@@ -221,15 +213,6 @@ class PhotoLiveSlideshow {
             this.currentImage.style.opacity = '1';
             this.currentImage.style.transform = '';
             
-            // Ensure next image is hidden and clean
-            if (this.nextImage) {
-                this.nextImage.classList.add('hidden');
-                this.nextImage.style.opacity = '0';
-                this.nextImage.style.transform = '';
-                this.nextImage.className = 'slide-image hidden';
-            }
-            
-            this.preloadNextImage();
             console.log('Image displayed:', imagePath);
         };
         img.onerror = () => {
@@ -427,38 +410,6 @@ class PhotoLiveSlideshow {
         } else {
             body.classList.remove('transparent');
             container.classList.remove('transparent');
-        }
-    }
-
-    showCurrentImage() {
-        // Utiliser les données d'image fournies par le serveur
-        if (!this.serverCurrentImage) {
-            console.log('Aucune donnée d\'image du serveur disponible');
-            return;
-        }
-
-        // Précharger l'image
-        const img = new Image();
-        img.onload = () => {
-            this.currentImage.src = this.serverCurrentImage.path;
-            this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
-            
-            // Précharger la prochaine image
-            this.preloadNextImage();
-        };
-        img.onerror = () => {
-            console.error('Impossible de charger l\'image:', this.serverCurrentImage.path);
-            // Ne plus appeler nextSlide() localement, laisser le serveur gérer
-        };
-        img.src = this.serverCurrentImage.path;
-    }
-
-    preloadNextImage() {
-        // Utiliser l'image suivante fournie par le serveur si disponible
-        if (this.serverNextImage && this.serverNextImage.path !== this.currentImage.src) {
-            const img = new Image();
-            img.src = this.serverNextImage.path;
-            console.log('Préchargement de l\'image suivante:', this.serverNextImage.filename);
         }
     }
 
