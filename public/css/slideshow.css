@@ -55,23 +55,6 @@ body.transparent {
     visibility: visible;
 }
 
-/* Transitions */
-.transition-none {
-    transition: none !important;
-}
-
-.transition-fade {
-    transition: opacity 1s ease-in-out;
-}
-
-.transition-slide {
-    transition: transform 1s ease-in-out;
-}
-
-.transition-zoom {
-    transition: transform 1.5s ease-in-out, opacity 1s ease-in-out;
-}
-
 /* Filtres */
 .filter-none {
     filter: none;
@@ -260,57 +243,4 @@ body.transparent {
     }
 }
 
-/* Animations supplémentaires */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
 
-@keyframes slideInFromRight {
-    from {
-        transform: translateX(100%);
-    }
-    to {
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideInFromLeft {
-    from {
-        transform: translateX(-100%);
-    }
-    to {
-        transform: translateX(0);
-    }
-}
-
-@keyframes zoomIn {
-    from {
-        transform: scale(0.8);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-.animate-fadeIn {
-    animation: fadeIn 1s ease-in-out;
-}
-
-.animate-slideInRight {
-    animation: slideInFromRight 1s ease-out;
-}
-
-.animate-slideInLeft {
-    animation: slideInFromLeft 1s ease-out;
-}
-
-.animate-zoomIn {
-    animation: zoomIn 1.5s ease-out;
-}

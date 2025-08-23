@@ -4,7 +4,6 @@ class PhotoLiveControl {
         this.images = [];
         this.settings = {
             interval: 5000,
-            transition: 'fade',
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
@@ -66,7 +65,7 @@ class PhotoLiveControl {
         // Settings elements
         this.intervalSlider = document.getElementById('interval-slider');
         this.intervalValue = document.getElementById('interval-value');
-        this.transitionSelect = document.getElementById('transition-select');
+
         this.filterSelect = document.getElementById('filter-select');
         
         // Watermark elements
@@ -175,10 +174,7 @@ class PhotoLiveControl {
             this.updateSetting('interval', value * 1000);
         });
 
-        // Transition select
-        this.transitionSelect.addEventListener('change', (e) => {
-            this.updateSetting('transition', e.target.value);
-        });
+
 
         // Filter select
         this.filterSelect.addEventListener('change', (e) => {
@@ -356,8 +352,7 @@ class PhotoLiveControl {
         this.intervalSlider.value = this.settings.interval / 1000;
         this.intervalValue.textContent = this.settings.interval / 1000 + 's';
         
-        // Update transition
-        this.transitionSelect.value = this.settings.transition;
+
         
         // Update filter
         this.filterSelect.value = this.settings.filter;
