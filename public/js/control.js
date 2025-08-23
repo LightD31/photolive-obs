@@ -4,7 +4,6 @@ class PhotoLiveControl {
         this.images = [];
         this.settings = {
             interval: 5000,
-            transition: 'fade',
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
@@ -20,6 +19,14 @@ class PhotoLiveControl {
             transparentBackground: false
         };
         this.isPlaying = true;
+        
+        // Performance tracking
+        this.loadingData = false;
+        this.dataLoaded = false;
+        this.watermarkImagesLoaded = false;
+        this.settingUpdateInProgress = false;
+        this.updateTimeout = null;
+        this.lastUserInteraction = Date.now();
         
         this.init();
     }
@@ -58,7 +65,6 @@ class PhotoLiveControl {
         // Settings elements
         this.intervalSlider = document.getElementById('interval-slider');
         this.intervalValue = document.getElementById('interval-value');
-        this.transitionSelect = document.getElementById('transition-select');
         this.filterSelect = document.getElementById('filter-select');
         
         // Watermark elements
@@ -99,11 +105,17 @@ class PhotoLiveControl {
     }
 
     setupSocket() {
-        this.socket = io();
+        this.socket = io({
+            transports: ['websocket'], // Force WebSocket transport
+            timeout: 5000,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
         
         this.socket.on('connect', () => {
             console.log('Connected to server');
             this.updateConnectionStatus(true);
+            this.requestInitialData();
         });
 
         this.socket.on('disconnect', () => {
@@ -111,10 +123,14 @@ class PhotoLiveControl {
             this.updateConnectionStatus(false);
         });
 
+        this.socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            this.updateConnectionStatus(false);
+        });
+
         this.socket.on('images-updated', (data) => {
             console.log('Images updated:', data.images.length);
-            this.updateImages(data.images);
-            this.updateSettings(data.settings);
+            this.handleImagesUpdate(data.images, data.settings);
         });
 
         this.socket.on('settings-updated', (settings) => {
@@ -255,21 +271,72 @@ class PhotoLiveControl {
                     break;
             }
         });
+
+        // Zoom controls
+        this.zoomInBtn.addEventListener('click', () => {
+            this.zoomIn();
+        });
+
+        this.zoomOutBtn.addEventListener('click', () => {
+            this.zoomOut();
+        });
+
+        this.zoomResetBtn.addEventListener('click', () => {
+            this.resetZoom();
+        });
     }
 
     async loadInitialData() {
         try {
+            // Prevent multiple simultaneous requests
+            if (this.loadingData) {
+                return;
+            }
+            this.loadingData = true;
+
             const response = await fetch('/api/images');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
             
-            this.updateImages(data.images);
-            this.updateSettings(data.settings);
+            this.handleImagesUpdate(data.images, data.settings);
             
-            // Load watermark images
-            await this.loadWatermarkImages();
+            // Load watermark images only once or when needed
+            if (!this.watermarkImagesLoaded) {
+                await this.loadWatermarkImages();
+                this.watermarkImagesLoaded = true;
+            }
         } catch (error) {
             console.error('Error during initial loading:', error);
+            this.showNotification('Failed to load data from server', 'error');
+        } finally {
+            this.loadingData = false;
         }
+    }
+
+    // New method to request initial data from server
+    requestInitialData() {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('get-slideshow-state');
+            // Only load if not already loaded or if connection was lost
+            if (!this.dataLoaded) {
+                this.loadInitialData();
+                this.dataLoaded = true;
+            }
+        }
+    }
+
+    // Optimized method to handle images update with debouncing
+    handleImagesUpdate(images, settings) {
+        clearTimeout(this.updateTimeout);
+        this.updateTimeout = setTimeout(() => {
+            this.updateImages(images);
+            if (settings) {
+                this.updateSettings(settings);
+            }
+        }, 100); // Debounce updates
     }
 
     updateConnectionStatus(connected) {
@@ -332,22 +399,47 @@ class PhotoLiveControl {
     }
 
     updateSetting(key, value) {
+        // Prevent multiple simultaneous requests
+        if (this.settingUpdateInProgress) {
+            return;
+        }
+        this.settingUpdateInProgress = true;
+
         const newSettings = { ...this.settings, [key]: value };
         
-        // Send to server
+        // Send to server with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         fetch('/api/settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ [key]: value })
+            body: JSON.stringify({ [key]: value }),
+            signal: controller.signal
         })
-        .then(response => response.json())
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             console.log('Setting updated:', key, value);
         })
         .catch(error => {
-            console.error('Error during update:', error);
+            if (error.name === 'AbortError') {
+                console.error('Setting update timeout:', key);
+                this.showNotification('Setting update timeout', 'error');
+            } else {
+                console.error('Error during update:', error);
+                this.showNotification('Failed to update setting', 'error');
+            }
+        })
+        .finally(() => {
+            this.settingUpdateInProgress = false;
         });
     }
 
@@ -421,7 +513,8 @@ class PhotoLiveControl {
     }
 
     renderImagesPreview() {
-        this.imagesPreview.innerHTML = '';
+        // Optimize rendering for large image sets
+        const fragment = document.createDocumentFragment();
         
         if (this.images.length === 0) {
             this.imagesPreview.innerHTML = `
@@ -433,7 +526,11 @@ class PhotoLiveControl {
             return;
         }
 
-        this.images.forEach((image, index) => {
+        // Limit rendering for performance with large image sets
+        const maxRender = 100; // Limit to 100 images for performance
+        const imagesToRender = this.images.slice(0, maxRender);
+        
+        imagesToRender.forEach((image, index) => {
             const imageItem = document.createElement('div');
             imageItem.className = 'image-item';
             imageItem.dataset.index = index;
@@ -442,6 +539,15 @@ class PhotoLiveControl {
             img.src = image.path;
             img.alt = image.filename;
             img.loading = 'lazy';
+            
+            // Add error handling for broken images
+            img.onerror = () => {
+                img.style.display = 'none';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'image-error';
+                errorDiv.textContent = '❌';
+                imageItem.appendChild(errorDiv);
+            };
             
             const info = document.createElement('div');
             info.className = 'image-info';
@@ -459,8 +565,20 @@ class PhotoLiveControl {
             
             imageItem.appendChild(img);
             imageItem.appendChild(info);
-            this.imagesPreview.appendChild(imageItem);
+            fragment.appendChild(imageItem);
         });
+
+        // Clear and append all at once to minimize reflows
+        this.imagesPreview.innerHTML = '';
+        this.imagesPreview.appendChild(fragment);
+        
+        // Show count if more images available
+        if (this.images.length > maxRender) {
+            const moreDiv = document.createElement('div');
+            moreDiv.className = 'more-images';
+            moreDiv.innerHTML = `<p>+${this.images.length - maxRender} more images...</p>`;
+            this.imagesPreview.appendChild(moreDiv);
+        }
     }
 
     formatFileSize(bytes) {
@@ -673,6 +791,44 @@ class PhotoLiveControl {
             }
         });
     }
+
+    // Zoom functionality methods
+    zoomIn() {
+        const currentIndex = this.zoomLevels.indexOf(this.zoomLevel);
+        if (currentIndex < this.zoomLevels.length - 1) {
+            this.setZoom(this.zoomLevels[currentIndex + 1]);
+        }
+    }
+
+    zoomOut() {
+        const currentIndex = this.zoomLevels.indexOf(this.zoomLevel);
+        if (currentIndex > 0) {
+            this.setZoom(this.zoomLevels[currentIndex - 1]);
+        }
+    }
+
+    resetZoom() {
+        this.setZoom(100);
+    }
+
+    setZoom(level) {
+        // Remove all zoom classes
+        this.zoomLevels.forEach(zoomLevel => {
+            this.imagesPreview.classList.remove(`zoom-${zoomLevel}`);
+        });
+
+        // Set new zoom level
+        this.zoomLevel = level;
+        this.imagesPreview.classList.add(`zoom-${level}`);
+
+        // Update display
+        this.zoomLevelDisplay.textContent = `${level}%`;
+
+        // Update button states
+        const currentIndex = this.zoomLevels.indexOf(level);
+        this.zoomOutBtn.disabled = currentIndex === 0;
+        this.zoomInBtn.disabled = currentIndex === this.zoomLevels.length - 1;
+    }
 }
 
 // Initialization
@@ -680,9 +836,53 @@ document.addEventListener('DOMContentLoaded', () => {
     window.control = new PhotoLiveControl();
 });
 
-// Auto-refresh preview every 30 seconds
-setInterval(() => {
-    if (window.control && window.control.socket && window.control.socket.connected) {
-        window.control.loadInitialData();
+// Optimized auto-refresh with connection check and exponential backoff
+let refreshInterval = 60000; // Start with 60 seconds
+let maxRefreshInterval = 300000; // Max 5 minutes
+let refreshTimeoutId;
+
+function scheduleRefresh() {
+    clearTimeout(refreshTimeoutId);
+    refreshTimeoutId = setTimeout(() => {
+        if (window.control && window.control.socket) {
+            if (window.control.socket.connected) {
+                // Connection is good, reset interval
+                refreshInterval = 60000;
+                
+                // Only refresh if user is not actively interacting
+                if (!document.hasFocus() || Date.now() - window.control.lastUserInteraction > 30000) {
+                    window.control.loadInitialData();
+                }
+            } else {
+                // Connection issues, increase interval
+                refreshInterval = Math.min(refreshInterval * 1.5, maxRefreshInterval);
+                console.log('Connection issues, increasing refresh interval to', refreshInterval / 1000, 'seconds');
+            }
+        }
+        scheduleRefresh(); // Schedule next refresh
+    }, refreshInterval);
+}
+
+// Start the optimized refresh cycle
+scheduleRefresh();
+
+// Track user interaction to avoid unnecessary refreshes
+document.addEventListener('click', () => {
+    if (window.control) {
+        window.control.lastUserInteraction = Date.now();
     }
-}, 30000);
+});
+
+document.addEventListener('keydown', () => {
+    if (window.control) {
+        window.control.lastUserInteraction = Date.now();
+    }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    clearTimeout(refreshTimeoutId);
+    if (window.control && window.control.socket) {
+        window.control.socket.disconnect();
+    }
+});

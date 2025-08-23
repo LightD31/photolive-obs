@@ -20,9 +20,13 @@ class PhotoLiveSlideshow {
             latestCount: 5,
             transparentBackground: false
         };
-        this.intervalId = null;
         this.isPlaying = true;
         this.isTransitioning = false;
+        this.transitionTimer = null;
+        
+        // Données d'images fournies par le serveur
+        this.serverCurrentImage = null;
+        this.serverNextImage = null;
         
         this.init();
     }
@@ -82,6 +86,16 @@ class PhotoLiveSlideshow {
         this.socket.on('resume-slideshow', () => {
             this.resumeSlideshow();
         });
+
+        this.socket.on('image-changed', (data) => {
+            console.log('Image changed from server:', data);
+            this.handleImageChange(data);
+        });
+
+        this.socket.on('slideshow-state', (data) => {
+            console.log('Slideshow state from server:', data);
+            this.handleStateSync(data);
+        });
     }
 
     setupEventListeners() {
@@ -95,8 +109,8 @@ class PhotoLiveSlideshow {
             console.error('Erreur de chargement de l\'image suivante');
         });
 
-        // Raccourcis clavier pour le debug
-        document.addEventListener('keydown', (e) => {
+        // Raccourcis clavier pour le debug - garder une référence pour pouvoir les supprimer
+        this.keydownHandler = (e) => {
             switch(e.key) {
                 case 'ArrowRight':
                 case ' ':
@@ -113,7 +127,9 @@ class PhotoLiveSlideshow {
                     this.togglePlayPause();
                     break;
             }
-        });
+        };
+        
+        document.addEventListener('keydown', this.keydownHandler);
     }
 
     async loadInitialData() {
@@ -123,11 +139,121 @@ class PhotoLiveSlideshow {
             
             this.updateImages(data.images);
             this.updateSettings(data.settings);
+            
+            // Demander l'état actuel du slideshow au serveur pour se synchroniser
+            if (this.socket) {
+                this.socket.emit('get-slideshow-state');
+            }
         } catch (error) {
             console.error('Erreur lors du chargement initial:', error);
             this.hideLoading();
             this.showNoImages();
         }
+    }
+
+    handleImageChange(data) {
+        // Gérer un changement d'image avec transition
+        if (!data || !data.currentImage) {
+            return;
+        }
+
+        console.log('Changement d\'image avec transition:', data.currentImage.filename);
+
+        // Stocker les données d'image fournies par le serveur
+        this.serverCurrentImage = data.currentImage;
+        this.serverNextImage = data.nextImage;
+        this.currentIndex = data.currentIndex;
+        this.isPlaying = data.isPlaying !== undefined ? data.isPlaying : this.isPlaying;
+
+        // Toujours faire une transition pour les changements d'image
+        this.transitionToServerImage(data.currentImage.path, data.direction);
+    }
+
+    handleStateSync(data) {
+        // Gérer une synchronisation d'état (première connexion, etc.)
+        if (!data || !data.currentImage) {
+            return;
+        }
+
+        console.log('Synchronisation d\'état:', data.currentImage.filename);
+
+        // Stocker les données d'image fournies par le serveur
+        this.serverCurrentImage = data.currentImage;
+        this.serverNextImage = data.nextImage;
+        this.currentIndex = data.currentIndex;
+        this.isPlaying = data.isPlaying !== undefined ? data.isPlaying : this.isPlaying;
+
+        // Vérifier si l'image affichée est différente
+        const currentPath = this.currentImage.src;
+        const newPath = data.currentImage.path;
+        
+        if (!currentPath || currentPath === '') {
+            // Première image, affichage direct
+            this.displayImageDirectly(data.currentImage.path);
+        } else {
+            // Construire l'URL complète pour la comparaison
+            const currentUrl = new URL(currentPath, window.location.origin).pathname;
+            const newUrl = newPath;
+            
+            if (currentUrl !== newUrl) {
+                // L'image a changé, affichage direct pour la synchro
+                console.log(`Synchronisation: changement d'image de ${currentUrl} vers ${newUrl}`);
+                this.displayImageDirectly(data.currentImage.path);
+            }
+        }
+    }
+
+    transitionToServerImage(imagePath, direction = 1) {
+        // Transition vers l'image demandée par le serveur
+        console.log('transitionToServerImage appelée:', imagePath, 'direction:', direction, 'isTransitioning:', this.isTransitioning);
+        
+        if (this.isTransitioning) {
+            // Si une transition est en cours, l'interrompre proprement et afficher directement
+            console.log('Transition en cours, nettoyage et affichage direct');
+            this.cleanupTransition();
+            this.displayImageDirectly(imagePath);
+            return;
+        }
+
+        this.isTransitioning = true;
+        
+        // Démarrer la transition directement - le préchargement est géré dans performTransition
+        this.performTransition(imagePath);
+    }
+
+    displayImageDirectly(imagePath) {
+        // Affichage direct sans transition pour la synchronisation
+        if (!this.currentImage) {
+            console.error('currentImage element not found');
+            return;
+        }
+
+        // Arrêter toute transition en cours
+        this.isTransitioning = false;
+
+        const img = new Image();
+        img.onload = () => {
+            // Nettoyer les classes de transition et remettre l'image principale visible
+            this.currentImage.src = imagePath;
+            this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
+            this.currentImage.style.opacity = '1';
+            this.currentImage.style.transform = '';
+            
+            // S'assurer que l'image suivante est cachée et nettoyée
+            if (this.nextImage) {
+                this.nextImage.classList.add('hidden');
+                this.nextImage.style.opacity = '0';
+                this.nextImage.style.transform = '';
+                this.nextImage.className = 'slide-image hidden';
+            }
+            
+            this.preloadNextImage();
+            console.log('Image affichée directement:', imagePath);
+        };
+        img.onerror = () => {
+            console.error('Erreur de chargement lors de l\'affichage direct:', imagePath);
+        };
+        img.src = imagePath;
     }
 
     updateImages(images, newImageAdded = null) {
@@ -136,7 +262,6 @@ class PhotoLiveSlideshow {
         if (this.images.length === 0) {
             this.hideLoading();
             this.showNoImages();
-            this.stopSlideshow();
             return;
         }
 
@@ -147,22 +272,36 @@ class PhotoLiveSlideshow {
         this.createShuffledImagesList(newImageAdded);
         
         // Si une nouvelle image a été ajoutée et que le shuffle est activé, 
-        // commencer par la nouvelle image
+        // l'index sera géré par le serveur
         if (newImageAdded && this.settings.shuffleImages) {
-            const newImageIndex = this.shuffledImages.findIndex(img => img.filename === newImageAdded);
-            if (newImageIndex !== -1) {
-                this.currentIndex = newImageIndex;
-                console.log(`🎯 Nouvelle image détectée: ${newImageAdded}, passage à l'index ${newImageIndex}`);
-            }
+            console.log(`🎯 Nouvelle image détectée: ${newImageAdded}, le serveur gère la synchronisation`);
         }
         
-        // Si c'est le premier chargement d'images, commencer le diaporama
+        // Si c'est le premier chargement d'images, attendre les instructions du serveur
         if (this.currentIndex >= this.getImagesList().length) {
             this.currentIndex = 0;
         }
 
-        this.showCurrentImage();
-        this.startSlideshow();
+        // Ne pas démarrer automatiquement - attendre les instructions du serveur
+        console.log('Images mises à jour, en attente des instructions du serveur');
+        
+        // Si on a déjà une image à afficher, la montrer
+        if (this.getImagesList().length > 0 && this.currentIndex < this.getImagesList().length) {
+            const currentImageData = this.getCurrentImageData();
+            if (currentImageData && (!this.currentImage.src || this.currentImage.src === '')) {
+                this.displayImageDirectly(currentImageData.path);
+            }
+        }
+    }
+
+    showCurrentImage() {
+        if (this.images.length === 0) return;
+
+        const currentImageData = this.getCurrentImageData();
+        if (!currentImageData) return;
+
+        // Afficher l'image directement (sans transition pour l'initialisation)
+        this.displayImageDirectly(currentImageData.path);
     }
 
     createShuffledImagesList(newImageAdded = null) {
@@ -225,10 +364,8 @@ class PhotoLiveSlideshow {
         // Mettre à jour l'overlay
         this.updateOverlay();
         
-        // Redémarrer le diaporama avec le nouvel intervalle
-        if (this.isPlaying) {
-            this.startSlideshow();
-        }
+        // Le timer est maintenant géré côté serveur
+        console.log('Paramètres mis à jour, timer géré par le serveur');
     }
 
     updateWatermark() {
@@ -312,34 +449,34 @@ class PhotoLiveSlideshow {
     }
 
     showCurrentImage() {
-        if (this.images.length === 0) return;
-
-        const currentImageData = this.getCurrentImageData();
-        if (!currentImageData) return;
+        // Utiliser les données d'image fournies par le serveur
+        if (!this.serverCurrentImage) {
+            console.log('Aucune donnée d\'image du serveur disponible');
+            return;
+        }
 
         // Précharger l'image
         const img = new Image();
         img.onload = () => {
-            this.currentImage.src = currentImageData.path;
+            this.currentImage.src = this.serverCurrentImage.path;
             this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
             
-            // Preloader la prochaine image
+            // Précharger la prochaine image
             this.preloadNextImage();
         };
         img.onerror = () => {
-            console.error('Impossible de charger l\'image:', currentImageData.path);
-            this.nextSlide();
+            console.error('Impossible de charger l\'image:', this.serverCurrentImage.path);
+            // Ne plus appeler nextSlide() localement, laisser le serveur gérer
         };
-        img.src = currentImageData.path;
+        img.src = this.serverCurrentImage.path;
     }
 
     preloadNextImage() {
-        const nextIndex = this.getNextIndex();
-        const nextImageData = this.images[nextIndex];
-        
-        if (nextImageData && nextImageData.path !== this.currentImage.src) {
+        // Utiliser l'image suivante fournie par le serveur si disponible
+        if (this.serverNextImage && this.serverNextImage.path !== this.currentImage.src) {
             const img = new Image();
-            img.src = nextImageData.path;
+            img.src = this.serverNextImage.path;
+            console.log('Préchargement de l\'image suivante:', this.serverNextImage.filename);
         }
     }
 
@@ -379,46 +516,29 @@ class PhotoLiveSlideshow {
     }
 
     nextSlide() {
-        const imagesList = this.getImagesList();
-        if (imagesList.length === 0 || this.isTransitioning) return;
-        
-        this.currentIndex = this.getNextIndex();
-        this.transitionToImage();
+        // Les changements d'image sont maintenant gérés uniquement par le serveur
+        // Cette méthode ne sert plus que pour les raccourcis clavier locaux
+        console.log('Demande de passage à l\'image suivante envoyée au serveur');
+        if (this.socket) {
+            this.socket.emit('next-image');
+        }
     }
 
     prevSlide() {
-        const imagesList = this.getImagesList();
-        if (imagesList.length === 0 || this.isTransitioning) return;
-        
-        this.currentIndex = this.getPrevIndex();
-        this.transitionToImage();
-    }
-
-    transitionToImage() {
-        if (this.isTransitioning) return;
-        
-        this.isTransitioning = true;
-        const nextImageData = this.getCurrentImageData();
-        
-        if (!nextImageData) {
-            this.isTransitioning = false;
-            return;
+        // Les changements d'image sont maintenant gérés uniquement par le serveur
+        // Cette méthode ne sert plus que pour les raccourcis clavier locaux
+        console.log('Demande de passage à l\'image précédente envoyée au serveur');
+        if (this.socket) {
+            this.socket.emit('prev-image');
         }
-
-        // Précharger la nouvelle image
-        const img = new Image();
-        img.onload = () => {
-            this.performTransition(nextImageData.path);
-        };
-        img.onerror = () => {
-            console.error('Erreur de chargement:', nextImageData.path);
-            this.isTransitioning = false;
-            this.nextSlide();
-        };
-        img.src = nextImageData.path;
     }
 
     performTransition(newImagePath) {
+        console.log('performTransition appelée avec:', newImagePath, 'transition:', this.settings.transition);
+        
+        // Nettoyer toute transition en cours
+        this.cleanupTransition();
+        
         switch (this.settings.transition) {
             case 'none':
                 this.noneTransition(newImagePath);
@@ -433,126 +553,242 @@ class PhotoLiveSlideshow {
                 this.zoomTransition(newImagePath);
                 break;
             default:
+                console.log('Transition par défaut: fade');
                 this.fadeTransition(newImagePath);
         }
     }
 
+    cleanupTransition() {
+        // Nettoyer les timers de transition en cours
+        if (this.transitionTimer) {
+            clearTimeout(this.transitionTimer);
+            this.transitionTimer = null;
+        }
+        
+        // Réinitialiser les styles et classes
+        if (this.currentImage) {
+            this.currentImage.style.transform = '';
+            this.currentImage.style.opacity = '1';
+            this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
+        }
+        
+        if (this.nextImage) {
+            this.nextImage.style.transform = '';
+            this.nextImage.style.opacity = '0';
+            this.nextImage.className = 'slide-image hidden';
+            this.nextImage.classList.add('hidden');
+        }
+    }
+
     noneTransition(newImagePath) {
-        // Changement immédiat sans effet de transition
-        this.currentImage.src = newImagePath;
-        this.currentImage.className = `slide-image transition-none filter-${this.settings.filter}`;
-        this.currentImage.style.opacity = '1';
+        console.log('Transition none vers:', newImagePath);
+        
+        // Précharger l'image avant de l'afficher
+        const img = new Image();
+        img.onload = () => {
+            this.currentImage.src = newImagePath;
+            this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
+            this.currentImage.style.opacity = '1';
+            this.currentImage.style.transform = '';
+            
+            this.isTransitioning = false;
+            this.preloadNextImage();
+            console.log('Transition none terminée');
+        };
+        img.onerror = () => {
+            console.error('Erreur de chargement lors de la transition none:', newImagePath);
+            this.isTransitioning = false;
+        };
+        img.src = newImagePath;
+    }
+
+    fadeTransition(newImagePath) {
+        if (!this.nextImage) {
+            console.error('nextImage element not found, falling back to direct display');
+            this.displayImageDirectly(newImagePath);
+            return;
+        }
+
+        console.log('Démarrage transition fade vers:', newImagePath);
+        
+        // Précharger l'image avant de commencer la transition
+        const img = new Image();
+        img.onload = () => {
+            this.startFadeTransition(newImagePath);
+        };
+        img.onerror = () => {
+            console.error('Erreur de chargement lors de la transition fade:', newImagePath);
+            this.isTransitioning = false;
+        };
+        img.src = newImagePath;
+    }
+
+    startFadeTransition(newImagePath) {
+        // Préparer l'image suivante
+        this.nextImage.src = newImagePath;
+        this.nextImage.className = `slide-image transition-fade filter-${this.settings.filter}`;
+        this.nextImage.style.opacity = '0';
+        this.nextImage.style.transform = '';
+        this.nextImage.classList.remove('hidden');
+
+        // Utiliser requestAnimationFrame pour des transitions plus fluides
+        requestAnimationFrame(() => {
+            // Fade out current, fade in next
+            if (this.currentImage) {
+                this.currentImage.style.opacity = '0';
+            }
+            this.nextImage.style.opacity = '1';
+            
+            // Utiliser un seul timer pour finir la transition
+            this.transitionTimer = setTimeout(() => {
+                this.finishTransition();
+                console.log('Transition fade terminée');
+            }, 1000); // Correspond à la durée CSS
+        });
+    }
+
+    slideTransition(newImagePath) {
+        if (!this.nextImage) {
+            console.error('nextImage element not found, falling back to direct display');
+            this.displayImageDirectly(newImagePath);
+            return;
+        }
+
+        console.log('Démarrage transition slide vers:', newImagePath);
+        
+        // Précharger l'image avant de commencer la transition
+        const img = new Image();
+        img.onload = () => {
+            this.startSlideTransition(newImagePath);
+        };
+        img.onerror = () => {
+            console.error('Erreur de chargement lors de la transition slide:', newImagePath);
+            this.isTransitioning = false;
+        };
+        img.src = newImagePath;
+    }
+
+    startSlideTransition(newImagePath) {
+        // Préparer l'image suivante
+        this.nextImage.src = newImagePath;
+        this.nextImage.className = `slide-image transition-slide filter-${this.settings.filter}`;
+        this.nextImage.style.opacity = '1';
+        this.nextImage.style.transform = 'translateX(100%)';
+        this.nextImage.classList.remove('hidden');
+
+        requestAnimationFrame(() => {
+            // Démarrer les animations
+            if (this.currentImage) {
+                this.currentImage.style.transform = 'translateX(-100%)';
+            }
+            this.nextImage.style.transform = 'translateX(0)';
+            
+            this.transitionTimer = setTimeout(() => {
+                this.finishTransition();
+                console.log('Transition slide terminée');
+            }, 1000); // Correspond à la durée CSS
+        });
+    }
+
+    zoomTransition(newImagePath) {
+        if (!this.nextImage) {
+            console.error('nextImage element not found, falling back to direct display');
+            this.displayImageDirectly(newImagePath);
+            return;
+        }
+
+        console.log('Démarrage transition zoom vers:', newImagePath);
+        
+        // Précharger l'image avant de commencer la transition
+        const img = new Image();
+        img.onload = () => {
+            this.startZoomTransition(newImagePath);
+        };
+        img.onerror = () => {
+            console.error('Erreur de chargement lors de la transition zoom:', newImagePath);
+            this.isTransitioning = false;
+        };
+        img.src = newImagePath;
+    }
+
+    startZoomTransition(newImagePath) {
+        // Préparer l'image suivante
+        this.nextImage.src = newImagePath;
+        this.nextImage.className = `slide-image transition-zoom filter-${this.settings.filter}`;
+        this.nextImage.style.opacity = '0';
+        this.nextImage.style.transform = 'scale(1.1)';
+        this.nextImage.classList.remove('hidden');
+
+        requestAnimationFrame(() => {
+            // Démarrer les animations
+            if (this.currentImage) {
+                this.currentImage.style.opacity = '0';
+                this.currentImage.style.transform = 'scale(0.9)';
+            }
+            this.nextImage.style.opacity = '1';
+            this.nextImage.style.transform = 'scale(1)';
+            
+            this.transitionTimer = setTimeout(() => {
+                this.finishTransition();
+                console.log('Transition zoom terminée');
+            }, 1500); // Durée plus longue pour le zoom
+        });
+    }
+
+    finishTransition() {
+        // Nettoyer le timer
+        if (this.transitionTimer) {
+            clearTimeout(this.transitionTimer);
+            this.transitionTimer = null;
+        }
+
+        // Échanger les éléments de manière propre
+        if (this.nextImage && this.currentImage) {
+            // L'image suivante devient l'image courante
+            this.nextImage.className = `slide-image visible filter-${this.settings.filter}`;
+            this.nextImage.style.opacity = '1';
+            this.nextImage.style.transform = '';
+            
+            // L'ancienne image courante devient cachée
+            this.currentImage.className = 'slide-image hidden';
+            this.currentImage.style.opacity = '0';
+            this.currentImage.style.transform = '';
+            this.currentImage.classList.add('hidden');
+            
+            // Échanger les références
+            const temp = this.currentImage;
+            this.currentImage = this.nextImage;
+            this.nextImage = temp;
+        }
         
         this.isTransitioning = false;
         this.preloadNextImage();
     }
 
-    fadeTransition(newImagePath) {
-        this.nextImage.src = newImagePath;
-        this.nextImage.className = `slide-image transition-fade filter-${this.settings.filter}`;
-        this.nextImage.style.opacity = '0';
-        this.nextImage.classList.remove('hidden');
-
-        // Fade out current, fade in next
-        setTimeout(() => {
-            this.currentImage.style.opacity = '0';
-            this.nextImage.style.opacity = '1';
-        }, 50);
-
-        setTimeout(() => {
-            // Swap images
-            const temp = this.currentImage;
-            this.currentImage = this.nextImage;
-            this.nextImage = temp;
-            
-            this.nextImage.classList.add('hidden');
-            this.currentImage.style.opacity = '1';
-            
-            this.isTransitioning = false;
-            this.preloadNextImage();
-        }, 1050);
-    }
-
-    slideTransition(newImagePath) {
-        this.nextImage.src = newImagePath;
-        this.nextImage.className = `slide-image transition-slide filter-${this.settings.filter}`;
-        this.nextImage.classList.remove('hidden');
-        this.nextImage.classList.add('slide-in-right');
-
-        setTimeout(() => {
-            this.currentImage.classList.add('slide-out-left');
-            this.nextImage.classList.remove('slide-in-right');
-        }, 50);
-
-        setTimeout(() => {
-            // Swap images
-            const temp = this.currentImage;
-            this.currentImage = this.nextImage;
-            this.nextImage = temp;
-            
-            this.nextImage.classList.add('hidden');
-            this.currentImage.classList.remove('slide-out-left', 'slide-in-right');
-            
-            this.isTransitioning = false;
-            this.preloadNextImage();
-        }, 1050);
-    }
-
-    zoomTransition(newImagePath) {
-        this.nextImage.src = newImagePath;
-        this.nextImage.className = `slide-image transition-zoom filter-${this.settings.filter}`;
-        this.nextImage.style.opacity = '0';
-        this.nextImage.classList.remove('hidden');
-        this.nextImage.classList.add('zoom-in');
-
-        setTimeout(() => {
-            this.currentImage.classList.add('zoom-out');
-            this.currentImage.style.opacity = '0';
-            this.nextImage.style.opacity = '1';
-            this.nextImage.classList.remove('zoom-in');
-        }, 50);
-
-        setTimeout(() => {
-            // Swap images
-            const temp = this.currentImage;
-            this.currentImage = this.nextImage;
-            this.nextImage = temp;
-            
-            this.nextImage.classList.add('hidden');
-            this.nextImage.classList.remove('zoom-out');
-            this.currentImage.style.opacity = '1';
-            
-            this.isTransitioning = false;
-            this.preloadNextImage();
-        }, 1550);
-    }
-
     startSlideshow() {
-        this.stopSlideshow();
-        
-        const imagesList = this.getImagesList();
-        if (imagesList.length > 1 && this.isPlaying) {
-            this.intervalId = setInterval(() => {
-                this.nextSlide();
-            }, this.settings.interval);
-        }
+        // Le timer est maintenant géré côté serveur
+        // Cette méthode ne fait que mettre à jour l'état local
+        this.isPlaying = true;
+        console.log('Slideshow démarré (géré par le serveur)');
     }
 
     stopSlideshow() {
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
-            this.intervalId = null;
-        }
+        // Le timer est maintenant géré côté serveur
+        // Cette méthode ne fait que mettre à jour l'état local
+        this.isPlaying = false;
+        console.log('Slideshow arrêté (géré par le serveur)');
     }
 
     pauseSlideshow() {
         this.isPlaying = false;
-        this.stopSlideshow();
+        // Plus besoin d'arrêter un timer local
+        console.log('Slideshow mis en pause (synchronisé avec le serveur)');
     }
 
     resumeSlideshow() {
         this.isPlaying = true;
-        this.startSlideshow();
+        // Plus besoin de démarrer un timer local
+        console.log('Slideshow repris (synchronisé avec le serveur)');
     }
 
     togglePlayPause() {
@@ -578,20 +814,21 @@ class PhotoLiveSlideshow {
     hideNoImages() {
         this.noImages.classList.add('hidden');
     }
+
+    destroy() {
+        // Nettoyer les timers et événements lors de la destruction
+        this.cleanupTransition();
+        
+        if (this.socket) {
+            this.socket.disconnect();
+        }
+        
+        // Nettoyer les event listeners
+        document.removeEventListener('keydown', this.keydownHandler);
+    }
 }
 
 // Initialisation quand le DOM est prêt
 document.addEventListener('DOMContentLoaded', () => {
     window.slideshow = new PhotoLiveSlideshow();
-});
-
-// Gestion de la visibilité de la page
-document.addEventListener('visibilitychange', () => {
-    if (window.slideshow) {
-        if (document.hidden) {
-            window.slideshow.pauseSlideshow();
-        } else {
-            window.slideshow.resumeSlideshow();
-        }
-    }
 });

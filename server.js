@@ -135,6 +135,9 @@ let slideshowState = {
   currentImage: null
 };
 
+// Timer du diaporama côté serveur
+let slideshowTimer = null;
+
 // Fonction pour scanner les images
 async function scanImages(newImageFilename = null) {
   try {
@@ -174,6 +177,9 @@ async function scanImages(newImageFilename = null) {
       newImageAdded: newImageFilename
     });
 
+    // Redémarrer le timer du diaporama si nécessaire
+    restartSlideshowTimer();
+
     console.log(`${images.length} images trouvées dans ${currentPhotosPath}${newImageFilename ? ` (nouvelle: ${newImageFilename})` : ''}`);
     return images;
   } catch (error) {
@@ -199,9 +205,14 @@ function updateSlideshowState() {
 
   slideshowState.currentImage = currentImages[slideshowState.currentIndex];
   
+  // Calculer l'image suivante pour les transitions
+  const nextIndex = (slideshowState.currentIndex + 1) % currentImages.length;
+  const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
+  
   // Émettre l'état mis à jour aux clients
   io.emit('slideshow-state', {
     currentImage: slideshowState.currentImage,
+    nextImage: nextImage,
     currentIndex: slideshowState.currentIndex,
     isPlaying: slideshowState.isPlaying,
     totalImages: currentImages.length
@@ -215,12 +226,46 @@ function changeImage(direction = 1) {
   slideshowState.currentIndex += direction;
   updateSlideshowState();
   
+  // Calculer l'image suivante pour les transitions
+  const nextIndex = (slideshowState.currentIndex + 1) % currentImages.length;
+  const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
+  
   // Émettre le changement d'image aux clients slideshow
   io.emit('image-changed', {
     currentImage: slideshowState.currentImage,
+    nextImage: nextImage,
     currentIndex: slideshowState.currentIndex,
     direction: direction
   });
+}
+
+// Démarrer le timer du diaporama côté serveur
+function startSlideshowTimer() {
+  stopSlideshowTimer();
+  
+  if (currentImages.length > 1 && slideshowState.isPlaying) {
+    slideshowTimer = setInterval(() => {
+      console.log('Timer serveur: passage à l\'image suivante');
+      changeImage(1);
+    }, slideshowSettings.interval);
+    console.log(`Timer du diaporama démarré (intervalle: ${slideshowSettings.interval}ms)`);
+  }
+}
+
+// Arrêter le timer du diaporama
+function stopSlideshowTimer() {
+  if (slideshowTimer) {
+    clearInterval(slideshowTimer);
+    slideshowTimer = null;
+    console.log('Timer du diaporama arrêté');
+  }
+}
+
+// Redémarrer le timer avec de nouveaux paramètres
+function restartSlideshowTimer() {
+  if (slideshowState.isPlaying) {
+    startSlideshowTimer();
+  }
 }
 
 // Surveillance des changements de fichiers
@@ -361,6 +406,11 @@ app.post('/api/settings', (req, res) => {
     }
     
     slideshowSettings = { ...slideshowSettings, ...newSettings };
+    
+    // Si l'intervalle a changé, redémarrer le timer
+    if (newSettings.interval) {
+      restartSlideshowTimer();
+    }
     
     // Émettre les nouveaux réglages aux clients
     io.emit('settings-updated', slideshowSettings);
@@ -514,6 +564,7 @@ io.on('connection', (socket) => {
   // Envoyer l'état actuel du diaporama
   socket.emit('slideshow-state', {
     currentImage: slideshowState.currentImage,
+    nextImage: currentImages.length > 1 ? currentImages[(slideshowState.currentIndex + 1) % currentImages.length] : null,
     currentIndex: slideshowState.currentIndex,
     isPlaying: slideshowState.isPlaying,
     totalImages: currentImages.length
@@ -538,35 +589,55 @@ io.on('connection', (socket) => {
     if (index >= 0 && index < currentImages.length) {
       slideshowState.currentIndex = index;
       updateSlideshowState();
+      // Redémarrer le timer pour réinitialiser l'intervalle
+      restartSlideshowTimer();
       io.emit('jump-to-image', index);
     }
   });
 
   socket.on('pause-slideshow', () => {
     slideshowState.isPlaying = false;
+    stopSlideshowTimer();
+    
+    const nextIndex = currentImages.length > 1 ? (slideshowState.currentIndex + 1) % currentImages.length : 0;
+    const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
+    
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
+      nextImage: nextImage,
       currentIndex: slideshowState.currentIndex,
       isPlaying: slideshowState.isPlaying,
       totalImages: currentImages.length
     });
     socket.broadcast.emit('pause-slideshow');
+    console.log('Diaporama mis en pause par un client');
   });
 
   socket.on('resume-slideshow', () => {
     slideshowState.isPlaying = true;
+    startSlideshowTimer();
+    
+    const nextIndex = currentImages.length > 1 ? (slideshowState.currentIndex + 1) % currentImages.length : 0;
+    const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
+    
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
+      nextImage: nextImage,
       currentIndex: slideshowState.currentIndex,
       isPlaying: slideshowState.isPlaying,
       totalImages: currentImages.length
     });
     socket.broadcast.emit('resume-slideshow');
+    console.log('Diaporama repris par un client');
   });
 
   socket.on('get-slideshow-state', () => {
+    const nextIndex = currentImages.length > 1 ? (slideshowState.currentIndex + 1) % currentImages.length : 0;
+    const nextImage = currentImages.length > 1 ? currentImages[nextIndex] : null;
+    
     socket.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
+      nextImage: nextImage,
       currentIndex: slideshowState.currentIndex,
       isPlaying: slideshowState.isPlaying,
       totalImages: currentImages.length
@@ -585,6 +656,9 @@ async function initialize() {
     
     // Démarrer la surveillance des fichiers
     setupFileWatcher();
+    
+    // Démarrer le timer du diaporama
+    startSlideshowTimer();
     
     // Démarrer le serveur
     server.listen(config.port, () => {
@@ -625,6 +699,10 @@ initialize();
 // Gestion propre de l'arrêt
 process.on('SIGINT', () => {
   console.log('\nArrêt du serveur...');
+  
+  // Arrêter le timer du diaporama
+  stopSlideshowTimer();
+  
   if (fileWatcher) {
     fileWatcher.close();
     console.log('Surveillance des fichiers arrêtée');
@@ -637,6 +715,10 @@ process.on('SIGINT', () => {
 
 process.on('SIGTERM', () => {
   console.log('\nArrêt du serveur (SIGTERM)...');
+  
+  // Arrêter le timer du diaporama
+  stopSlideshowTimer();
+  
   if (fileWatcher) {
     fileWatcher.close();
   }
