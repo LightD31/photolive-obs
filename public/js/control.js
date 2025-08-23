@@ -55,7 +55,7 @@ class PhotoLiveControl {
         this.currentPreviewImage = document.getElementById('current-preview-image');
         this.previewPlaceholder = this.currentPreviewContainer.querySelector('.preview-placeholder');
         this.currentImageName = document.getElementById('current-image-name');
-        this.currentImageIndex = document.getElementById('current-image-index');
+        this.currentImageIndexElement = document.getElementById('current-image-index');
         
         // Control buttons
         this.prevBtn = document.getElementById('prev-btn');
@@ -467,7 +467,7 @@ class PhotoLiveControl {
 
         // Update image info
         this.currentImageName.textContent = currentImage.filename || 'Unknown';
-        this.currentImageIndex.textContent = `${currentIndex + 1} / ${totalImages}`;
+        this.currentImageIndexElement.textContent = `${currentIndex + 1} / ${totalImages}`;
 
         // Highlight current image in grid
         this.highlightCurrentImageInGrid(currentIndex);
@@ -481,7 +481,7 @@ class PhotoLiveControl {
         this.currentPreviewImage.style.display = 'none';
         this.previewPlaceholder.style.display = 'flex';
         this.currentImageName.textContent = '-';
-        this.currentImageIndex.textContent = '0 / 0';
+        this.currentImageIndexElement.textContent = '0 / 0';
         
         // Remove highlighting from grid
         const items = this.imagesPreview.querySelectorAll('.image-item');
