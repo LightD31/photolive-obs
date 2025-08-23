@@ -141,9 +141,11 @@
                             </div>
 
                             <div class="setting-row hidden" id="watermark-image-group">
-                                <select id="watermark-image" class="compact-select">
-                                    <option value="">Select image...</option>
-                                </select>
+                                <div class="file-input-container">
+                                    <input type="file" id="watermark-file" accept="image/*" class="file-input" style="display: none;">
+                                    <button type="button" id="watermark-browse-btn" class="btn btn-secondary compact">📁 Browse...</button>
+                                    <span id="watermark-file-name" class="file-name">No file selected</span>
+                                </div>
                             </div>
 
                             <div class="setting-row">

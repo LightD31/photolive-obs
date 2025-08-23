@@ -23,7 +23,6 @@ class PhotoLiveControl {
         // Performance tracking
         this.loadingData = false;
         this.dataLoaded = false;
-        this.watermarkImagesLoaded = false;
         this.settingUpdateInProgress = false;
         this.updateTimeout = null;
         this.lastUserInteraction = Date.now();
@@ -97,7 +96,9 @@ class PhotoLiveControl {
         this.watermarkEnabled = document.getElementById('watermark-enabled');
         this.watermarkType = document.getElementById('watermark-type');
         this.watermarkText = document.getElementById('watermark-text');
-        this.watermarkImage = document.getElementById('watermark-image');
+        this.watermarkFile = document.getElementById('watermark-file');
+        this.watermarkBrowseBtn = document.getElementById('watermark-browse-btn');
+        this.watermarkFileName = document.getElementById('watermark-file-name');
         this.watermarkPosition = document.getElementById('watermark-position');
         this.watermarkSize = document.getElementById('watermark-size');
         this.watermarkOpacity = document.getElementById('watermark-opacity');
@@ -223,8 +224,15 @@ class PhotoLiveControl {
             this.updateSetting('watermarkText', e.target.value);
         });
 
-        this.watermarkImage.addEventListener('change', (e) => {
-            this.updateSetting('watermarkImage', e.target.value);
+        // Watermark file input
+        this.watermarkBrowseBtn.addEventListener('click', () => {
+            this.watermarkFile.click();
+        });
+
+        this.watermarkFile.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.handleWatermarkFileSelection(e.target.files[0]);
+            }
         });
 
         this.watermarkPosition.addEventListener('change', (e) => {
@@ -323,12 +331,6 @@ class PhotoLiveControl {
             const data = await response.json();
             
             this.handleImagesUpdate(data.images, data.settings);
-            
-            // Load watermark images only once or when needed
-            if (!this.watermarkImagesLoaded) {
-                await this.loadWatermarkImages();
-                this.watermarkImagesLoaded = true;
-            }
         } catch (error) {
             console.error('Error during initial loading:', error);
             this.showNotification('Failed to load data from server', 'error');
@@ -399,7 +401,16 @@ class PhotoLiveControl {
         this.watermarkEnabled.checked = this.settings.showWatermark;
         this.watermarkType.value = this.settings.watermarkType || 'text';
         this.watermarkText.value = this.settings.watermarkText;
-        this.watermarkImage.value = this.settings.watermarkImage || '';
+        
+        // Update watermark file display
+        if (this.settings.watermarkImage) {
+            // Extract filename from path for display
+            const fileName = this.settings.watermarkImage.split('/').pop() || 'Selected file';
+            this.watermarkFileName.textContent = fileName;
+        } else {
+            this.watermarkFileName.textContent = 'No file selected';
+        }
+        
         this.watermarkPosition.value = this.settings.watermarkPosition;
         this.watermarkSize.value = this.settings.watermarkSize || 'medium';
         this.watermarkOpacity.value = this.settings.watermarkOpacity || 80;
@@ -849,23 +860,53 @@ class PhotoLiveControl {
         this.updateGridZoom(zoomLevel);
     }
 
-    async loadWatermarkImages() {
+    async handleWatermarkFileSelection(file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            this.showNotification('Please select an image file', 'error');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            this.showNotification('File size too large. Please select a file smaller than 5MB', 'error');
+            return;
+        }
+
         try {
-            const response = await fetch('/api/watermarks');
-            const watermarks = await response.json();
-            
-            // Clear existing options
-            this.watermarkImage.innerHTML = '<option value="">Select an image...</option>';
-            
-            // Add watermark options
-            watermarks.forEach(watermark => {
-                const option = document.createElement('option');
-                option.value = watermark.path;
-                option.textContent = watermark.name;
-                this.watermarkImage.appendChild(option);
+            // Show upload progress
+            this.watermarkFileName.textContent = 'Uploading...';
+            this.watermarkBrowseBtn.disabled = true;
+
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('watermark', file);
+
+            const response = await fetch('/api/watermark-upload', {
+                method: 'POST',
+                body: formData
             });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Update the UI with the selected file
+                this.watermarkFileName.textContent = file.name;
+                
+                // Update the setting with the uploaded file path
+                this.updateSetting('watermarkImage', data.filePath);
+                
+                this.showNotification('Watermark uploaded successfully', 'success');
+            } else {
+                this.showNotification(data.error || 'Upload failed', 'error');
+                this.watermarkFileName.textContent = 'No file selected';
+            }
         } catch (error) {
-            console.error('Error loading watermarks:', error);
+            console.error('Error uploading watermark:', error);
+            this.showNotification('Upload failed. Please try again.', 'error');
+            this.watermarkFileName.textContent = 'No file selected';
+        } finally {
+            this.watermarkBrowseBtn.disabled = false;
         }
     }
 

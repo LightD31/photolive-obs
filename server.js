@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const chokidar = require('chokidar');
 const cors = require('cors');
+const multer = require('multer');
 
 const app = express();
 const server = http.createServer(app);
@@ -108,7 +109,41 @@ app.use((req, res, next) => {
 app.use(express.static(config.publicPath));
 // Servir les filigranes statiquement
 app.use('/watermarks', express.static(path.join(__dirname, 'watermarks')));
+// Servir les filigranes uploadés
+app.use('/uploads/watermarks', express.static(path.join(__dirname, 'uploads', 'watermarks')));
 // Note: La route /photos est maintenant gérée dynamiquement
+
+// Configuration multer pour les uploads de filigranes
+const watermarkStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, 'uploads', 'watermarks');
+    // Créer le dossier s'il n'existe pas
+    require('fs').mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Générer un nom de fichier unique avec timestamp
+    const timestamp = Date.now();
+    const extension = path.extname(file.originalname);
+    const name = path.basename(file.originalname, extension);
+    cb(null, `${name}_${timestamp}${extension}`);
+  }
+});
+
+const uploadWatermark = multer({
+  storage: watermarkStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Vérifier le type de fichier
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seuls les fichiers image sont acceptés'), false);
+    }
+  }
+});
 
 // Variables globales
 let currentImages = [];
@@ -494,6 +529,30 @@ app.get('/api/watermarks', async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la lecture des filigranes:', error);
     res.json([]);
+  }
+});
+
+// Route pour uploader un filigrane
+app.post('/api/watermark-upload', uploadWatermark.single('watermark'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier fourni' });
+    }
+
+    console.log('Filigrane uploadé:', req.file.filename);
+
+    // Retourner le chemin du fichier uploadé
+    const filePath = `/uploads/watermarks/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      filePath: filePath,
+      filename: req.file.filename,
+      originalName: req.file.originalname
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'upload du filigrane:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'upload' });
   }
 });
 
