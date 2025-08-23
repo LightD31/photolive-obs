@@ -196,7 +196,13 @@
                 <div class="right-column">
                     <!-- Image preview grid -->
                     <section class="control-section full-height">
-                        <h2>🖼️ Images <span id="images-count">0 images</span></h2>
+                        <div class="section-header">
+                            <h2>🖼️ Images <span id="images-count">0 images</span></h2>
+                            <div class="zoom-control">
+                                <label for="grid-zoom">🔍</label>
+                                <input type="range" id="grid-zoom" min="1" max="4" step="1" value="2" title="Grid zoom level">
+                            </div>
+                        </div>
                         <div id="images-preview" class="images-grid compact">
                             <!-- Images will be added dynamically -->
                         </div>
