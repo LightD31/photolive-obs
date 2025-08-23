@@ -27,7 +27,6 @@ function loadConfig() {
       publicPath: path.join(__dirname, 'public'),
       slideInterval: configData.slideshow.interval,
       supportedFormats: configData.slideshow.supportedFormats,
-      transitions: configData.features.transitions,
       filters: configData.features.filters,
       watermarkPositions: configData.features.watermarkPositions,
       watermarkTypes: configData.features.watermarkTypes || [
@@ -51,12 +50,6 @@ function loadConfig() {
       publicPath: path.join(__dirname, 'public'),
       slideInterval: 5000,
       supportedFormats: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff'],
-      transitions: [
-        { id: 'none', name: 'Aucune', duration: 0 },
-        { id: 'fade', name: 'Fondu', duration: 1000 },
-        { id: 'slide', name: 'Glissement', duration: 1000 },
-        { id: 'zoom', name: 'Zoom', duration: 1500 }
-      ],
       filters: [
         { id: 'none', name: 'Aucun' },
         { id: 'sepia', name: 'Sépia' },
@@ -64,7 +57,6 @@ function loadConfig() {
       ],
       defaults: {
         interval: 5000,
-        transition: 'fade',
         filter: 'none',
         showWatermark: false,
         watermarkText: 'PhotoLive OBS',
@@ -358,7 +350,7 @@ app.post('/api/settings', (req, res) => {
   try {
     // Validation des données d'entrée
     const allowedSettings = [
-      'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
+      'interval', 'filter', 'showWatermark', 'watermarkText',
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
       'transparentBackground', 'photosPath'

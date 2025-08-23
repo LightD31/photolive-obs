@@ -6,7 +6,6 @@ class PhotoLiveSlideshow {
         this.currentIndex = 0;
         this.settings = {
             interval: 5000,
-            transition: 'fade',
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
@@ -21,8 +20,6 @@ class PhotoLiveSlideshow {
             transparentBackground: false
         };
         this.isPlaying = true;
-        this.isTransitioning = false;
-        this.transitionTimer = null;
         
         // Données d'images fournies par le serveur
         this.serverCurrentImage = null;
@@ -204,42 +201,27 @@ class PhotoLiveSlideshow {
     }
 
     transitionToServerImage(imagePath, direction = 1) {
-        // Transition vers l'image demandée par le serveur
-        console.log('transitionToServerImage appelée:', imagePath, 'direction:', direction, 'isTransitioning:', this.isTransitioning);
-        
-        if (this.isTransitioning) {
-            // Si une transition est en cours, l'interrompre proprement et afficher directement
-            console.log('Transition en cours, nettoyage et affichage direct');
-            this.cleanupTransition();
-            this.displayImageDirectly(imagePath);
-            return;
-        }
-
-        this.isTransitioning = true;
-        
-        // Démarrer la transition directement - le préchargement est géré dans performTransition
-        this.performTransition(imagePath);
+        // Display the image directly without transitions
+        console.log('Displaying image:', imagePath);
+        this.displayImageDirectly(imagePath);
     }
 
     displayImageDirectly(imagePath) {
-        // Affichage direct sans transition pour la synchronisation
+        // Display image directly without transitions
         if (!this.currentImage) {
             console.error('currentImage element not found');
             return;
         }
 
-        // Arrêter toute transition en cours
-        this.isTransitioning = false;
-
         const img = new Image();
         img.onload = () => {
-            // Nettoyer les classes de transition et remettre l'image principale visible
+            // Set the image and apply filter
             this.currentImage.src = imagePath;
             this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
             this.currentImage.style.opacity = '1';
             this.currentImage.style.transform = '';
             
-            // S'assurer que l'image suivante est cachée et nettoyée
+            // Ensure next image is hidden and clean
             if (this.nextImage) {
                 this.nextImage.classList.add('hidden');
                 this.nextImage.style.opacity = '0';
@@ -248,10 +230,10 @@ class PhotoLiveSlideshow {
             }
             
             this.preloadNextImage();
-            console.log('Image affichée directement:', imagePath);
+            console.log('Image displayed:', imagePath);
         };
         img.onerror = () => {
-            console.error('Erreur de chargement lors de l\'affichage direct:', imagePath);
+            console.error('Error loading image:', imagePath);
         };
         img.src = imagePath;
     }
@@ -533,238 +515,6 @@ class PhotoLiveSlideshow {
         }
     }
 
-    performTransition(newImagePath) {
-        console.log('performTransition appelée avec:', newImagePath, 'transition:', this.settings.transition);
-        
-        // Nettoyer toute transition en cours
-        this.cleanupTransition();
-        
-        switch (this.settings.transition) {
-            case 'none':
-                this.noneTransition(newImagePath);
-                break;
-            case 'fade':
-                this.fadeTransition(newImagePath);
-                break;
-            case 'slide':
-                this.slideTransition(newImagePath);
-                break;
-            case 'zoom':
-                this.zoomTransition(newImagePath);
-                break;
-            default:
-                console.log('Transition par défaut: fade');
-                this.fadeTransition(newImagePath);
-        }
-    }
-
-    cleanupTransition() {
-        // Nettoyer les timers de transition en cours
-        if (this.transitionTimer) {
-            clearTimeout(this.transitionTimer);
-            this.transitionTimer = null;
-        }
-        
-        // Réinitialiser les styles et classes
-        if (this.currentImage) {
-            this.currentImage.style.transform = '';
-            this.currentImage.style.opacity = '1';
-            this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
-        }
-        
-        if (this.nextImage) {
-            this.nextImage.style.transform = '';
-            this.nextImage.style.opacity = '0';
-            this.nextImage.className = 'slide-image hidden';
-            this.nextImage.classList.add('hidden');
-        }
-    }
-
-    noneTransition(newImagePath) {
-        console.log('Transition none vers:', newImagePath);
-        
-        // Précharger l'image avant de l'afficher
-        const img = new Image();
-        img.onload = () => {
-            this.currentImage.src = newImagePath;
-            this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
-            this.currentImage.style.opacity = '1';
-            this.currentImage.style.transform = '';
-            
-            this.isTransitioning = false;
-            this.preloadNextImage();
-            console.log('Transition none terminée');
-        };
-        img.onerror = () => {
-            console.error('Erreur de chargement lors de la transition none:', newImagePath);
-            this.isTransitioning = false;
-        };
-        img.src = newImagePath;
-    }
-
-    fadeTransition(newImagePath) {
-        if (!this.nextImage) {
-            console.error('nextImage element not found, falling back to direct display');
-            this.displayImageDirectly(newImagePath);
-            return;
-        }
-
-        console.log('Démarrage transition fade vers:', newImagePath);
-        
-        // Précharger l'image avant de commencer la transition
-        const img = new Image();
-        img.onload = () => {
-            this.startFadeTransition(newImagePath);
-        };
-        img.onerror = () => {
-            console.error('Erreur de chargement lors de la transition fade:', newImagePath);
-            this.isTransitioning = false;
-        };
-        img.src = newImagePath;
-    }
-
-    startFadeTransition(newImagePath) {
-        // Préparer l'image suivante
-        this.nextImage.src = newImagePath;
-        this.nextImage.className = `slide-image transition-fade filter-${this.settings.filter}`;
-        this.nextImage.style.opacity = '0';
-        this.nextImage.style.transform = '';
-        this.nextImage.classList.remove('hidden');
-
-        // Utiliser requestAnimationFrame pour des transitions plus fluides
-        requestAnimationFrame(() => {
-            // Fade out current, fade in next
-            if (this.currentImage) {
-                this.currentImage.style.opacity = '0';
-            }
-            this.nextImage.style.opacity = '1';
-            
-            // Utiliser un seul timer pour finir la transition
-            this.transitionTimer = setTimeout(() => {
-                this.finishTransition();
-                console.log('Transition fade terminée');
-            }, 1000); // Correspond à la durée CSS
-        });
-    }
-
-    slideTransition(newImagePath) {
-        if (!this.nextImage) {
-            console.error('nextImage element not found, falling back to direct display');
-            this.displayImageDirectly(newImagePath);
-            return;
-        }
-
-        console.log('Démarrage transition slide vers:', newImagePath);
-        
-        // Précharger l'image avant de commencer la transition
-        const img = new Image();
-        img.onload = () => {
-            this.startSlideTransition(newImagePath);
-        };
-        img.onerror = () => {
-            console.error('Erreur de chargement lors de la transition slide:', newImagePath);
-            this.isTransitioning = false;
-        };
-        img.src = newImagePath;
-    }
-
-    startSlideTransition(newImagePath) {
-        // Préparer l'image suivante
-        this.nextImage.src = newImagePath;
-        this.nextImage.className = `slide-image transition-slide filter-${this.settings.filter}`;
-        this.nextImage.style.opacity = '1';
-        this.nextImage.style.transform = 'translateX(100%)';
-        this.nextImage.classList.remove('hidden');
-
-        requestAnimationFrame(() => {
-            // Démarrer les animations
-            if (this.currentImage) {
-                this.currentImage.style.transform = 'translateX(-100%)';
-            }
-            this.nextImage.style.transform = 'translateX(0)';
-            
-            this.transitionTimer = setTimeout(() => {
-                this.finishTransition();
-                console.log('Transition slide terminée');
-            }, 1000); // Correspond à la durée CSS
-        });
-    }
-
-    zoomTransition(newImagePath) {
-        if (!this.nextImage) {
-            console.error('nextImage element not found, falling back to direct display');
-            this.displayImageDirectly(newImagePath);
-            return;
-        }
-
-        console.log('Démarrage transition zoom vers:', newImagePath);
-        
-        // Précharger l'image avant de commencer la transition
-        const img = new Image();
-        img.onload = () => {
-            this.startZoomTransition(newImagePath);
-        };
-        img.onerror = () => {
-            console.error('Erreur de chargement lors de la transition zoom:', newImagePath);
-            this.isTransitioning = false;
-        };
-        img.src = newImagePath;
-    }
-
-    startZoomTransition(newImagePath) {
-        // Préparer l'image suivante
-        this.nextImage.src = newImagePath;
-        this.nextImage.className = `slide-image transition-zoom filter-${this.settings.filter}`;
-        this.nextImage.style.opacity = '0';
-        this.nextImage.style.transform = 'scale(1.1)';
-        this.nextImage.classList.remove('hidden');
-
-        requestAnimationFrame(() => {
-            // Démarrer les animations
-            if (this.currentImage) {
-                this.currentImage.style.opacity = '0';
-                this.currentImage.style.transform = 'scale(0.9)';
-            }
-            this.nextImage.style.opacity = '1';
-            this.nextImage.style.transform = 'scale(1)';
-            
-            this.transitionTimer = setTimeout(() => {
-                this.finishTransition();
-                console.log('Transition zoom terminée');
-            }, 1500); // Durée plus longue pour le zoom
-        });
-    }
-
-    finishTransition() {
-        // Nettoyer le timer
-        if (this.transitionTimer) {
-            clearTimeout(this.transitionTimer);
-            this.transitionTimer = null;
-        }
-
-        // Échanger les éléments de manière propre
-        if (this.nextImage && this.currentImage) {
-            // L'image suivante devient l'image courante
-            this.nextImage.className = `slide-image visible filter-${this.settings.filter}`;
-            this.nextImage.style.opacity = '1';
-            this.nextImage.style.transform = '';
-            
-            // L'ancienne image courante devient cachée
-            this.currentImage.className = 'slide-image hidden';
-            this.currentImage.style.opacity = '0';
-            this.currentImage.style.transform = '';
-            this.currentImage.classList.add('hidden');
-            
-            // Échanger les références
-            const temp = this.currentImage;
-            this.currentImage = this.nextImage;
-            this.nextImage = temp;
-        }
-        
-        this.isTransitioning = false;
-        this.preloadNextImage();
-    }
-
     startSlideshow() {
         // Le timer est maintenant géré côté serveur
         // Cette méthode ne fait que mettre à jour l'état local
@@ -816,9 +566,7 @@ class PhotoLiveSlideshow {
     }
 
     destroy() {
-        // Nettoyer les timers et événements lors de la destruction
-        this.cleanupTransition();
-        
+        // Clean up events when destroying
         if (this.socket) {
             this.socket.disconnect();
         }
