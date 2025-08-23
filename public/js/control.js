@@ -73,6 +73,7 @@ class PhotoLiveControl {
         // Status elements
         this.connectionStatus = document.getElementById('connection-status');
         this.imagesCount = document.getElementById('images-count');
+        this.imagesGridCount = document.getElementById('images-grid-count');
         
         // Preview elements
         this.currentPreviewContainer = document.getElementById('current-preview-container');
@@ -371,7 +372,11 @@ class PhotoLiveControl {
 
     updateImages(images) {
         this.images = images;
-        this.imagesCount.textContent = `${images.length} image${images.length > 1 ? 's' : ''}`;
+        const countText = `${images.length} image${images.length > 1 ? 's' : ''}`;
+        this.imagesCount.textContent = countText;
+        if (this.imagesGridCount) {
+            this.imagesGridCount.textContent = countText;
+        }
         this.renderImagesPreview();
     }
 
