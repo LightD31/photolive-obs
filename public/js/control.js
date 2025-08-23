@@ -28,6 +28,12 @@ class PhotoLiveControl {
         this.updateTimeout = null;
         this.lastUserInteraction = Date.now();
         
+        // Grid performance optimizations
+        this.isRenderingGrid = false;
+        this.pendingGridUpdate = false;
+        this.lastImageListHash = null;
+        this.sortedImagesCache = null;
+        
         this.init();
     }
 
@@ -39,11 +45,28 @@ class PhotoLiveControl {
         this.loadInitialData();
         this.updateSlideshowUrl();
         this.initializeGridZoom();
+        this.setupGridEventDelegation();
         
         // Request current slideshow state
         if (this.socket) {
             this.socket.emit('get-slideshow-state');
         }
+    }
+
+    // Generate a hash for the images array to detect changes
+    generateImageListHash(images) {
+        return images.map(img => `${img.path}-${img.modified}`).join('|');
+    }
+
+    // Setup event delegation for grid clicks to improve performance
+    setupGridEventDelegation() {
+        this.imagesPreview.addEventListener('click', (e) => {
+            const imageItem = e.target.closest('.image-item');
+            if (imageItem && imageItem.dataset.index) {
+                const originalIndex = parseInt(imageItem.dataset.index);
+                this.socket.emit('jump-to-image', originalIndex);
+            }
+        });
     }
 
     setupElements() {
@@ -499,22 +522,34 @@ class PhotoLiveControl {
     }
 
     highlightCurrentImageInGrid(currentIndex) {
-        const items = this.imagesPreview.querySelectorAll('.image-item');
-        items.forEach((item) => {
-            // Use the original index stored in data-index attribute
-            const originalIndex = parseInt(item.dataset.index);
-            if (originalIndex === currentIndex) {
-                item.classList.add('current');
-            } else {
-                item.classList.remove('current');
+        // Use the optimized highlighting method
+        this.currentImageIndex = currentIndex;
+        this.updateCurrentImageHighlighting();
+    }
+
+    renderImagesPreview() {
+        // Prevent concurrent renders and add throttling
+        if (this.isRenderingGrid) {
+            this.pendingGridUpdate = true;
+            return;
+        }
+        
+        this.isRenderingGrid = true;
+        
+        // Use requestAnimationFrame for smooth rendering
+        requestAnimationFrame(() => {
+            this.performGridRender();
+            this.isRenderingGrid = false;
+            
+            // Process pending update if any
+            if (this.pendingGridUpdate) {
+                this.pendingGridUpdate = false;
+                this.renderImagesPreview();
             }
         });
     }
 
-    renderImagesPreview() {
-        // Optimize rendering for large image sets
-        const fragment = document.createDocumentFragment();
-        
+    performGridRender() {
         if (this.images.length === 0) {
             this.imagesPreview.innerHTML = `
                 <div class="empty-state">
@@ -522,58 +557,96 @@ class PhotoLiveControl {
                     <p>Add images (JPG, PNG, GIF, BMP, TIFF) to the "photos" folder to get started.</p>
                 </div>
             `;
+            this.lastImageListHash = null;
+            this.sortedImagesCache = null;
             return;
         }
 
-        // Create a chronologically sorted copy for grid display (always chronological order)
-        const chronologicalImages = [...this.images].map((image, originalIndex) => ({
-            ...image,
-            originalIndex
-        })).sort((a, b) => new Date(b.modified) - new Date(a.modified));
+        // Check if images have actually changed
+        const currentHash = this.generateImageListHash(this.images);
+        if (currentHash === this.lastImageListHash && this.sortedImagesCache) {
+            // Images haven't changed, just update highlighting if needed
+            this.updateCurrentImageHighlighting();
+            return;
+        }
 
-        // Render all images in chronological order
-        chronologicalImages.forEach((image, displayIndex) => {
-            const imageItem = document.createElement('div');
-            imageItem.className = 'image-item';
-            imageItem.dataset.index = image.originalIndex; // Store original index for navigation
-            imageItem.dataset.displayIndex = displayIndex; // Store display index for highlighting
-            
-            const img = document.createElement('img');
-            img.src = image.path;
-            img.alt = image.filename;
-            img.loading = 'lazy';
-            
-            // Add error handling for broken images
-            img.onerror = () => {
-                img.style.display = 'none';
+        // Cache the sorted images to avoid re-sorting on every render
+        if (!this.sortedImagesCache || currentHash !== this.lastImageListHash) {
+            this.sortedImagesCache = [...this.images].map((image, originalIndex) => ({
+                ...image,
+                originalIndex
+            })).sort((a, b) => new Date(b.modified) - new Date(a.modified));
+            this.lastImageListHash = currentHash;
+        }
+
+        // Use DocumentFragment for efficient DOM manipulation
+        const fragment = document.createDocumentFragment();
+
+        // Batch DOM creation
+        this.sortedImagesCache.forEach((image, displayIndex) => {
+            const imageItem = this.createImageItem(image, displayIndex);
+            fragment.appendChild(imageItem);
+        });
+
+        // Single DOM update
+        this.imagesPreview.innerHTML = '';
+        this.imagesPreview.appendChild(fragment);
+    }
+
+    createImageItem(image, displayIndex) {
+        const imageItem = document.createElement('div');
+        imageItem.className = 'image-item';
+        imageItem.dataset.index = image.originalIndex;
+        imageItem.dataset.displayIndex = displayIndex;
+        
+        const img = document.createElement('img');
+        img.src = image.path;
+        img.alt = image.filename;
+        img.loading = 'lazy';
+        img.decoding = 'async'; // Improve performance for large images
+        
+        // Optimized error handling
+        img.onerror = () => {
+            img.style.display = 'none';
+            if (!imageItem.querySelector('.image-error')) {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'image-error';
                 errorDiv.textContent = '❌';
                 imageItem.appendChild(errorDiv);
-            };
-            
-            const info = document.createElement('div');
-            info.className = 'image-info';
-            info.innerHTML = `
-                <div>${image.filename}</div>
-                <div>
-                    ${this.formatFileSize(image.size)} • ${this.formatDate(image.modified)}
-                </div>
-            `;
-            
-            // Add click listener to jump to this image using original index
-            imageItem.addEventListener('click', () => {
-                this.socket.emit('jump-to-image', image.originalIndex);
-            });
-            
-            imageItem.appendChild(img);
-            imageItem.appendChild(info);
-            fragment.appendChild(imageItem);
-        });
+            }
+        };
+        
+        const info = document.createElement('div');
+        info.className = 'image-info';
+        info.innerHTML = `
+            <div>${this.escapeHtml(image.filename)}</div>
+            <div>
+                ${this.formatFileSize(image.size)} • ${this.formatDate(image.modified)}
+            </div>
+        `;
+        
+        imageItem.appendChild(img);
+        imageItem.appendChild(info);
+        
+        return imageItem;
+    }
 
-        // Clear and append all at once to minimize reflows
-        this.imagesPreview.innerHTML = '';
-        this.imagesPreview.appendChild(fragment);
+    // Helper method to escape HTML and prevent XSS
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Update only the current image highlighting without full re-render
+    updateCurrentImageHighlighting() {
+        const items = this.imagesPreview.querySelectorAll('.image-item');
+        const currentIndex = this.currentImageIndex;
+        
+        items.forEach((item) => {
+            const originalIndex = parseInt(item.dataset.index);
+            item.classList.toggle('current', originalIndex === currentIndex);
+        });
     }
 
     formatFileSize(bytes) {
