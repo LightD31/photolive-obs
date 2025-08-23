@@ -500,8 +500,10 @@ class PhotoLiveControl {
 
     highlightCurrentImageInGrid(currentIndex) {
         const items = this.imagesPreview.querySelectorAll('.image-item');
-        items.forEach((item, index) => {
-            if (index === currentIndex) {
+        items.forEach((item) => {
+            // Use the original index stored in data-index attribute
+            const originalIndex = parseInt(item.dataset.index);
+            if (originalIndex === currentIndex) {
                 item.classList.add('current');
             } else {
                 item.classList.remove('current');
@@ -523,11 +525,18 @@ class PhotoLiveControl {
             return;
         }
 
-        // Render all images - remove the arbitrary limit
-        this.images.forEach((image, index) => {
+        // Create a chronologically sorted copy for grid display (always chronological order)
+        const chronologicalImages = [...this.images].map((image, originalIndex) => ({
+            ...image,
+            originalIndex
+        })).sort((a, b) => new Date(b.modified) - new Date(a.modified));
+
+        // Render all images in chronological order
+        chronologicalImages.forEach((image, displayIndex) => {
             const imageItem = document.createElement('div');
             imageItem.className = 'image-item';
-            imageItem.dataset.index = index;
+            imageItem.dataset.index = image.originalIndex; // Store original index for navigation
+            imageItem.dataset.displayIndex = displayIndex; // Store display index for highlighting
             
             const img = document.createElement('img');
             img.src = image.path;
@@ -552,9 +561,9 @@ class PhotoLiveControl {
                 </div>
             `;
             
-            // Add click listener to jump to this image
+            // Add click listener to jump to this image using original index
             imageItem.addEventListener('click', () => {
-                this.socket.emit('jump-to-image', index);
+                this.socket.emit('jump-to-image', image.originalIndex);
             });
             
             imageItem.appendChild(img);
