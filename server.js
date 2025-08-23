@@ -558,11 +558,15 @@ io.on('connection', (socket) => {
   // Gestion des commandes de contrôle
   socket.on('next-image', () => {
     changeImage(1);
+    // Redémarrer le timer pour réinitialiser l'intervalle
+    restartSlideshowTimer();
     socket.broadcast.emit('next-image');
   });
 
   socket.on('prev-image', () => {
     changeImage(-1);
+    // Redémarrer le timer pour réinitialiser l'intervalle
+    restartSlideshowTimer();
     socket.broadcast.emit('prev-image');
   });
 
