@@ -32,7 +32,7 @@ if not exist "photos" (
 echo ✅ Demarrage du serveur...
 echo.
 echo 🌐 Interface de contrôle : http://localhost:3001/control
-echo 📺 Page diaporama OBS : http://localhost:3001/slideshow
+echo 📺 Page diaporama OBS : http://localhost:3001/
 echo.
 echo Appuyez sur Ctrl+C pour arrêter le serveur
 echo.

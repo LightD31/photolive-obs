@@ -4,6 +4,7 @@ class PhotoLiveControl {
         this.images = [];
         this.settings = {
             interval: 5000,
+            transition: 'fade',
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
@@ -65,6 +66,7 @@ class PhotoLiveControl {
         // Settings elements
         this.intervalSlider = document.getElementById('interval-slider');
         this.intervalValue = document.getElementById('interval-value');
+        this.transitionSelect = document.getElementById('transition-select');
         this.filterSelect = document.getElementById('filter-select');
         
         // Watermark elements
@@ -86,6 +88,7 @@ class PhotoLiveControl {
         this.repeatLatest = document.getElementById('repeat-latest');
         this.latestCount = document.getElementById('latest-count');
         this.latestCountValue = document.getElementById('latest-count-value');
+        this.latestCountContainer = document.getElementById('latest-count-container');
         this.shuffleImages = document.getElementById('shuffle-images');
         this.transparentBackground = document.getElementById('transparent-background');
         
@@ -217,6 +220,7 @@ class PhotoLiveControl {
         // Advanced options
         this.repeatLatest.addEventListener('change', (e) => {
             this.updateSetting('repeatLatest', e.target.checked);
+            this.toggleLatestCountContainer(e.target.checked);
         });
 
         this.latestCount.addEventListener('input', (e) => {
@@ -270,19 +274,6 @@ class PhotoLiveControl {
                     this.togglePlayPause();
                     break;
             }
-        });
-
-        // Zoom controls
-        this.zoomInBtn.addEventListener('click', () => {
-            this.zoomIn();
-        });
-
-        this.zoomOutBtn.addEventListener('click', () => {
-            this.zoomOut();
-        });
-
-        this.zoomResetBtn.addEventListener('click', () => {
-            this.resetZoom();
         });
     }
 
@@ -388,6 +379,7 @@ class PhotoLiveControl {
         this.repeatLatest.checked = this.settings.repeatLatest;
         this.latestCount.value = this.settings.latestCount;
         this.latestCountValue.textContent = this.settings.latestCount;
+        this.toggleLatestCountContainer(this.settings.repeatLatest);
         this.shuffleImages.checked = this.settings.shuffleImages;
         this.transparentBackground.checked = this.settings.transparentBackground;
         
@@ -736,6 +728,14 @@ class PhotoLiveControl {
         }
     }
 
+    toggleLatestCountContainer(isEnabled) {
+        if (isEnabled) {
+            this.latestCountContainer.classList.remove('hidden');
+        } else {
+            this.latestCountContainer.classList.add('hidden');
+        }
+    }
+
     async loadWatermarkImages() {
         try {
             const response = await fetch('/api/watermarks');
@@ -790,44 +790,6 @@ class PhotoLiveControl {
                 }
             }
         });
-    }
-
-    // Zoom functionality methods
-    zoomIn() {
-        const currentIndex = this.zoomLevels.indexOf(this.zoomLevel);
-        if (currentIndex < this.zoomLevels.length - 1) {
-            this.setZoom(this.zoomLevels[currentIndex + 1]);
-        }
-    }
-
-    zoomOut() {
-        const currentIndex = this.zoomLevels.indexOf(this.zoomLevel);
-        if (currentIndex > 0) {
-            this.setZoom(this.zoomLevels[currentIndex - 1]);
-        }
-    }
-
-    resetZoom() {
-        this.setZoom(100);
-    }
-
-    setZoom(level) {
-        // Remove all zoom classes
-        this.zoomLevels.forEach(zoomLevel => {
-            this.imagesPreview.classList.remove(`zoom-${zoomLevel}`);
-        });
-
-        // Set new zoom level
-        this.zoomLevel = level;
-        this.imagesPreview.classList.add(`zoom-${level}`);
-
-        // Update display
-        this.zoomLevelDisplay.textContent = `${level}%`;
-
-        // Update button states
-        const currentIndex = this.zoomLevels.indexOf(level);
-        this.zoomOutBtn.disabled = currentIndex === 0;
-        this.zoomInBtn.disabled = currentIndex === this.zoomLevels.length - 1;
     }
 }
 

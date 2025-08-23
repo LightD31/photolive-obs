@@ -45,14 +45,14 @@ npm install
 npm start
 ```
 
-The application will be accessible at: `http://localhost:3000`
+The application will be accessible at: `http://localhost:3001`
 
 ## 📋 Usage
 
 ### Configuration in OBS Studio
 
 1. **Add a "Browser" source** to your OBS scene
-2. **Configure the URL**: `http://localhost:3000`
+2. **Configure the URL**: `http://localhost:3001`
 3. **Set dimensions** according to your needs (e.g.: 1920x1080)
 4. **Enable "Refresh browser when scene becomes active"** (optional)
 
@@ -64,7 +64,7 @@ The application will be accessible at: `http://localhost:3000`
 
 ### Control interface
 
-Access the control interface at: `http://localhost:3000/control`
+Access the control interface at: `http://localhost:3001/control`
 
 #### Available controls
 
@@ -78,7 +78,7 @@ Access the control interface at: `http://localhost:3000/control`
 
 ### Keyboard shortcuts
 
-On the slideshow page (`http://localhost:3000`):
+On the slideshow page (`http://localhost:3001`):
 
 - `→` or `Space`: Next image
 - `←`: Previous image  
@@ -117,7 +117,7 @@ The `config/default.json` file contains default settings:
 ```json
 {
   "server": {
-    "port": 3000,
+    "port": 3001,
     "photosPath": "./photos"
   },
   "slideshow": {
@@ -184,7 +184,7 @@ Events received from client:
 
 - Check that Node.js is installed: `node --version`
 - Check that dependencies are installed: `npm install`
-- Check that port 3000 is not in use
+- Check that port 3001 is not in use
 
 ### Images don't appear
 
@@ -194,7 +194,7 @@ Events received from client:
 
 ### OBS doesn't load the page
 
-- Check the URL: `http://localhost:3000`
+- Check the URL: `http://localhost:3001`
 - Test first in a web browser
 - Check browser source settings in OBS
 
