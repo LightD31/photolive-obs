@@ -112,6 +112,7 @@ app.use('/watermarks', express.static(path.join(__dirname, 'watermarks')));
 
 // Variables globales
 let currentImages = [];
+let shuffledImages = []; // Version mélangée des images
 let newlyAddedImages = new Set(); // Tracker des nouvelles images
 let currentPhotosPath = config.photosPath; // Dossier photos actuel
 let fileWatcher = null; // Instance du watcher de fichiers
@@ -129,6 +130,47 @@ let slideshowState = {
 
 // Timer du diaporama côté serveur
 let slideshowTimer = null;
+
+// Fonction pour mélanger un tableau (Fisher-Yates shuffle)
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Fonction pour obtenir la liste d'images actuelle (mélangée ou non)
+function getCurrentImagesList() {
+  return slideshowSettings.shuffleImages ? shuffledImages : currentImages;
+}
+
+// Fonction pour créer/mettre à jour la liste mélangée
+function updateShuffledImagesList(newImageAdded = null) {
+  if (!slideshowSettings.shuffleImages) {
+    // Mode normal : utiliser l'ordre chronologique
+    shuffledImages = [...currentImages];
+    console.log('Mode normal: ordre chronologique');
+    return;
+  }
+
+  // Séparer les nouvelles images des existantes
+  const newImages = currentImages.filter(img => img.isNew);
+  const existingImages = currentImages.filter(img => !img.isNew);
+
+  // Mélanger les images existantes
+  const shuffledExisting = shuffleArray([...existingImages]);
+  
+  // Priorité : nouvelles images d'abord, puis les existantes mélangées
+  shuffledImages = [...newImages, ...shuffledExisting];
+  
+  console.log(`🔀 Mode mélangé: ${newImages.length} nouvelles images en priorité, ${existingImages.length} existantes mélangées`);
+  
+  if (newImages.length > 0) {
+    console.log('📸 Nouvelles images:', newImages.map(img => img.filename));
+  }
+}
 
 // Fonction pour scanner les images
 async function scanImages(newImageFilename = null) {
@@ -159,12 +201,15 @@ async function scanImages(newImageFilename = null) {
     
     currentImages = images;
     
+    // Créer/mettre à jour la liste mélangée selon les paramètres
+    updateShuffledImagesList(newImageFilename);
+    
     // Mettre à jour l'état du diaporama
     updateSlideshowState();
     
-    // Émettre la liste mise à jour aux clients
+    // Émettre la liste mise à jour aux clients avec la liste appropriée
     io.emit('images-updated', {
-      images: currentImages,
+      images: getCurrentImagesList(), // Envoyer la liste appropriée (mélangée ou non)
       settings: slideshowSettings,
       newImageAdded: newImageFilename
     });
@@ -182,33 +227,36 @@ async function scanImages(newImageFilename = null) {
 
 // Mettre à jour l'état du diaporama
 function updateSlideshowState() {
-  if (currentImages.length === 0) {
+  const imagesList = getCurrentImagesList();
+  
+  if (imagesList.length === 0) {
     slideshowState.currentImage = null;
     slideshowState.currentIndex = 0;
     return;
   }
 
   // S'assurer que l'index est valide
-  if (slideshowState.currentIndex >= currentImages.length) {
+  if (slideshowState.currentIndex >= imagesList.length) {
     slideshowState.currentIndex = 0;
   } else if (slideshowState.currentIndex < 0) {
-    slideshowState.currentIndex = currentImages.length - 1;
+    slideshowState.currentIndex = imagesList.length - 1;
   }
 
-  slideshowState.currentImage = currentImages[slideshowState.currentIndex];
+  slideshowState.currentImage = imagesList[slideshowState.currentIndex];
   
   // Émettre l'état mis à jour aux clients
   io.emit('slideshow-state', {
     currentImage: slideshowState.currentImage,
     currentIndex: slideshowState.currentIndex,
     isPlaying: slideshowState.isPlaying,
-    totalImages: currentImages.length
+    totalImages: imagesList.length
   });
 }
 
 // Changer d'image avec émission d'événement
 function changeImage(direction = 1) {
-  if (currentImages.length === 0) return;
+  const imagesList = getCurrentImagesList();
+  if (imagesList.length === 0) return;
   
   slideshowState.currentIndex += direction;
   updateSlideshowState();
@@ -225,7 +273,8 @@ function changeImage(direction = 1) {
 function startSlideshowTimer() {
   stopSlideshowTimer();
   
-  if (currentImages.length > 1 && slideshowState.isPlaying) {
+  const imagesList = getCurrentImagesList();
+  if (imagesList.length > 1 && slideshowState.isPlaying) {
     slideshowTimer = setInterval(() => {
       console.log('Timer serveur: passage à l\'image suivante');
       changeImage(1);
@@ -327,7 +376,7 @@ function setupFileWatcher() {
 // Routes API
 app.get('/api/images', (req, res) => {
   res.json({
-    images: currentImages,
+    images: getCurrentImagesList(),
     settings: slideshowSettings
   });
 });
@@ -387,7 +436,29 @@ app.post('/api/settings', (req, res) => {
       }
     }
     
+    const previousShuffleState = slideshowSettings.shuffleImages;
     slideshowSettings = { ...slideshowSettings, ...newSettings };
+    
+    // Si l'état du mélange a changé, recréer la liste mélangée
+    if (newSettings.shuffleImages !== undefined && previousShuffleState !== newSettings.shuffleImages) {
+      console.log(`🔄 Mode mélange changé: ${previousShuffleState} → ${newSettings.shuffleImages}`);
+      updateShuffledImagesList();
+      
+      // Réajuster l'index si nécessaire
+      const imagesList = getCurrentImagesList();
+      if (slideshowState.currentIndex >= imagesList.length) {
+        slideshowState.currentIndex = 0;
+      }
+      
+      // Mettre à jour l'état du diaporama pour refléter la nouvelle liste
+      updateSlideshowState();
+      
+      // Émettre la nouvelle liste d'images aux clients
+      io.emit('images-updated', {
+        images: imagesList,
+        settings: slideshowSettings
+      });
+    }
     
     // Si l'intervalle a changé, redémarrer le timer
     if (newSettings.interval) {
@@ -539,7 +610,7 @@ io.on('connection', (socket) => {
   
   // Envoyer l'état actuel au nouveau client
   socket.emit('images-updated', {
-    images: currentImages,
+    images: getCurrentImagesList(),
     settings: slideshowSettings
   });
   
@@ -571,7 +642,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('jump-to-image', (index) => {
-    if (index >= 0 && index < currentImages.length) {
+    const imagesList = getCurrentImagesList();
+    if (index >= 0 && index < imagesList.length) {
       slideshowState.currentIndex = index;
       updateSlideshowState();
       // Redémarrer le timer pour réinitialiser l'intervalle

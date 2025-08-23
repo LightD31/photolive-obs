@@ -2,7 +2,6 @@ class PhotoLiveSlideshow {
     constructor() {
         this.socket = null;
         this.images = [];
-        this.shuffledImages = [];
         this.currentIndex = 0;
         this.settings = {
             interval: 5000,
@@ -233,8 +232,8 @@ class PhotoLiveSlideshow {
         this.hideNoImages();
         this.hideLoading();
         
-        // Créer la liste mélangée avec les informations du serveur
-        this.createShuffledImagesList(newImageAdded);
+        // Les images sont déjà dans le bon ordre (mélangé ou chronologique) depuis le serveur
+        console.log(`📋 Images reçues du serveur: ${this.images.length} images dans l'ordre ${this.settings.shuffleImages ? 'mélangé' : 'chronologique'}`);
         
         // Si une nouvelle image a été ajoutée et que le shuffle est activé, 
         // l'index sera géré par le serveur
@@ -269,56 +268,15 @@ class PhotoLiveSlideshow {
         this.displayImageDirectly(currentImageData.path);
     }
 
-    createShuffledImagesList(newImageAdded = null) {
-        if (!this.settings.shuffleImages) {
-            // Mode normal : utiliser l'ordre par défaut (chronologique)
-            this.shuffledImages = [...this.images];
-            console.log('Mode normal: ordre chronologique');
-            return;
-        }
-
-        // Séparer les nouvelles images des existantes basé sur le marquage serveur
-        const newImages = this.images.filter(img => img.isNew);
-        const existingImages = this.images.filter(img => !img.isNew);
-
-        // Mélanger les images existantes
-        const shuffledExisting = this.shuffleArray([...existingImages]);
-        
-        // Priorité : nouvelles images d'abord, puis les existantes mélangées
-        this.shuffledImages = [...newImages, ...shuffledExisting];
-        
-        console.log(`🔀 Mode mélangé: ${newImages.length} nouvelles images en priorité, ${existingImages.length} existantes mélangées`);
-        if (newImages.length > 0) {
-            console.log('📸 Nouvelles images:', newImages.map(img => img.filename));
-        }
-    }
-
-    shuffleArray(array) {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }
-
     getImagesList() {
-        return this.settings.shuffleImages ? this.shuffledImages : this.images;
+        // The server now sends images in the correct order, so we always use this.images
+        return this.images;
     }
 
     updateSettings(settings) {
-        const previousShuffleState = this.settings.shuffleImages;
         this.settings = { ...this.settings, ...settings };
         
-        // Si l'état du mélange a changé, recréer la liste
-        if (previousShuffleState !== this.settings.shuffleImages) {
-            this.createShuffledImagesList();
-            
-            // Réajuster l'index actuel si nécessaire
-            if (this.currentIndex >= this.getImagesList().length) {
-                this.currentIndex = 0;
-            }
-        }
+        // Note: Shuffle logic is now handled server-side, no need to recreate lists
         
         // Mettre à jour l'arrière-plan transparent
         this.updateBackground();
@@ -330,7 +288,7 @@ class PhotoLiveSlideshow {
         this.updateOverlay();
         
         // Le timer est maintenant géré côté serveur
-        console.log('Paramètres mis à jour, timer géré par le serveur');
+        console.log('Paramètres mis à jour, shuffle géré par le serveur');
     }
 
     updateWatermark() {
