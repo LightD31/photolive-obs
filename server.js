@@ -128,6 +128,13 @@ let slideshowSettings = {
   photosPath: config.photosPath, // Ajouter le chemin dans les settings
 };
 
+// État du diaporama
+let slideshowState = {
+  currentIndex: 0,
+  isPlaying: true,
+  currentImage: null
+};
+
 // Fonction pour scanner les images
 async function scanImages(newImageFilename = null) {
   try {
@@ -157,6 +164,9 @@ async function scanImages(newImageFilename = null) {
     
     currentImages = images;
     
+    // Mettre à jour l'état du diaporama
+    updateSlideshowState();
+    
     // Émettre la liste mise à jour aux clients
     io.emit('images-updated', {
       images: currentImages,
@@ -170,6 +180,47 @@ async function scanImages(newImageFilename = null) {
     console.error('Erreur lors du scan des images:', error);
     return [];
   }
+}
+
+// Mettre à jour l'état du diaporama
+function updateSlideshowState() {
+  if (currentImages.length === 0) {
+    slideshowState.currentImage = null;
+    slideshowState.currentIndex = 0;
+    return;
+  }
+
+  // S'assurer que l'index est valide
+  if (slideshowState.currentIndex >= currentImages.length) {
+    slideshowState.currentIndex = 0;
+  } else if (slideshowState.currentIndex < 0) {
+    slideshowState.currentIndex = currentImages.length - 1;
+  }
+
+  slideshowState.currentImage = currentImages[slideshowState.currentIndex];
+  
+  // Émettre l'état mis à jour aux clients
+  io.emit('slideshow-state', {
+    currentImage: slideshowState.currentImage,
+    currentIndex: slideshowState.currentIndex,
+    isPlaying: slideshowState.isPlaying,
+    totalImages: currentImages.length
+  });
+}
+
+// Changer d'image avec émission d'événement
+function changeImage(direction = 1) {
+  if (currentImages.length === 0) return;
+  
+  slideshowState.currentIndex += direction;
+  updateSlideshowState();
+  
+  // Émettre le changement d'image aux clients slideshow
+  io.emit('image-changed', {
+    currentImage: slideshowState.currentImage,
+    currentIndex: slideshowState.currentIndex,
+    direction: direction
+  });
 }
 
 // Surveillance des changements de fichiers
@@ -459,6 +510,14 @@ io.on('connection', (socket) => {
     images: currentImages,
     settings: slideshowSettings
   });
+  
+  // Envoyer l'état actuel du diaporama
+  socket.emit('slideshow-state', {
+    currentImage: slideshowState.currentImage,
+    currentIndex: slideshowState.currentIndex,
+    isPlaying: slideshowState.isPlaying,
+    totalImages: currentImages.length
+  });
 
   socket.on('disconnect', () => {
     console.log('Client déconnecté:', socket.id);
@@ -466,19 +525,52 @@ io.on('connection', (socket) => {
 
   // Gestion des commandes de contrôle
   socket.on('next-image', () => {
+    changeImage(1);
     socket.broadcast.emit('next-image');
   });
 
   socket.on('prev-image', () => {
+    changeImage(-1);
     socket.broadcast.emit('prev-image');
   });
 
+  socket.on('jump-to-image', (index) => {
+    if (index >= 0 && index < currentImages.length) {
+      slideshowState.currentIndex = index;
+      updateSlideshowState();
+      io.emit('jump-to-image', index);
+    }
+  });
+
   socket.on('pause-slideshow', () => {
+    slideshowState.isPlaying = false;
+    io.emit('slideshow-state', {
+      currentImage: slideshowState.currentImage,
+      currentIndex: slideshowState.currentIndex,
+      isPlaying: slideshowState.isPlaying,
+      totalImages: currentImages.length
+    });
     socket.broadcast.emit('pause-slideshow');
   });
 
   socket.on('resume-slideshow', () => {
+    slideshowState.isPlaying = true;
+    io.emit('slideshow-state', {
+      currentImage: slideshowState.currentImage,
+      currentIndex: slideshowState.currentIndex,
+      isPlaying: slideshowState.isPlaying,
+      totalImages: currentImages.length
+    });
     socket.broadcast.emit('resume-slideshow');
+  });
+
+  socket.on('get-slideshow-state', () => {
+    socket.emit('slideshow-state', {
+      currentImage: slideshowState.currentImage,
+      currentIndex: slideshowState.currentIndex,
+      isPlaying: slideshowState.isPlaying,
+      totalImages: currentImages.length
+    });
   });
 });
 

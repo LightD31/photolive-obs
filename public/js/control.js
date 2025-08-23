@@ -16,7 +16,7 @@ class PhotoLiveControl {
             shuffleImages: false,
             repeatLatest: false,
             latestCount: 5,
-            photosPath: '', // Chemin des photos
+            photosPath: '', // Photos path
             transparentBackground: false
         };
         this.isPlaying = true;
@@ -28,14 +28,27 @@ class PhotoLiveControl {
         this.setupElements();
         this.setupSocket();
         this.setupEventListeners();
+        this.setupCollapsibleSections();
         this.loadInitialData();
         this.updateSlideshowUrl();
+        
+        // Request current slideshow state
+        if (this.socket) {
+            this.socket.emit('get-slideshow-state');
+        }
     }
 
     setupElements() {
         // Status elements
         this.connectionStatus = document.getElementById('connection-status');
         this.imagesCount = document.getElementById('images-count');
+        
+        // Preview elements
+        this.currentPreviewContainer = document.getElementById('current-preview-container');
+        this.currentPreviewImage = document.getElementById('current-preview-image');
+        this.previewPlaceholder = this.currentPreviewContainer.querySelector('.preview-placeholder');
+        this.currentImageName = document.getElementById('current-image-name');
+        this.currentImageIndex = document.getElementById('current-image-index');
         
         // Control buttons
         this.prevBtn = document.getElementById('prev-btn');
@@ -79,30 +92,46 @@ class PhotoLiveControl {
         
         // Slideshow URL
         this.slideshowUrl = document.getElementById('slideshow-url');
+        
+        // Current image tracking
+        this.currentImageIndex = 0;
+        this.currentImageData = null;
     }
 
     setupSocket() {
         this.socket = io();
         
         this.socket.on('connect', () => {
-            console.log('Connecté au serveur');
+            console.log('Connected to server');
             this.updateConnectionStatus(true);
         });
 
         this.socket.on('disconnect', () => {
-            console.log('Déconnecté du serveur');
+            console.log('Disconnected from server');
             this.updateConnectionStatus(false);
         });
 
         this.socket.on('images-updated', (data) => {
-            console.log('Images mises à jour:', data.images.length);
+            console.log('Images updated:', data.images.length);
             this.updateImages(data.images);
             this.updateSettings(data.settings);
         });
 
         this.socket.on('settings-updated', (settings) => {
-            console.log('Paramètres mis à jour:', settings);
+            console.log('Settings updated:', settings);
             this.updateSettings(settings);
+        });
+
+        this.socket.on('image-changed', (data) => {
+            console.log('Image changed:', data);
+            this.updateCurrentImagePreview(data);
+        });
+
+        this.socket.on('slideshow-state', (data) => {
+            console.log('Slideshow state:', data);
+            this.updateCurrentImagePreview(data);
+            this.isPlaying = data.isPlaying;
+            this.updatePlayPauseButton();
         });
     }
 
@@ -123,7 +152,7 @@ class PhotoLiveControl {
         // Interval slider
         this.intervalSlider.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
-            this.intervalValue.textContent = value;
+            this.intervalValue.textContent = value + 's';
             this.updateSetting('interval', value * 1000);
         });
 
@@ -239,16 +268,16 @@ class PhotoLiveControl {
             // Load watermark images
             await this.loadWatermarkImages();
         } catch (error) {
-            console.error('Erreur lors du chargement initial:', error);
+            console.error('Error during initial loading:', error);
         }
     }
 
     updateConnectionStatus(connected) {
         if (connected) {
-            this.connectionStatus.textContent = 'Connecté';
+            this.connectionStatus.textContent = 'Connected';
             this.connectionStatus.className = 'status-connected';
         } else {
-            this.connectionStatus.textContent = 'Déconnecté';
+            this.connectionStatus.textContent = 'Disconnected';
             this.connectionStatus.className = 'status-disconnected';
         }
     }
@@ -267,7 +296,7 @@ class PhotoLiveControl {
     updateUI() {
         // Update interval
         this.intervalSlider.value = this.settings.interval / 1000;
-        this.intervalValue.textContent = this.settings.interval / 1000;
+        this.intervalValue.textContent = this.settings.interval / 1000 + 's';
         
         // Update transition
         this.transitionSelect.value = this.settings.transition;
@@ -315,23 +344,80 @@ class PhotoLiveControl {
         })
         .then(response => response.json())
         .then(data => {
-            console.log('Paramètre mis à jour:', key, value);
+            console.log('Setting updated:', key, value);
         })
         .catch(error => {
-            console.error('Erreur lors de la mise à jour:', error);
+            console.error('Error during update:', error);
         });
     }
 
     togglePlayPause() {
         if (this.isPlaying) {
             this.socket.emit('pause-slideshow');
-            this.playPauseBtn.innerHTML = '▶️ Lecture';
+            this.playPauseBtn.innerHTML = '▶️';
             this.isPlaying = false;
         } else {
             this.socket.emit('resume-slideshow');
-            this.playPauseBtn.innerHTML = '⏸️ Pause';
+            this.playPauseBtn.innerHTML = '⏸️';
             this.isPlaying = true;
         }
+    }
+
+    updatePlayPauseButton() {
+        if (this.isPlaying) {
+            this.playPauseBtn.innerHTML = '⏸️';
+        } else {
+            this.playPauseBtn.innerHTML = '▶️';
+        }
+    }
+
+    updateCurrentImagePreview(data) {
+        if (!data || !data.currentImage) {
+            this.showPreviewPlaceholder();
+            return;
+        }
+
+        const currentImage = data.currentImage;
+        const currentIndex = data.currentIndex !== undefined ? data.currentIndex : 0;
+        const totalImages = this.images.length;
+
+        // Update preview image
+        this.currentPreviewImage.src = currentImage.path;
+        this.currentPreviewImage.style.display = 'block';
+        this.previewPlaceholder.style.display = 'none';
+
+        // Update image info
+        this.currentImageName.textContent = currentImage.filename || 'Unknown';
+        this.currentImageIndex.textContent = `${currentIndex + 1} / ${totalImages}`;
+
+        // Highlight current image in grid
+        this.highlightCurrentImageInGrid(currentIndex);
+
+        // Store current image data
+        this.currentImageData = currentImage;
+        this.currentImageIndex = currentIndex;
+    }
+
+    showPreviewPlaceholder() {
+        this.currentPreviewImage.style.display = 'none';
+        this.previewPlaceholder.style.display = 'flex';
+        this.currentImageName.textContent = '-';
+        this.currentImageIndex.textContent = '0 / 0';
+        
+        // Remove highlighting from grid
+        const items = this.imagesPreview.querySelectorAll('.image-item');
+        items.forEach(item => item.classList.remove('current'));
+    }
+
+    highlightCurrentImageInGrid(currentIndex) {
+        const items = this.imagesPreview.querySelectorAll('.image-item');
+        items.forEach((item, index) => {
+            if (index === currentIndex) {
+                item.classList.add('current');
+            } else {
+                item.classList.remove('current');
+            }
+        });
     }
 
     renderImagesPreview() {
@@ -340,8 +426,8 @@ class PhotoLiveControl {
         if (this.images.length === 0) {
             this.imagesPreview.innerHTML = `
                 <div class="empty-state">
-                    <h3>Aucune image trouvée</h3>
-                    <p>Ajoutez des images (JPG, PNG, GIF, BMP, TIFF) dans le dossier "photos" pour commencer.</p>
+                    <h3>No images found</h3>
+                    <p>Add images (JPG, PNG, GIF, BMP, TIFF) to the "photos" folder to get started.</p>
                 </div>
             `;
             return;
@@ -350,6 +436,7 @@ class PhotoLiveControl {
         this.images.forEach((image, index) => {
             const imageItem = document.createElement('div');
             imageItem.className = 'image-item';
+            imageItem.dataset.index = index;
             
             const img = document.createElement('img');
             img.src = image.path;
@@ -360,10 +447,15 @@ class PhotoLiveControl {
             info.className = 'image-info';
             info.innerHTML = `
                 <div>${image.filename}</div>
-                <div style="font-size: 0.7rem; opacity: 0.8;">
+                <div>
                     ${this.formatFileSize(image.size)} • ${this.formatDate(image.modified)}
                 </div>
             `;
+            
+            // Add click listener to jump to this image
+            imageItem.addEventListener('click', () => {
+                this.socket.emit('jump-to-image', index);
+            });
             
             imageItem.appendChild(img);
             imageItem.appendChild(info);
@@ -402,13 +494,13 @@ class PhotoLiveControl {
         const newPath = this.photosPath.value.trim();
         
         if (!newPath) {
-            this.showNotification('Veuillez entrer un chemin de dossier', 'error');
+            this.showNotification('Please enter a folder path', 'error');
             return;
         }
 
         try {
             this.changeFolderBtn.disabled = true;
-            this.changeFolderBtn.textContent = 'Changement...';
+            this.changeFolderBtn.textContent = 'Changing...';
             
             const response = await fetch('/api/photos-path', {
                 method: 'POST',
@@ -421,27 +513,27 @@ class PhotoLiveControl {
             const data = await response.json();
 
             if (response.ok) {
-                this.showNotification(`Dossier changé vers: ${data.photosPath}`, 'success');
-                // Les images seront automatiquement mises à jour via WebSocket
+                this.showNotification(`Folder changed to: ${data.photosPath}`, 'success');
+                // Images will be automatically updated via WebSocket
             } else {
-                this.showNotification(data.error || 'Erreur lors du changement de dossier', 'error');
+                this.showNotification(data.error || 'Error changing folder', 'error');
             }
         } catch (error) {
-            console.error('Erreur lors du changement de dossier:', error);
-            this.showNotification('Erreur de connexion au serveur', 'error');
+            console.error('Error changing folder:', error);
+            this.showNotification('Server connection error', 'error');
         } finally {
             this.changeFolderBtn.disabled = false;
-            this.changeFolderBtn.textContent = '✅ Changer';
+            this.changeFolderBtn.textContent = '✅ Change';
         }
     }
 
     showNotification(message, type = 'info') {
-        // Créer l'élément de notification
+        // Create notification element
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.textContent = message;
         
-        // Styles inline pour la notification
+        // Inline styles for notification
         Object.assign(notification.style, {
             position: 'fixed',
             top: '20px',
@@ -462,12 +554,12 @@ class PhotoLiveControl {
         
         document.body.appendChild(notification);
         
-        // Animation d'entrée
+        // Entry animation
         setTimeout(() => {
             notification.style.transform = 'translateX(0)';
         }, 10);
         
-        // Supprimer après 5 secondes
+        // Remove after 5 seconds
         setTimeout(() => {
             notification.style.transform = 'translateX(100%)';
             setTimeout(() => {
@@ -484,7 +576,7 @@ class PhotoLiveControl {
             
             // Show feedback
             const originalText = this.slideshowUrl.textContent;
-            this.slideshowUrl.textContent = 'Copié!';
+            this.slideshowUrl.textContent = 'Copied!';
             this.slideshowUrl.style.background = '#48bb78';
             this.slideshowUrl.style.color = 'white';
             
@@ -494,7 +586,7 @@ class PhotoLiveControl {
                 this.slideshowUrl.style.color = '#5a67d8';
             }, 1000);
         } catch (err) {
-            console.error('Erreur lors de la copie:', err);
+            console.error('Error during copy:', err);
             
             // Fallback method
             const textArea = document.createElement('textarea');
@@ -503,7 +595,7 @@ class PhotoLiveControl {
             textArea.select();
             try {
                 document.execCommand('copy');
-                this.slideshowUrl.textContent = 'Copié!';
+                this.slideshowUrl.textContent = 'Copied!';
                 setTimeout(() => {
                     this.updateSlideshowUrl();
                 }, 1000);
@@ -532,7 +624,7 @@ class PhotoLiveControl {
             const watermarks = await response.json();
             
             // Clear existing options
-            this.watermarkImage.innerHTML = '<option value="">Sélectionnez une image...</option>';
+            this.watermarkImage.innerHTML = '<option value="">Select an image...</option>';
             
             // Add watermark options
             watermarks.forEach(watermark => {
@@ -542,12 +634,48 @@ class PhotoLiveControl {
                 this.watermarkImage.appendChild(option);
             });
         } catch (error) {
-            console.error('Erreur lors du chargement des filigranes:', error);
+            console.error('Error loading watermarks:', error);
         }
+    }
+
+    setupCollapsibleSections() {
+        // Find all collapsible sections
+        const collapsibleSections = document.querySelectorAll('.collapsible');
+        
+        collapsibleSections.forEach(section => {
+            const header = section.querySelector('.collapsible-header');
+            const content = section.querySelector('.collapsible-content');
+            const icon = header.querySelector('.collapse-icon');
+            
+            if (header && content) {
+                header.addEventListener('click', () => {
+                    const isCollapsed = section.classList.contains('collapsed');
+                    
+                    if (isCollapsed) {
+                        section.classList.remove('collapsed');
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        if (icon) icon.textContent = '−';
+                    } else {
+                        section.classList.add('collapsed');
+                        content.style.maxHeight = '0px';
+                        if (icon) icon.textContent = '+';
+                    }
+                });
+                
+                // Set initial state
+                if (section.classList.contains('collapsed')) {
+                    content.style.maxHeight = '0px';
+                    if (icon) icon.textContent = '+';
+                } else {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    if (icon) icon.textContent = '−';
+                }
+            }
+        });
     }
 }
 
-// Initialisation
+// Initialization
 document.addEventListener('DOMContentLoaded', () => {
     window.control = new PhotoLiveControl();
 });
