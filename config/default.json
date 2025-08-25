@@ -63,6 +63,7 @@
     "repeatLatest": false,
     "latestCount": 5,
     "transparentBackground": true,
-    "excludedImages": []
+    "excludedImages": [],
+    "language": "en"
   }
 }

@@ -6,13 +6,19 @@
     <title>PhotoLive OBS - Control</title>
     <link rel="stylesheet" href="css/control.css">
 </head>
-<body>
+<body data-i18n-title="app.control_title">
     <div class="container">
         <header>
-            <h1>📸 PhotoLive OBS - Control</h1>
+            <h1 data-i18n="app.control_title">📸 PhotoLive OBS - Control</h1>
             <div class="status">
-                <span id="connection-status" class="status-disconnected">Disconnected</span>
-                <span id="images-count">0 images</span>
+                <span id="connection-status" class="status-disconnected" data-i18n="status.disconnected">Disconnected</span>
+                <span id="images-count" data-i18n="status.images_count">0 images</span>
+                <div class="language-selector">
+                    <select id="language-select" class="compact-select">
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                    </select>
+                </div>
             </div>
         </header>
 
@@ -23,17 +29,17 @@
                 <div class="left-column">
                     <!-- Current and Next image previews -->
                     <section class="control-section preview-section">
-                        <h2>🖼️ Image Previews</h2>
+                        <h2 data-i18n="sections.image_previews">🖼️ Image Previews</h2>
                         <div class="preview-grid">
                             <!-- Current image preview -->
                             <div class="preview-item">
-                                <h3>Current</h3>
+                                <h3 data-i18n="previews.current">Current</h3>
                                 <div class="current-preview">
                                     <div id="current-preview-container" class="preview-container">
-                                        <img id="current-preview-image" class="preview-image" alt="Current image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E" style="display: none;">
+                                        <img id="current-preview-image" class="preview-image" data-i18n-alt="slideshow.alt_current" alt="Current image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E" style="display: none;">
                                         <div class="preview-placeholder">
                                             <span>🖼️</span>
-                                            <p>No image selected</p>
+                                            <p data-i18n="previews.no_image_selected">No image selected</p>
                                         </div>
                                     </div>
                                     <div class="preview-info">
@@ -45,13 +51,13 @@
                             
                             <!-- Next image preview -->
                             <div class="preview-item">
-                                <h3>Next</h3>
+                                <h3 data-i18n="previews.next">Next</h3>
                                 <div class="next-preview">
                                     <div id="next-preview-container" class="preview-container">
-                                        <img id="next-preview-image" class="preview-image" alt="Next image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E" style="display: none;">
+                                        <img id="next-preview-image" class="preview-image" data-i18n-alt="slideshow.alt_next" alt="Next image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E" style="display: none;">
                                         <div class="preview-placeholder">
                                             <span>⏭️</span>
-                                            <p>Next image</p>
+                                            <p data-i18n="previews.next_image">Next image</p>
                                         </div>
                                     </div>
                                     <div class="preview-info">
@@ -65,7 +71,7 @@
 
                     <!-- Playback controls -->
                     <section class="control-section compact">
-                        <h2>🎮 Controls</h2>
+                        <h2 data-i18n="sections.controls">🎮 Controls</h2>
                         <div class="control-buttons">
                             <button id="prev-btn" class="btn btn-secondary">⏮️</button>
                             <button id="play-pause-btn" class="btn btn-primary">⏸️</button>
@@ -73,7 +79,7 @@
                         </div>
                         <div class="playback-settings">
                             <div class="setting-row">
-                                <label for="interval-slider">Interval:</label>
+                                <label for="interval-slider" data-i18n="controls.interval">Interval:</label>
                                 <div class="slider-container">
                                     <input type="range" id="interval-slider" min="1" max="30" step="1" value="5">
                                     <span id="interval-value">5s</span>
@@ -250,6 +256,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/control.js"></script>
 </body>
 </html>

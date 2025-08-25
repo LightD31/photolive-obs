@@ -441,7 +441,7 @@ app.post('/api/settings', (req, res) => {
       'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
-      'transparentBackground', 'photosPath', 'excludedImages'
+      'transparentBackground', 'photosPath', 'excludedImages', 'language'
     ];
     
     const newSettings = {};
@@ -479,6 +479,11 @@ app.post('/api/settings', (req, res) => {
             break;
           case 'excludedImages':
             if (Array.isArray(value) && value.every(item => typeof item === 'string')) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'language':
+            if (typeof value === 'string' && ['en', 'fr'].includes(value)) {
               newSettings[key] = value;
             }
             break;
@@ -592,6 +597,39 @@ app.post('/api/watermark-upload', uploadWatermark.single('watermark'), (req, res
   } catch (error) {
     console.error('Error uploading watermark:', error);
     res.status(500).json({ error: 'Upload error' });
+  }
+});
+
+// Route to serve language files
+app.get('/api/locales/:language', async (req, res) => {
+  try {
+    const language = req.params.language;
+    
+    // Validate language parameter
+    if (!/^[a-z]{2}$/.test(language)) {
+      return res.status(400).json({ error: 'Invalid language code' });
+    }
+    
+    const localesPath = path.join(__dirname, 'locales', `${language}.json`);
+    
+    try {
+      const localeData = await fs.readFile(localesPath, 'utf8');
+      const translations = JSON.parse(localeData);
+      
+      // Set proper cache headers for translations
+      res.set({
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Content-Type': 'application/json'
+      });
+      
+      res.json(translations);
+    } catch (fileError) {
+      console.error(`Locale file not found: ${language}`, fileError);
+      res.status(404).json({ error: `Language '${language}' not available` });
+    }
+  } catch (error) {
+    console.error('Error serving locale:', error);
+    res.status(500).json({ error: 'Failed to load language file' });
   }
 });
 
