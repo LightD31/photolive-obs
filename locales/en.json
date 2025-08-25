@@ -1,0 +1,133 @@
+{
+  "app": {
+    "title": "PhotoLive OBS",
+    "control_title": "PhotoLive OBS - Control",
+    "slideshow_title": "PhotoLive OBS - Slideshow"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "images_count": "{{count}} images",
+    "images_count_singular": "{{count}} image"
+  },
+  "sections": {
+    "image_previews": "Image Previews",
+    "controls": "Controls",
+    "quick_settings": "Quick Settings",
+    "folder_settings": "Folder Settings",
+    "watermark_settings": "Watermark Settings",
+    "advanced_settings": "Advanced Settings",
+    "instructions": "Instructions"
+  },
+  "previews": {
+    "current": "Current",
+    "next": "Next",
+    "no_image_selected": "No image selected",
+    "next_image": "Next image"
+  },
+  "controls": {
+    "interval": "Interval",
+    "previous": "Previous",
+    "next": "Next",
+    "play": "Play",
+    "pause": "Pause"
+  },
+  "settings": {
+    "filter": "Filter",
+    "transition": "Transition",
+    "shuffle": "Shuffle",
+    "transparent_bg": "Transparent BG",
+    "photos_folder": "Photos Folder",
+    "change_folder": "Change folder",
+    "enable": "Enable",
+    "text": "Text",
+    "image": "Image",
+    "position": "Position",
+    "size": "Size",
+    "opacity": "Opacity",
+    "repeat_latest": "Repeat Latest",
+    "latest_count": "Latest Count",
+    "language": "Language"
+  },
+  "filters": {
+    "none": "None",
+    "sepia": "Sepia",
+    "grayscale": "B&W",
+    "blur": "Blur",
+    "brightness": "Bright",
+    "contrast": "Contrast",
+    "vintage": "Vintage",
+    "cool": "Cool",
+    "warm": "Warm"
+  },
+  "transitions": {
+    "none": "None",
+    "fade": "Fade",
+    "slide": "Slide",
+    "zoom": "Zoom"
+  },
+  "watermark": {
+    "types": {
+      "text": "Text",
+      "image": "Image"
+    },
+    "positions": {
+      "top-left": "Top Left",
+      "top-right": "Top Right",
+      "bottom-left": "Bottom Left",
+      "bottom-right": "Bottom Right",
+      "center": "Center"
+    },
+    "sizes": {
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large",
+      "xlarge": "XL"
+    },
+    "text_placeholder": "Watermark text...",
+    "file_browse": "Browse...",
+    "no_file_selected": "No file selected",
+    "help_text": "PNG format recommended for best quality"
+  },
+  "instructions": {
+    "obs_setup": "OBS Setup:",
+    "obs_url_text": "Add Browser source with URL:",
+    "shortcuts": "Shortcuts:",
+    "shortcuts_text": "Next, Previous, Pause"
+  },
+  "grid": {
+    "all_images": "All Images",
+    "zoom": "Zoom",
+    "loading_thumbnails": "Loading thumbnails...",
+    "no_images": "No images in folder",
+    "add_images_hint": "Add images to the photos folder to see them here",
+    "exclude": "Exclude",
+    "include": "Include",
+    "new": "NEW"
+  },
+  "slideshow": {
+    "loading": "Loading photos...",
+    "no_images_found": "No images found",
+    "add_images_instruction": "Add images to the \"photos\" folder to start the slideshow.",
+    "alt_current": "Current photo",
+    "alt_next": "Next photo"
+  },
+  "notifications": {
+    "folder_changed": "Photos folder changed successfully",
+    "folder_change_error": "Error changing photos folder",
+    "watermark_uploaded": "Watermark uploaded successfully",
+    "upload_failed": "Upload failed. Please try again.",
+    "copied_to_clipboard": "Copied to clipboard!",
+    "copy_failed": "Failed to copy"
+  },
+  "file_size": {
+    "bytes": "B",
+    "kilobytes": "KB", 
+    "megabytes": "MB",
+    "gigabytes": "GB"
+  },
+  "languages": {
+    "en": "English",
+    "fr": "Français"
+  }
+}

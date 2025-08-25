@@ -31,14 +31,14 @@ function loadConfig() {
       filters: configData.features.filters,
       watermarkPositions: configData.features.watermarkPositions,
       watermarkTypes: configData.features.watermarkTypes || [
-        { id: 'text', name: 'Texte' },
-        { id: 'image', name: 'Image PNG' }
+        { id: 'text', name: 'Text' },
+        { id: 'image', name: 'PNG Image' }
       ],
       watermarkSizes: configData.features.watermarkSizes || [
-        { id: 'small', name: 'Petit', scale: 0.5 },
-        { id: 'medium', name: 'Moyen', scale: 1.0 },
-        { id: 'large', name: 'Grand', scale: 1.5 },
-        { id: 'xlarge', name: 'Très grand', scale: 2.0 }
+        { id: 'small', name: 'Small', scale: 0.5 },
+        { id: 'medium', name: 'Medium', scale: 1.0 },
+        { id: 'large', name: 'Large', scale: 1.5 },
+        { id: 'xlarge', name: 'Extra Large', scale: 2.0 }
       ],
       defaults: configData.defaults
     };
@@ -200,20 +200,20 @@ function updateShuffledImagesList(newImageAdded = null) {
     return;
   }
 
-  // Séparer les nouvelles images des existantes
+  // Separate new images from existing ones
   const newImages = currentImages.filter(img => img.isNew);
   const existingImages = currentImages.filter(img => !img.isNew);
 
-  // Mélanger les images existantes
+  // Shuffle existing images
   const shuffledExisting = shuffleArray([...existingImages]);
   
-  // Priorité : nouvelles images d'abord, puis les existantes mélangées
+  // Priority: new images first, then shuffled existing ones
   shuffledImages = [...newImages, ...shuffledExisting];
   
-  console.log(`🔀 Mode mélangé: ${newImages.length} nouvelles images en priorité, ${existingImages.length} existantes mélangées`);
+  console.log(`🔀 Shuffle mode: ${newImages.length} new images priority, ${existingImages.length} existing shuffled`);
   
   if (newImages.length > 0) {
-    console.log('📸 Nouvelles images:', newImages.map(img => img.filename));
+    console.log('📸 New images:', newImages.map(img => img.filename));
   }
 }
 
@@ -237,33 +237,33 @@ async function scanImages(newImageFilename = null) {
         size: stats.size,
         created: stats.birthtime,
         modified: stats.mtime,
-        isNew: newlyAddedImages.has(file) // Marquer les nouvelles images
+        isNew: newlyAddedImages.has(file) // Mark new images
       });
     }
 
-    // Trier par date de modification (plus récent en premier)
+    // Sort by modification date (most recent first)
     images.sort((a, b) => b.modified - a.modified);
     
     currentImages = images;
     
-    // Créer/mettre à jour la liste mélangée selon les paramètres
+    // Create/update shuffled list according to parameters
     updateShuffledImagesList(newImageFilename);
     
-    // Mettre à jour l'état du diaporama
+    // Update slideshow state
     updateSlideshowState();
     
-    // Émettre la liste mise à jour aux clients avec la liste appropriée
+    // Emit updated list to clients with appropriate list
     io.emit('images-updated', {
-      allImages: getAllImagesList(), // Liste complète pour l'affichage de la grille
-      images: getCurrentImagesList(), // Liste filtrée pour le diaporama
+      allImages: getAllImagesList(), // Complete list for grid display
+      images: getCurrentImagesList(), // Filtered list for slideshow
       settings: slideshowSettings,
       newImageAdded: newImageFilename
     });
 
-    // Redémarrer le timer du diaporama si nécessaire
+    // Restart slideshow timer if necessary
     restartSlideshowTimer();
 
-    console.log(`${images.length} images trouvées dans ${currentPhotosPath}${newImageFilename ? ` (nouvelle: ${newImageFilename})` : ''}`);
+    console.log(`${images.length} images found in ${currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}`);
     return images;
   } catch (error) {
     console.error('Error scanning images:', error);
@@ -271,7 +271,7 @@ async function scanImages(newImageFilename = null) {
   }
 }
 
-// Mettre à jour l'état du diaporama
+// Update slideshow state
 function updateSlideshowState(emitEvent = true) {
   const imagesList = getCurrentImagesList();
   
@@ -340,14 +340,14 @@ function stopSlideshowTimer() {
   }
 }
 
-// Redémarrer le timer avec de nouveaux paramètres
+// Restart timer with new parameters
 function restartSlideshowTimer() {
   if (slideshowState.isPlaying) {
     startSlideshowTimer();
   }
 }
 
-// Surveillance des changements de fichiers
+// File change monitoring
 function setupFileWatcher() {
   // Arrêter le watcher précédent s'il existe
   if (fileWatcher) {
@@ -368,19 +368,19 @@ function setupFileWatcher() {
         const ext = path.extname(filename).toLowerCase();
         
         if (config.supportedFormats.includes(ext)) {
-          console.log(`Nouvelle image détectée: ${filename}`);
+          console.log(`New image detected: ${filename}`);
           
-          // Marquer comme nouvelle image
+          // Mark as new image
           newlyAddedImages.add(filename);
           
-          // Rescanner avec information de la nouvelle image
+          // Rescan with new image information
           scanImages(filename);
           
-          // Nettoyer le marquage après 5 minutes avec gestion d'erreurs
+          // Clean marking after 5 minutes with error handling
           setTimeout(() => {
             try {
               newlyAddedImages.delete(filename);
-              console.log(`Image ${filename} n'est plus considérée comme nouvelle`);
+              console.log(`Image ${filename} is no longer considered new`);
               
               // Nettoyage périodique pour éviter les fuites mémoire
               if (newlyAddedImages.size > 100) {
@@ -401,10 +401,10 @@ function setupFileWatcher() {
         const filename = path.basename(filePath);
         console.log(`Image supprimée: ${filename}`);
         
-        // Retirer du tracker des nouvelles images si présent
+        // Remove from new images tracker if present
         newlyAddedImages.delete(filename);
         
-        scanImages(); // Rescanner toutes les images
+        scanImages(); // Rescan all images
       } catch (error) {
         console.error('Error processing file removal:', error);
       }
@@ -441,7 +441,7 @@ app.post('/api/settings', (req, res) => {
       'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
-      'transparentBackground', 'photosPath', 'excludedImages'
+      'transparentBackground', 'photosPath', 'excludedImages', 'language'
     ];
     
     const newSettings = {};
@@ -479,6 +479,11 @@ app.post('/api/settings', (req, res) => {
             break;
           case 'excludedImages':
             if (Array.isArray(value) && value.every(item => typeof item === 'string')) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'language':
+            if (typeof value === 'string' && ['en', 'fr'].includes(value)) {
               newSettings[key] = value;
             }
             break;
@@ -523,10 +528,10 @@ app.post('/api/settings', (req, res) => {
         slideshowState.currentIndex = 0;
       }
       
-      // Mettre à jour l'état du diaporama pour refléter la nouvelle liste
+      // Update slideshow state to reflect new list
       updateSlideshowState();
       
-      // Émettre la nouvelle liste d'images aux clients
+      // Emit new image list to clients
       io.emit('images-updated', {
         allImages: getAllImagesList(),
         images: getCurrentImagesList(),
@@ -595,6 +600,39 @@ app.post('/api/watermark-upload', uploadWatermark.single('watermark'), (req, res
   }
 });
 
+// Route to serve language files
+app.get('/api/locales/:language', async (req, res) => {
+  try {
+    const language = req.params.language;
+    
+    // Validate language parameter
+    if (!/^[a-z]{2}$/.test(language)) {
+      return res.status(400).json({ error: 'Invalid language code' });
+    }
+    
+    const localesPath = path.join(__dirname, 'locales', `${language}.json`);
+    
+    try {
+      const localeData = await fs.readFile(localesPath, 'utf8');
+      const translations = JSON.parse(localeData);
+      
+      // Set proper cache headers for translations
+      res.set({
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Content-Type': 'application/json'
+      });
+      
+      res.json(translations);
+    } catch (fileError) {
+      console.error(`Locale file not found: ${language}`, fileError);
+      res.status(404).json({ error: `Language '${language}' not available` });
+    }
+  } catch (error) {
+    console.error('Error serving locale:', error);
+    res.status(500).json({ error: 'Failed to load language file' });
+  }
+});
+
 // Route to change photos folder
 app.post('/api/photos-path', async (req, res) => {
   try {
@@ -626,27 +664,27 @@ app.post('/api/photos-path', async (req, res) => {
       return res.status(400).json({ error: 'Le dossier spécifié n\'existe pas ou n\'est pas accessible' });
     }
 
-    // Mettre à jour le chemin actuel
+    // Update current path
     currentPhotosPath = resolvedPath;
     slideshowSettings.photosPath = currentPhotosPath;
     
-    console.log('Nouveau dossier défini:', currentPhotosPath);
+    console.log('New folder set:', currentPhotosPath);
     
-    // Nettoyer le tracker des nouvelles images
+    // Clean new images tracker
     newlyAddedImages.clear();
     
-    // Redémarrer la surveillance des fichiers
+    // Restart file watching
     setupFileWatcher();
     
-    // Rescanner les images du nouveau dossier
+    // Rescan images from new folder
     await scanImages();
     
-    console.log(`Dossier de photos changé vers: ${currentPhotosPath}`);
+    console.log(`Photos folder changed to: ${currentPhotosPath}`);
     
     res.json({ 
       success: true, 
       photosPath: currentPhotosPath,
-      message: 'Dossier changé avec succès'
+      message: 'Folder changed successfully'
     });
   } catch (error) {
     console.error('Error changing folder:', error);
@@ -697,14 +735,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(config.publicPath, 'slideshow.html'));
 });
 
-// Route pour l'interface de contrôle
+// Route for the control interface
 app.get('/control', (req, res) => {
   res.sendFile(path.join(config.publicPath, 'control.html'));
 });
 
 // Gestion des connexions WebSocket
 io.on('connection', (socket) => {
-  console.log('Client connecté:', socket.id);
+  console.log('Client connected:', socket.id);
   
   // Envoyer l'état actuel au nouveau client
   socket.emit('images-updated', {
@@ -722,20 +760,20 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('Client déconnecté:', socket.id);
+    console.log('Client disconnected:', socket.id);
   });
 
-  // Gestion des commandes de contrôle
+  // Handle control commands
   socket.on('next-image', () => {
     changeImage(1);
-    // Redémarrer le timer pour réinitialiser l'intervalle
+    // Restart timer to reset interval
     restartSlideshowTimer();
     socket.broadcast.emit('next-image');
   });
 
   socket.on('prev-image', () => {
     changeImage(-1);
-    // Redémarrer le timer pour réinitialiser l'intervalle
+    // Restart timer to reset interval
     restartSlideshowTimer();
     socket.broadcast.emit('prev-image');
   });
@@ -757,7 +795,7 @@ io.on('connection', (socket) => {
         direction: direction
       });
       
-      // Redémarrer le timer pour réinitialiser l'intervalle
+      // Restart timer to reset interval
       restartSlideshowTimer();
     }
   });

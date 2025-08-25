@@ -27,11 +27,24 @@ class PhotoLiveSlideshow {
         this.init();
     }
 
-    init() {
+    async init() {
+        // Initialize i18n first
+        await this.initializeI18n();
+        
         this.setupElements();
         this.setupSocket();
         this.setupEventListeners();
         this.loadInitialData();
+    }
+
+    async initializeI18n() {
+        try {
+            // Use saved language preference from localStorage
+            const savedLanguage = localStorage.getItem('photolive-language');
+            await window.i18n.init(savedLanguage);
+        } catch (error) {
+            console.error('Failed to initialize i18n:', error);
+        }
     }
 
     setupElements() {

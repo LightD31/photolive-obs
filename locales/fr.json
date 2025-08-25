@@ -1,0 +1,133 @@
+{
+  "app": {
+    "title": "PhotoLive OBS",
+    "control_title": "PhotoLive OBS - Contrôle",
+    "slideshow_title": "PhotoLive OBS - Diaporama"
+  },
+  "status": {
+    "connected": "Connecté",
+    "disconnected": "Déconnecté",
+    "images_count": "{{count}} images",
+    "images_count_singular": "{{count}} image"
+  },
+  "sections": {
+    "image_previews": "Aperçus des Images",
+    "controls": "Contrôles",
+    "quick_settings": "Paramètres Rapides",
+    "folder_settings": "Paramètres Dossier",
+    "watermark_settings": "Paramètres Filigrane",
+    "advanced_settings": "Paramètres Avancés",
+    "instructions": "Instructions"
+  },
+  "previews": {
+    "current": "Actuelle",
+    "next": "Suivante",
+    "no_image_selected": "Aucune image sélectionnée",
+    "next_image": "Image suivante"
+  },
+  "controls": {
+    "interval": "Intervalle",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "play": "Lecture",
+    "pause": "Pause"
+  },
+  "settings": {
+    "filter": "Filtre",
+    "transition": "Transition",
+    "shuffle": "Mélanger",
+    "transparent_bg": "Fond Transparent",
+    "photos_folder": "Dossier Photos",
+    "change_folder": "Changer le dossier",
+    "enable": "Activer",
+    "text": "Texte",
+    "image": "Image",
+    "position": "Position",
+    "size": "Taille",
+    "opacity": "Opacité",
+    "repeat_latest": "Répéter les Récentes",
+    "latest_count": "Nombre Récentes",
+    "language": "Langue"
+  },
+  "filters": {
+    "none": "Aucun",
+    "sepia": "Sépia",
+    "grayscale": "N&B",
+    "blur": "Flou",
+    "brightness": "Lumineux",
+    "contrast": "Contraste",
+    "vintage": "Vintage",
+    "cool": "Froid",
+    "warm": "Chaud"
+  },
+  "transitions": {
+    "none": "Aucune",
+    "fade": "Fondu",
+    "slide": "Glissement",
+    "zoom": "Zoom"
+  },
+  "watermark": {
+    "types": {
+      "text": "Texte",
+      "image": "Image"
+    },
+    "positions": {
+      "top-left": "Haut Gauche",
+      "top-right": "Haut Droite",
+      "bottom-left": "Bas Gauche",
+      "bottom-right": "Bas Droite",
+      "center": "Centre"
+    },
+    "sizes": {
+      "small": "Petit",
+      "medium": "Moyen",
+      "large": "Grand",
+      "xlarge": "Très Grand"
+    },
+    "text_placeholder": "Texte du filigrane...",
+    "file_browse": "Parcourir...",
+    "no_file_selected": "Aucun fichier sélectionné",
+    "help_text": "Format PNG recommandé pour une meilleure qualité"
+  },
+  "instructions": {
+    "obs_setup": "Configuration OBS :",
+    "obs_url_text": "Ajouter une source Navigateur avec URL :",
+    "shortcuts": "Raccourcis :",
+    "shortcuts_text": "Suivant, Précédent, Pause"
+  },
+  "grid": {
+    "all_images": "Toutes les Images",
+    "zoom": "Zoom",
+    "loading_thumbnails": "Chargement des miniatures...",
+    "no_images": "Aucune image dans le dossier",
+    "add_images_hint": "Ajoutez des images au dossier photos pour les voir ici",
+    "exclude": "Exclure",
+    "include": "Inclure",
+    "new": "NOUVEAU"
+  },
+  "slideshow": {
+    "loading": "Chargement des photos...",
+    "no_images_found": "Aucune image trouvée",
+    "add_images_instruction": "Ajoutez des images au dossier \"photos\" pour démarrer le diaporama.",
+    "alt_current": "Photo actuelle",
+    "alt_next": "Photo suivante"
+  },
+  "notifications": {
+    "folder_changed": "Dossier photos changé avec succès",
+    "folder_change_error": "Erreur lors du changement de dossier photos",
+    "watermark_uploaded": "Filigrane téléchargé avec succès",
+    "upload_failed": "Échec du téléchargement. Veuillez réessayer.",
+    "copied_to_clipboard": "Copié dans le presse-papiers !",
+    "copy_failed": "Échec de la copie"
+  },
+  "file_size": {
+    "bytes": "o",
+    "kilobytes": "Ko",
+    "megabytes": "Mo",
+    "gigabytes": "Go"
+  },
+  "languages": {
+    "en": "English",
+    "fr": "Français"
+  }
+}
