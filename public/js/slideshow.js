@@ -311,7 +311,7 @@ class PhotoLiveSlideshow {
             nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
             nextElement.style.opacity = '0'; // Start hidden to prevent flash
             nextElement.style.visibility = 'visible';
-            nextElement.style.transform = direction > 0 ? 'translateX(110%)' : 'translateX(-110%)';
+            nextElement.style.transform = direction > 0 ? 'translateX(120%)' : 'translateX(-120%)';
             
             // Add transition classes to both images
             currentElement.className = `slide-image filter-${this.settings.filter} transition-slide z-front`;
@@ -320,7 +320,7 @@ class PhotoLiveSlideshow {
             // Start the slide animation
             requestAnimationFrame(() => {
                 nextElement.style.opacity = '1'; // Make visible now that it's positioned off-screen
-                currentElement.style.transform = direction > 0 ? 'translateX(-110%)' : 'translateX(110%)';
+                currentElement.style.transform = direction > 0 ? 'translateX(-120%)' : 'translateX(120%)';
                 nextElement.style.transform = 'translateX(0)';
             });
             
