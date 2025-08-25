@@ -196,9 +196,18 @@ class PhotoLiveSlideshow {
     transitionToServerImage(imagePath, direction = 1) {
         console.log('Transitioning to image:', imagePath, 'with transition:', this.settings.transition);
         
-        // If no transition or same image, display directly
-        if (this.settings.transition === 'none' || this.currentImage.src.endsWith(imagePath.split('/').pop())) {
+        // If no transition, display directly
+        if (this.settings.transition === 'none') {
             this.displayImageDirectly(imagePath);
+            return;
+        }
+        
+        // Check if we're transitioning to the same image
+        const currentUrl = this.currentImage.src ? new URL(this.currentImage.src, window.location.origin).pathname : '';
+        const newUrl = imagePath;
+        
+        if (currentUrl === newUrl) {
+            console.log('Same image, skipping transition');
             return;
         }
         
@@ -222,18 +231,20 @@ class PhotoLiveSlideshow {
         // Preload the new image
         const img = new Image();
         img.onload = () => {
-            // Set up the next image
+            // Set up the next image for fade in
             this.nextImage.src = imagePath;
-            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-fade`;
+            this.nextImage.className = `slide-image filter-${this.settings.filter}`;
             this.nextImage.style.opacity = '0';
+            this.nextImage.style.transform = '';
             this.nextImage.style.visibility = 'visible';
             
-            // Fade out current image
+            // Start the crossfade transition
             this.currentImage.className = `slide-image filter-${this.settings.filter} transition-fade`;
-            this.currentImage.style.opacity = '0';
+            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-fade`;
             
-            // Fade in next image
+            // Trigger the fade animation
             requestAnimationFrame(() => {
+                this.currentImage.style.opacity = '0';
                 this.nextImage.style.opacity = '1';
             });
             
@@ -244,6 +255,7 @@ class PhotoLiveSlideshow {
         };
         img.onerror = () => {
             console.error('Error loading image for fade transition:', imagePath);
+            this.displayImageDirectly(imagePath);
         };
         img.src = imagePath;
     }
@@ -254,13 +266,14 @@ class PhotoLiveSlideshow {
         img.onload = () => {
             // Set up the next image positioned off-screen
             this.nextImage.src = imagePath;
-            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-slide`;
+            this.nextImage.className = `slide-image filter-${this.settings.filter}`;
             this.nextImage.style.opacity = '1';
             this.nextImage.style.visibility = 'visible';
             this.nextImage.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
             
-            // Add transition to current image
+            // Add transition classes to both images
             this.currentImage.className = `slide-image filter-${this.settings.filter} transition-slide`;
+            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-slide`;
             
             // Start the slide animation
             requestAnimationFrame(() => {
@@ -275,6 +288,7 @@ class PhotoLiveSlideshow {
         };
         img.onerror = () => {
             console.error('Error loading image for slide transition:', imagePath);
+            this.displayImageDirectly(imagePath);
         };
         img.src = imagePath;
     }
@@ -283,32 +297,36 @@ class PhotoLiveSlideshow {
         // Preload the new image
         const img = new Image();
         img.onload = () => {
-            // Set up the next image scaled down and transparent
-            this.nextImage.src = imagePath;
-            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-in`;
-            this.nextImage.style.transform = 'scale(1.2)';
-            this.nextImage.style.opacity = '0';
-            this.nextImage.style.visibility = 'visible';
-            
-            // Zoom out current image
+            // Phase 1: Zoom out current image
             this.currentImage.className = `slide-image filter-${this.settings.filter} transition-zoom-out`;
             this.currentImage.style.transform = 'scale(0.8)';
             this.currentImage.style.opacity = '0';
             
-            // Zoom in next image
-            requestAnimationFrame(() => {
-                this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-visible`;
-                this.nextImage.style.transform = 'scale(1)';
-                this.nextImage.style.opacity = '1';
-            });
-            
-            // After transition completes, swap the images
+            // After zoom out completes, start zoom in
             setTimeout(() => {
-                this.swapImages();
-            }, 1500);
+                // Set up the next image for zoom in
+                this.nextImage.src = imagePath;
+                this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-in`;
+                this.nextImage.style.transform = 'scale(0.8)';
+                this.nextImage.style.opacity = '0';
+                this.nextImage.style.visibility = 'visible';
+                
+                // Phase 2: Zoom in next image
+                requestAnimationFrame(() => {
+                    this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-visible`;
+                    this.nextImage.style.transform = 'scale(1)';
+                    this.nextImage.style.opacity = '1';
+                });
+                
+                // After zoom in completes, swap the images
+                setTimeout(() => {
+                    this.swapImages();
+                }, 750); // Half the total duration for second phase
+            }, 750); // Half the total duration for first phase
         };
         img.onerror = () => {
             console.error('Error loading image for zoom transition:', imagePath);
+            this.displayImageDirectly(imagePath);
         };
         img.src = imagePath;
     }
