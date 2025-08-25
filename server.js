@@ -17,6 +17,51 @@ const io = socketIo(server, {
   }
 });
 
+// Simple logger utility
+const LogLevel = {
+  ERROR: 0,
+  WARN: 1, 
+  INFO: 2,
+  DEBUG: 3
+};
+
+class Logger {
+  constructor(level = 'INFO') {
+    this.setLevel(level);
+  }
+
+  setLevel(level) {
+    this.level = typeof level === 'string' ? LogLevel[level.toUpperCase()] : level;
+  }
+
+  error(...args) {
+    if (this.level >= LogLevel.ERROR) {
+      console.error(...args);
+    }
+  }
+
+  warn(...args) {
+    if (this.level >= LogLevel.WARN) {
+      console.warn(...args);
+    }
+  }
+
+  info(...args) {
+    if (this.level >= LogLevel.INFO) {
+      console.log(...args);
+    }
+  }
+
+  debug(...args) {
+    if (this.level >= LogLevel.DEBUG) {
+      console.log(...args);
+    }
+  }
+}
+
+// Initialize logger (will be updated after config loads)
+let logger = new Logger('INFO');
+
 // Configuration loading
 function loadConfig() {
   try {
@@ -24,6 +69,7 @@ function loadConfig() {
     const configData = JSON.parse(require('fs').readFileSync(configPath, 'utf8'));
     return {
       port: process.env.PORT || configData.server.port,
+      logLevel: process.env.LOG_LEVEL || configData.server.logLevel || 'INFO',
       photosPath: path.resolve(__dirname, configData.server.photosPath),
       publicPath: path.join(__dirname, 'public'),
       slideInterval: configData.slideshow.interval,
@@ -47,6 +93,7 @@ function loadConfig() {
     // Fallback configuration
     return {
       port: process.env.PORT || 3001,
+      logLevel: process.env.LOG_LEVEL || 'INFO',
       photosPath: path.join(__dirname, 'photos'),
       publicPath: path.join(__dirname, 'public'),
       slideInterval: 5000,
@@ -78,13 +125,17 @@ function loadConfig() {
 
 const config = loadConfig();
 
+// Update logger with configured log level
+logger.setLevel(config.logLevel);
+
 // Log loaded configuration
-console.log('Configuration loaded:');
-console.log('- Port:', config.port);
-console.log('- Photos folder:', config.photosPath);
-console.log('- Default interval:', config.defaults.interval);
-console.log('- Default transparent background:', config.defaults.transparentBackground);
-console.log('- Default shuffle images:', config.defaults.shuffleImages);
+logger.info('Configuration loaded:');
+logger.info('- Port:', config.port);
+logger.info('- Photos folder:', config.photosPath);
+logger.info('- Log level:', config.logLevel);
+logger.debug('- Default interval:', config.defaults.interval);
+logger.debug('- Default transparent background:', config.defaults.transparentBackground);
+logger.debug('- Default shuffle images:', config.defaults.shuffleImages);
 
 // Middleware
 app.use(cors());
@@ -100,7 +151,7 @@ app.use((req, res, next) => {
   
   // Logging des requêtes suspectes
   if (req.url.includes('..') || req.url.includes('%2e%2e')) {
-    console.warn(`Tentative de path traversal détectée: ${req.url} depuis ${req.ip}`);
+    logger.warn(`Tentative de path traversal détectée: ${req.url} depuis ${req.ip}`);
     return res.status(400).json({ error: 'Invalid request' });
   }
   
@@ -196,7 +247,7 @@ function updateShuffledImagesList(newImageAdded = null) {
   if (!slideshowSettings.shuffleImages) {
     // Normal mode: use chronological order
     shuffledImages = [...currentImages];
-    console.log('Mode normal: ordre chronologique');
+    logger.debug('Mode normal: ordre chronologique');
     return;
   }
 
@@ -210,10 +261,10 @@ function updateShuffledImagesList(newImageAdded = null) {
   // Priority: new images first, then shuffled existing ones
   shuffledImages = [...newImages, ...shuffledExisting];
   
-  console.log(`🔀 Shuffle mode: ${newImages.length} new images priority, ${existingImages.length} existing shuffled`);
+  logger.debug(`🔀 Shuffle mode: ${newImages.length} new images priority, ${existingImages.length} existing shuffled`);
   
   if (newImages.length > 0) {
-    console.log('📸 New images:', newImages.map(img => img.filename));
+    logger.debug('📸 New images:', newImages.map(img => img.filename));
   }
 }
 
@@ -263,10 +314,10 @@ async function scanImages(newImageFilename = null) {
     // Restart slideshow timer if necessary
     restartSlideshowTimer();
 
-    console.log(`${images.length} images found in ${currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}`);
+    logger.info(`${images.length} images found in ${currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}`);
     return images;
   } catch (error) {
-    console.error('Error scanning images:', error);
+    logger.error('Error scanning images:', error);
     return [];
   }
 }
@@ -324,10 +375,10 @@ function startSlideshowTimer() {
   const imagesList = getCurrentImagesList();
   if (imagesList.length > 1 && slideshowState.isPlaying) {
     slideshowTimer = setInterval(() => {
-      console.log('Server timer: moving to next image');
+      logger.debug('Server timer: moving to next image');
       changeImage(1);
     }, slideshowSettings.interval);
-    console.log(`Slideshow timer started (interval: ${slideshowSettings.interval}ms)`);
+    logger.debug(`Slideshow timer started (interval: ${slideshowSettings.interval}ms)`);
   }
 }
 
@@ -336,7 +387,7 @@ function stopSlideshowTimer() {
   if (slideshowTimer) {
     clearInterval(slideshowTimer);
     slideshowTimer = null;
-    console.log('Slideshow timer stopped');
+    logger.debug('Slideshow timer stopped');
   }
 }
 
@@ -352,7 +403,7 @@ function setupFileWatcher() {
   // Arrêter le watcher précédent s'il existe
   if (fileWatcher) {
     fileWatcher.close();
-    console.log('Stopping previous monitoring');
+    logger.debug('Stopping previous monitoring');
   }
 
   fileWatcher = chokidar.watch(currentPhotosPath, {
@@ -368,7 +419,7 @@ function setupFileWatcher() {
         const ext = path.extname(filename).toLowerCase();
         
         if (config.supportedFormats.includes(ext)) {
-          console.log(`New image detected: ${filename}`);
+          logger.debug(`New image detected: ${filename}`);
           
           // Mark as new image
           newlyAddedImages.add(filename);
@@ -380,45 +431,45 @@ function setupFileWatcher() {
           setTimeout(() => {
             try {
               newlyAddedImages.delete(filename);
-              console.log(`Image ${filename} is no longer considered new`);
+              logger.debug(`Image ${filename} is no longer considered new`);
               
               // Nettoyage périodique pour éviter les fuites mémoire
               if (newlyAddedImages.size > 100) {
-                console.warn(`Nettoyage forcé du tracker d'images: ${newlyAddedImages.size} entrées`);
+                logger.warn(`Nettoyage forcé du tracker d'images: ${newlyAddedImages.size} entrées`);
                 newlyAddedImages.clear();
               }
             } catch (error) {
-              console.error('Error cleaning image tracker:', error);
+              logger.error('Error cleaning image tracker:', error);
             }
           }, 5 * 60 * 1000);
         }
       } catch (error) {
-        console.error('Error processing file addition:', error);
+        logger.error('Error processing file addition:', error);
       }
     })
     .on('unlink', (filePath) => {
       try {
         const filename = path.basename(filePath);
-        console.log(`Image supprimée: ${filename}`);
+        logger.debug(`Image supprimée: ${filename}`);
         
         // Remove from new images tracker if present
         newlyAddedImages.delete(filename);
         
         scanImages(); // Rescan all images
       } catch (error) {
-        console.error('Error processing file removal:', error);
+        logger.error('Error processing file removal:', error);
       }
     })
     .on('error', error => {
-      console.error('Watcher error:', error);
+      logger.error('Watcher error:', error);
       // Tentative de redémarrage du watcher en cas d'erreur critique
       setTimeout(() => {
-        console.log('Tentative de redémarrage du watcher...');
+        logger.info('Tentative de redémarrage du watcher...');
         setupFileWatcher();
       }, 5000);
     });
 
-  console.log(`Monitoring folder: ${currentPhotosPath}`);
+  logger.info(`Monitoring folder: ${currentPhotosPath}`);
 }
 
 // Routes API
@@ -500,7 +551,7 @@ app.post('/api/settings', (req, res) => {
     
     // Si l'état du mélange a changé, recréer la liste mélangée
     if (newSettings.shuffleImages !== undefined && previousShuffleState !== newSettings.shuffleImages) {
-      console.log(`🔄 Mode mélange changé: ${previousShuffleState} → ${newSettings.shuffleImages}`);
+      logger.debug(`🔄 Mode mélange changé: ${previousShuffleState} → ${newSettings.shuffleImages}`);
       
       // Remember the current image before shuffling to keep it as current
       const currentImageFilename = slideshowState.currentImage ? slideshowState.currentImage.filename : null;
@@ -549,7 +600,7 @@ app.post('/api/settings', (req, res) => {
     
     res.json(slideshowSettings);
   } catch (error) {
-    console.error('Error updating settings:', error);
+    logger.error('Error updating settings:', error);
     res.status(400).json({ error: 'Données de paramètres invalides' });
   }
 });
@@ -571,7 +622,7 @@ app.get('/api/watermarks', async (req, res) => {
     
     res.json(watermarkImages);
   } catch (error) {
-    console.error('Error reading watermarks:', error);
+    logger.error('Error reading watermarks:', error);
     res.json([]);
   }
 });
@@ -583,7 +634,7 @@ app.post('/api/watermark-upload', uploadWatermark.single('watermark'), (req, res
       return res.status(400).json({ error: 'Aucun fichier fourni' });
     }
 
-    console.log('Watermark uploaded:', req.file.filename);
+    logger.info('Watermark uploaded:', req.file.filename);
 
     // Return the uploaded file path
     const filePath = `/uploads/watermarks/${req.file.filename}`;
@@ -595,7 +646,7 @@ app.post('/api/watermark-upload', uploadWatermark.single('watermark'), (req, res
       originalName: req.file.originalname
     });
   } catch (error) {
-    console.error('Error uploading watermark:', error);
+    logger.error('Error uploading watermark:', error);
     res.status(500).json({ error: 'Upload error' });
   }
 });
@@ -624,11 +675,11 @@ app.get('/api/locales/:language', async (req, res) => {
       
       res.json(translations);
     } catch (fileError) {
-      console.error(`Locale file not found: ${language}`, fileError);
+      logger.error(`Locale file not found: ${language}`, fileError);
       res.status(404).json({ error: `Language '${language}' not available` });
     }
   } catch (error) {
-    console.error('Error serving locale:', error);
+    logger.error('Error serving locale:', error);
     res.status(500).json({ error: 'Failed to load language file' });
   }
 });
@@ -638,7 +689,7 @@ app.post('/api/photos-path', async (req, res) => {
   try {
     const { photosPath } = req.body;
     
-    console.log('Demande de changement de dossier:', photosPath);
+    logger.debug('Demande de changement de dossier:', photosPath);
     
     if (!photosPath || typeof photosPath !== 'string') {
       return res.status(400).json({ error: 'Chemin du dossier requis et doit être une chaîne' });
@@ -651,7 +702,7 @@ app.post('/api/photos-path', async (req, res) => {
 
     // Résoudre le chemin pour obtenir le chemin absolu
     const resolvedPath = path.resolve(photosPath);
-    console.log('Chemin résolu:', resolvedPath);
+    logger.debug('Chemin résolu:', resolvedPath);
 
     // Vérifier que le dossier existe
     try {
@@ -660,7 +711,7 @@ app.post('/api/photos-path', async (req, res) => {
         return res.status(400).json({ error: 'Le chemin spécifié n\'est pas un dossier' });
       }
     } catch (error) {
-      console.log('Error checking folder:', error.message);
+      logger.debug('Error checking folder:', error.message);
       return res.status(400).json({ error: 'Le dossier spécifié n\'existe pas ou n\'est pas accessible' });
     }
 
@@ -668,7 +719,7 @@ app.post('/api/photos-path', async (req, res) => {
     currentPhotosPath = resolvedPath;
     slideshowSettings.photosPath = currentPhotosPath;
     
-    console.log('New folder set:', currentPhotosPath);
+    logger.debug('New folder set:', currentPhotosPath);
     
     // Clean new images tracker
     newlyAddedImages.clear();
@@ -679,7 +730,7 @@ app.post('/api/photos-path', async (req, res) => {
     // Rescan images from new folder
     await scanImages();
     
-    console.log(`Photos folder changed to: ${currentPhotosPath}`);
+    logger.info(`Photos folder changed to: ${currentPhotosPath}`);
     
     res.json({ 
       success: true, 
@@ -687,7 +738,7 @@ app.post('/api/photos-path', async (req, res) => {
       message: 'Folder changed successfully'
     });
   } catch (error) {
-    console.error('Error changing folder:', error);
+    logger.error('Error changing folder:', error);
     res.status(500).json({ error: 'Erreur interne du serveur' });
   }
 });
@@ -720,12 +771,12 @@ app.get('/photos/:filename', (req, res) => {
     
     res.sendFile(resolvedPath, (err) => {
       if (err) {
-        console.error('Error sending file:', err);
+        logger.error('Error sending file:', err);
         res.status(404).json({ error: 'Image non trouvée' });
       }
     });
   } catch (error) {
-    console.error('Error in /photos route:', error);
+    logger.error('Error in /photos route:', error);
     res.status(500).json({ error: 'Erreur interne du serveur' });
   }
 });
@@ -742,7 +793,7 @@ app.get('/control', (req, res) => {
 
 // Gestion des connexions WebSocket
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  logger.debug('Client connected:', socket.id);
   
   // Envoyer l'état actuel au nouveau client
   socket.emit('images-updated', {
@@ -760,7 +811,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+    logger.debug('Client disconnected:', socket.id);
   });
 
   // Handle control commands
@@ -811,7 +862,7 @@ io.on('connection', (socket) => {
       totalImages: currentImages.length
     });
     socket.broadcast.emit('pause-slideshow');
-    console.log('Slideshow paused by a client');
+    logger.debug('Slideshow paused by a client');
   });
 
   socket.on('resume-slideshow', () => {
@@ -825,7 +876,7 @@ io.on('connection', (socket) => {
       totalImages: currentImages.length
     });
     socket.broadcast.emit('resume-slideshow');
-    console.log('Slideshow resumed by a client');
+    logger.debug('Slideshow resumed by a client');
   });
 
   socket.on('get-slideshow-state', () => {
@@ -840,7 +891,7 @@ io.on('connection', (socket) => {
   socket.on('toggle-image-exclusion', (filename) => {
     try {
       if (typeof filename !== 'string') {
-        console.error('Invalid filename for exclusion toggle:', filename);
+        logger.error('Invalid filename for exclusion toggle:', filename);
         return;
       }
 
@@ -850,11 +901,11 @@ io.on('connection', (socket) => {
       if (isExcluded) {
         // Remove from excluded list
         slideshowSettings.excludedImages = excludedImages.filter(img => img !== filename);
-        console.log(`Image ${filename} reintegrated into slideshow`);
+        logger.debug(`Image ${filename} reintegrated into slideshow`);
       } else {
         // Add to excluded list
         slideshowSettings.excludedImages = [...excludedImages, filename];
-        console.log(`Image ${filename} excluded from slideshow`);
+        logger.debug(`Image ${filename} excluded from slideshow`);
       }
       
       // Track if we need to restart timer (only if current image state changes)
@@ -887,7 +938,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('Error toggling image exclusion:', error);
+      logger.error('Error toggling image exclusion:', error);
     }
   });
 });
@@ -909,34 +960,34 @@ async function initialize() {
     
     // Démarrer le serveur
     server.listen(config.port, () => {
-      console.log(`PhotoLive OBS server started on http://localhost:${config.port}`);
-      console.log(`Control interface: http://localhost:${config.port}/control`);
-      console.log(`Slideshow for OBS: http://localhost:${config.port}/`);
-      console.log(`Photos folder monitored: ${currentPhotosPath}`);
+      logger.info(`PhotoLive OBS server started on http://localhost:${config.port}`);
+      logger.info(`Control interface: http://localhost:${config.port}/control`);
+      logger.info(`Slideshow for OBS: http://localhost:${config.port}/`);
+      logger.info(`Photos folder monitored: ${currentPhotosPath}`);
     }).on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
-        console.log(`Port ${config.port} already in use, trying port ${config.port + 1}...`);
+        logger.warn(`Port ${config.port} already in use, trying port ${config.port + 1}...`);
         config.port = config.port + 1;
         
         // Avoid infinite loop
         if (config.port > 3010) {
-          console.error('Impossible de trouver un port libre entre 3001 et 3010');
+          logger.error('Impossible de trouver un port libre entre 3001 et 3010');
           process.exit(1);
         }
         
         server.listen(config.port, () => {
-          console.log(`PhotoLive OBS server started on http://localhost:${config.port}`);
-          console.log(`Control interface: http://localhost:${config.port}/control`);
-          console.log(`Slideshow for OBS: http://localhost:${config.port}/`);
-          console.log(`Photos folder monitored: ${currentPhotosPath}`);
+          logger.info(`PhotoLive OBS server started on http://localhost:${config.port}`);
+          logger.info(`Control interface: http://localhost:${config.port}/control`);
+          logger.info(`Slideshow for OBS: http://localhost:${config.port}/`);
+          logger.info(`Photos folder monitored: ${currentPhotosPath}`);
         });
       } else {
-        console.error('Error starting server:', err);
+        logger.error('Error starting server:', err);
         process.exit(1);
       }
     });
   } catch (error) {
-    console.error('Error during initialization:', error);
+    logger.error('Error during initialization:', error);
   }
 }
 
@@ -945,23 +996,23 @@ initialize();
 
 // Gestion propre de l'arrêt
 process.on('SIGINT', () => {
-  console.log('\nStopping server...');
+  logger.info('\nStopping server...');
   
   // Arrêter le timer du diaporama
   stopSlideshowTimer();
   
   if (fileWatcher) {
     fileWatcher.close();
-    console.log('File monitoring stopped');
+    logger.info('File monitoring stopped');
   }
   server.close(() => {
-    console.log('Server stopped cleanly');
+    logger.info('Server stopped cleanly');
     process.exit(0);
   });
 });
 
 process.on('SIGTERM', () => {
-  console.log('\nStopping server (SIGTERM)...');
+  logger.info('\nStopping server (SIGTERM)...');
   
   // Arrêter le timer du diaporama
   stopSlideshowTimer();
