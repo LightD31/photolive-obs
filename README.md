@@ -4,6 +4,8 @@ A Node.js application that monitors a photo folder and displays images in a slid
 
 > ⚠️ **Security Warning**: This application is intended for local development and testing purposes only. Do not expose this application to the internet or use it in production environments without proper security review and hardening.
 
+> 🤖 **AI Generated Code**: This application is 100% AI-generated "vibe coded" software. Expect unconventional patterns, potential bugs, and code that works but may not follow best practices. Use at your own risk.
+
 ## Features
 
 - Real-time file monitoring with automatic image detection
