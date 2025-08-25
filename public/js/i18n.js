@@ -36,8 +36,8 @@ class I18n {
     }
 
     detectBrowserLanguage() {
-        const lang = navigator.language || navigator.userLanguage;
-        return lang.startsWith('fr') ? 'fr' : 'en';
+        // Always default to English
+        return 'en';
     }
 
     async loadTranslations(language) {
