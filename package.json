@@ -1,7 +1,7 @@
 {
   "name": "photolive-obs",
   "version": "1.0.0",
-  "description": "Application de diaporama photo en temps réel pour OBS Studio avec surveillance automatique de dossier et interface web",
+  "description": "Real-time photo slideshow application for OBS Studio with automatic folder monitoring and web interface",
   "main": "server.js",
   "homepage": ".",
   "scripts": {

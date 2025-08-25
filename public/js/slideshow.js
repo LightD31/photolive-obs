@@ -119,7 +119,7 @@ class PhotoLiveSlideshow {
     setupEventListeners() {
         // Gestion des erreurs de chargement d'images
         this.currentImageElement.addEventListener('error', () => {
-            console.error('Erreur de chargement de l\'image courante');
+            console.error('Error loading current image');
             this.nextSlide();
         });
 
@@ -159,7 +159,7 @@ class PhotoLiveSlideshow {
                 this.socket.emit('get-slideshow-state');
             }
         } catch (error) {
-            console.error('Erreur lors du chargement initial:', error);
+            console.error('Error during initial loading:', error);
             this.hideLoading();
             this.showNoImages();
         }

@@ -14,38 +14,38 @@
   },
   "features": {
     "transitions": [
-      { "id": "none", "name": "Aucune", "duration": 0 },
-      { "id": "fade", "name": "Fondu", "duration": 1000 },
-      { "id": "slide", "name": "Glissement", "duration": 1000 },
+      { "id": "none", "name": "None", "duration": 0 },
+      { "id": "fade", "name": "Fade", "duration": 1000 },
+      { "id": "slide", "name": "Slide", "duration": 1000 },
       { "id": "zoom", "name": "Zoom", "duration": 1500 }
     ],
     "filters": [
-      { "id": "none", "name": "Aucun" },
-      { "id": "sepia", "name": "Sépia" },
-      { "id": "grayscale", "name": "Noir & Blanc" },
-      { "id": "blur", "name": "Flou" },
-      { "id": "brightness", "name": "Luminosité" },
-      { "id": "contrast", "name": "Contraste" },
+      { "id": "none", "name": "None" },
+      { "id": "sepia", "name": "Sepia" },
+      { "id": "grayscale", "name": "Black & White" },
+      { "id": "blur", "name": "Blur" },
+      { "id": "brightness", "name": "Brightness" },
+      { "id": "contrast", "name": "Contrast" },
       { "id": "vintage", "name": "Vintage" },
-      { "id": "cool", "name": "Froid" },
-      { "id": "warm", "name": "Chaud" }
+      { "id": "cool", "name": "Cool" },
+      { "id": "warm", "name": "Warm" }
     ],
     "watermarkPositions": [
-      { "id": "top-left", "name": "Haut gauche" },
-      { "id": "top-right", "name": "Haut droit" },
-      { "id": "bottom-left", "name": "Bas gauche" },
-      { "id": "bottom-right", "name": "Bas droit" },
-      { "id": "center", "name": "Centre" }
+      { "id": "top-left", "name": "Top Left" },
+      { "id": "top-right", "name": "Top Right" },
+      { "id": "bottom-left", "name": "Bottom Left" },
+      { "id": "bottom-right", "name": "Bottom Right" },
+      { "id": "center", "name": "Center" }
     ],
     "watermarkTypes": [
-      { "id": "text", "name": "Texte" },
-      { "id": "image", "name": "Image PNG" }
+      { "id": "text", "name": "Text" },
+      { "id": "image", "name": "PNG Image" }
     ],
     "watermarkSizes": [
-      { "id": "small", "name": "Petit", "scale": 0.5 },
-      { "id": "medium", "name": "Moyen", "scale": 1.0 },
-      { "id": "large", "name": "Grand", "scale": 1.5 },
-      { "id": "xlarge", "name": "Très grand", "scale": 2.0 }
+      { "id": "small", "name": "Small", "scale": 0.5 },
+      { "id": "medium", "name": "Medium", "scale": 1.0 },
+      { "id": "large", "name": "Large", "scale": 1.5 },
+      { "id": "xlarge", "name": "Extra Large", "scale": 2.0 }
     ]
   },
   "defaults": {
