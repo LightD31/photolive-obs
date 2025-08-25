@@ -273,6 +273,7 @@ class PhotoLiveControl {
         // Folder selection elements
         this.photosPath = document.getElementById('photos-path');
         this.changeFolderBtn = document.getElementById('change-folder-btn');
+        this.browseFolderBtn = document.getElementById('browse-folder-btn');
         
         // Images preview
         this.imagesPreview = document.getElementById('images-preview');
@@ -445,6 +446,13 @@ class PhotoLiveControl {
         this.changeFolderBtn.addEventListener('click', () => {
             this.changePhotosFolder();
         });
+
+        // Native folder browser (Electron)
+        if (this.browseFolderBtn) {
+            this.browseFolderBtn.addEventListener('click', () => {
+                this.openNativeFolderDialog();
+            });
+        }
 
         // Manual path input
         this.photosPath.addEventListener('input', (e) => {
@@ -970,6 +978,44 @@ class PhotoLiveControl {
         } finally {
             this.changeFolderBtn.disabled = false;
             this.changeFolderBtn.textContent = '✅ Change';
+        }
+    }
+
+    async openNativeFolderDialog() {
+        // Check if we're running in Electron
+        if (typeof window.electronAPI !== 'undefined') {
+            try {
+                const selectedPath = await window.electronAPI.selectFolder();
+                if (selectedPath) {
+                    this.photosPath.value = selectedPath;
+                    this.changeFolderBtn.disabled = false;
+                    // Auto-change folder if path is selected
+                    await this.changePhotosFolder();
+                }
+            } catch (error) {
+                console.error('Error opening folder dialog:', error);
+                this.showNotification('Error opening folder dialog', 'error');
+            }
+        } else {
+            // Fallback for web browser - try File System Access API
+            try {
+                if ('showDirectoryPicker' in window) {
+                    const directoryHandle = await window.showDirectoryPicker();
+                    if (directoryHandle) {
+                        // Note: This gives us a handle, not a file path
+                        // For web context, we'd need to work with the handle differently
+                        this.showNotification('Folder selected (web mode)', 'info');
+                        console.log('Directory handle:', directoryHandle);
+                    }
+                } else {
+                    this.showNotification('Native folder selection not available in web browser. Please type the folder path manually.', 'warning');
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Error with web folder picker:', error);
+                    this.showNotification('Folder selection cancelled or not supported', 'warning');
+                }
+            }
         }
     }
 

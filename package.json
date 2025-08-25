@@ -7,6 +7,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "electron": "electron main.js --no-sandbox",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3001 && electron main.js --no-sandbox\"",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
     "clean": "rimraf dist node_modules package-lock.json",
     "reinstall": "npm run clean && npm install"
   },
@@ -30,6 +36,46 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "rimraf": "^5.0.5"
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.4",
+    "electron-builder": "^24.9.1",
+    "rimraf": "^5.0.5",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.photolive.obs",
+    "productName": "PhotoLive OBS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "server.js",
+      "main.js",
+      "config/**/*",
+      "locales/**/*",
+      "public/**/*",
+      "photos/.gitkeep",
+      "uploads/.gitkeep",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules",
+        "to": "node_modules",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/favicon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/favicon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/favicon.ico"
+    }
   }
 }

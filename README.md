@@ -10,7 +10,9 @@ A Node.js application that monitors a photo folder and displays images in a slid
 
 - Real-time file monitoring with automatic image detection
 - Web interface for OBS Studio browser sources
+- **Native desktop app with folder browser dialogs**
 - Control interface with image preview grid
+- **Executable packaging for Windows, macOS, and Linux**
 - Multilingual support (English and French)
 - Visual filters (Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm)
 - Text and image watermarks
@@ -41,12 +43,43 @@ npm install
 
 3. Start the application:
 ```bash
+# Web application mode
 npm start
+
+# Desktop application mode (with native folder dialogs)
+npm run electron
 ```
 
-The application runs at `http://localhost:3001`
+The web application runs at `http://localhost:3001`
+
+### Creating Executables
+
+To create standalone executable files:
+
+```bash
+# Build for current platform
+npm run build
+
+# Build for specific platforms
+npm run build-win     # Windows executable
+npm run build-mac     # macOS application
+npm run build-linux   # Linux AppImage
+```
+
+Built executables will be in the `dist/` folder and can be distributed without requiring Node.js installation.
 
 ## Usage
+
+### Folder Selection
+
+**Desktop App (Electron):**
+- Click the "📁 Browse..." button to open native OS folder dialog
+- Use Ctrl/Cmd+O keyboard shortcut
+- Selected folder is automatically applied
+
+**Web Browser:**
+- Type folder path manually in the text input
+- Click "Change" to apply the new folder
 
 ### OBS Studio Setup
 
