@@ -62,7 +62,6 @@
     "shuffleImages": true,
     "repeatLatest": false,
     "latestCount": 5,
-    "transparentBackground": true,
-    "excludedImages": []
+    "transparentBackground": true
   }
 }

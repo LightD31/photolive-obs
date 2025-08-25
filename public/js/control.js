@@ -17,8 +17,7 @@ class PhotoLiveControl {
             repeatLatest: false,
             latestCount: 5,
             photosPath: '', // Photos path
-            transparentBackground: false,
-            excludedImages: []
+            transparentBackground: false
         };
         this.isPlaying = true;
         
@@ -163,9 +162,8 @@ class PhotoLiveControl {
         });
 
         this.socket.on('images-updated', (data) => {
-            console.log('Images updated:', data.allImages ? data.allImages.length : data.images.length);
-            // Use allImages for grid display, images for slideshow count
-            this.handleImagesUpdate(data.allImages || data.images, data.settings);
+            console.log('Images updated:', data.images.length);
+            this.handleImagesUpdate(data.images, data.settings);
         });
 
         this.socket.on('settings-updated', (settings) => {
@@ -341,7 +339,7 @@ class PhotoLiveControl {
             
             const data = await response.json();
             
-            this.handleImagesUpdate(data.allImages || data.images, data.settings);
+            this.handleImagesUpdate(data.images, data.settings);
         } catch (error) {
             console.error('Error during initial loading:', error);
             this.showNotification('Failed to load data from server', 'error');
@@ -628,13 +626,6 @@ class PhotoLiveControl {
         imageItem.className = 'image-item';
         imageItem.dataset.index = image.originalIndex;
         imageItem.dataset.displayIndex = displayIndex;
-        imageItem.dataset.filename = image.filename;
-        
-        // Check if image is excluded
-        const isExcluded = this.settings.excludedImages && this.settings.excludedImages.includes(image.filename);
-        if (isExcluded) {
-            imageItem.classList.add('excluded');
-        }
         
         const img = document.createElement('img');
         img.src = image.path;
@@ -653,16 +644,6 @@ class PhotoLiveControl {
             }
         };
         
-        // Create exclusion toggle button
-        const excludeBtn = document.createElement('button');
-        excludeBtn.className = 'exclude-btn';
-        excludeBtn.title = isExcluded ? 'Include in slideshow' : 'Exclude from slideshow';
-        excludeBtn.innerHTML = isExcluded ? '👁️' : '🚫';
-        excludeBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent image selection when clicking the button
-            this.toggleImageExclusion(image.filename);
-        });
-        
         const info = document.createElement('div');
         info.className = 'image-info';
         info.innerHTML = `
@@ -673,7 +654,6 @@ class PhotoLiveControl {
         `;
         
         imageItem.appendChild(img);
-        imageItem.appendChild(excludeBtn);
         imageItem.appendChild(info);
         
         return imageItem;
@@ -695,15 +675,6 @@ class PhotoLiveControl {
             const originalIndex = parseInt(item.dataset.index);
             item.classList.toggle('current', originalIndex === currentIndex);
         });
-    }
-
-    toggleImageExclusion(filename) {
-        if (!this.socket) {
-            console.error('Socket not connected');
-            return;
-        }
-        
-        this.socket.emit('toggle-image-exclusion', filename);
     }
 
     formatFileSize(bytes) {
