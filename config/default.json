@@ -2,7 +2,8 @@
   "server": {
     "port": 3001,
     "photosPath": "./photos",
-    "allowedOrigins": ["*"]
+    "allowedOrigins": ["*"],
+    "logLevel": "INFO"
   },
   "slideshow": {
     "interval": 5000,
