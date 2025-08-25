@@ -11,6 +11,7 @@ A real-time photo slideshow application specifically designed for OBS Studio int
 - 🔄 **Real-time monitoring** - Automatically detects new images added to the folder with Chokidar file watcher
 - 🌐 **Web interface for OBS** - Optimized slideshow page for seamless OBS Studio browser source integration  
 - 🎛️ **Advanced control interface** - Comprehensive web-based control panel with real-time preview
+- 🌍 **Multilingual support** - Full internationalization with English and French languages, automatic browser detection
 - 🎨 **Visual filters** - 9 built-in filters: Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Dual watermark support** - Custom text watermarks OR image watermarks (PNG) with flexible positioning
 - 📁 **Dynamic folder management** - Change photo source folder on-the-fly through the control interface
@@ -50,6 +51,41 @@ npm start
 
 The application will be accessible at: `http://localhost:3001`
 
+## 🌍 Multilingual Support
+
+PhotoLive OBS includes comprehensive internationalization (i18n) support with intelligent language detection.
+
+### Available Languages
+
+- **English (en)** - Complete interface translation
+- **French (fr)** - Interface complète en français
+
+### Language Detection
+
+The application automatically detects the user's language preference through:
+
+1. **Saved preference** - Previously selected language in the control interface
+2. **Browser settings** - Automatic detection from `navigator.language`
+3. **Fallback** - Default to English if no preference is found
+
+### Language Selection
+
+Users can change the interface language through:
+
+- **Control interface** - Language dropdown in the Quick Settings section
+- **Automatic persistence** - Selected language is saved and remembered
+- **Real-time switching** - Interface updates immediately without page reload
+
+### Supported Interface Elements
+
+All user-facing text is translated including:
+
+- Control interface labels and buttons
+- Status messages and notifications
+- Filter and watermark option names
+- Section headers and instructions
+- Error messages and tooltips
+
 ## 📋 Usage
 
 ### Configuration in OBS Studio
@@ -74,6 +110,7 @@ Access the control interface at: `http://localhost:3001/control`
 - ▶️ **Play/Pause** slideshow with real-time state sync
 - ⏭️ **Manual navigation** (previous/next/jump to specific image)
 - ⏱️ **Configurable interval** for automatic image changes (1-30 seconds)
+- 🌍 **Language selection** - Switch between English and French with automatic browser detection
 - 🎨 **Visual filters**: None, Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Watermark options**: 
   - Text watermarks with custom content
@@ -108,6 +145,9 @@ photolive-obs/
 ├── package.json           # npm configuration and dependencies
 ├── config/
 │   └── default.json       # Complete application configuration
+├── locales/               # Internationalization files
+│   ├── en.json           # English translations
+│   └── fr.json           # French translations
 ├── photos/                # Default images folder (auto-created)
 ├── uploads/               # Watermark images storage (auto-created)
 └── public/                # Static web files served by Express
@@ -118,7 +158,8 @@ photolive-obs/
     │   └── control.css    # Control interface styling
     └── js/
         ├── slideshow.js   # WebSocket client for slideshow
-        └── control.js     # Control interface logic
+        ├── control.js     # Control interface logic
+        └── i18n.js        # Internationalization system
 ```
 
 ### Server configuration
@@ -152,7 +193,8 @@ The `config/default.json` file contains comprehensive application settings:
     "shuffleImages": true,
     "transparentBackground": true,
     "repeatLatest": false,
-    "latestCount": 5
+    "latestCount": 5,
+    "language": "en"
   }
 }
 ```
@@ -165,6 +207,7 @@ PhotoLive OBS is built as a modern web application using:
 - **Real-time communication**: Socket.IO for WebSocket connections
 - **File monitoring**: Chokidar for cross-platform file system watching  
 - **File uploads**: Multer for handling watermark image uploads
+- **Internationalization**: Custom i18n system with automatic browser language detection
 - **Security**: Input validation, path traversal protection, file type verification
 - **Frontend**: Vanilla JavaScript with modern ES6+ features
 - **Styling**: CSS Grid, Flexbox, and CSS animations for smooth image display
@@ -195,6 +238,9 @@ The application exposes a comprehensive REST API:
 
 #### Folder management
 - `POST /api/photos-path` - Change the source photos folder dynamically
+
+#### Internationalization
+- `GET /api/locales/:language` - Get translations for specified language (en, fr)
 
 #### Watermark management
 - `GET /api/watermarks` - List available watermark images
@@ -281,6 +327,13 @@ The application exposes a comprehensive REST API:
 - **Control interface not responding**: Check WebSocket connection in browser console
 - **Images not syncing**: Verify both slideshow and control pages are connected
 - **Slow image loading**: Check network speed and image file sizes
+
+### Language and localization
+
+- **Interface not in expected language**: Check browser language settings or use language selector in control interface
+- **Missing translations**: Verify localization files exist in `/locales/` directory
+- **Language not persisting**: Check browser localStorage and ensure settings are saved properly
+- **Translation loading errors**: Check browser console for failed requests to `/api/locales/` endpoints
 
 ## 📝 License
 
