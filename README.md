@@ -1,21 +1,24 @@
 # PhotoLive OBS 📸
 
-A real-time photo slideshow application specifically designed for OBS Studio. This application automatically monitors a folder of images and displays them in a web page that you can integrate directly into OBS as a browser source.
+A real-time photo slideshow application specifically designed for OBS Studio integration. This Node.js web application automatically monitors a photo folder and displays images in a customizable slideshow that can be integrated directly into OBS as a browser source.
+
+**Version 1.0.0** - A complete web-based solution built with Node.js, Express, and WebSockets for seamless real-time photo streaming.
 
 > ⚠️ **Security Warning**: This application has been entirely "vibe coded" and may contain security vulnerabilities. It is intended for local development and testing purposes only. Do not expose this application to the internet or use it in production environments without proper security review and hardening.
 
 ## ✨ Main Features
 
-- 🔄 **Real-time monitoring** - Automatically detects new images added to the folder
-- 🌐 **Web interface for OBS** - Web page optimized for integration into OBS Studio  
-- 🎛️ **Control interface** - Control the slideshow via a dedicated web interface
-- 🎬 **Smooth transitions** - Fade, slide, zoom with CSS animations
-- 🎨 **Visual filters** - Sepia, black & white, blur, brightness, contrast, vintage, etc.
-- 🏷️ **Customizable watermark** - Add your text or logo with free positioning
-- ⚡ **Real-time updates** - WebSocket for instant synchronization
-- 📱 **Responsive interface** - Compatible with all devices
-- ⌨️ **Keyboard shortcuts** - Quick slideshow control
-- 🔧 **Advanced configuration** - Repeat last images, shuffle, etc.
+- 🔄 **Real-time monitoring** - Automatically detects new images added to the folder with Chokidar file watcher
+- 🌐 **Web interface for OBS** - Optimized slideshow page for seamless OBS Studio browser source integration  
+- 🎛️ **Advanced control interface** - Comprehensive web-based control panel with real-time preview
+- 🎨 **Visual filters** - 9 built-in filters: Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
+- 🏷️ **Dual watermark support** - Custom text watermarks OR image watermarks (PNG) with flexible positioning
+- 📁 **Dynamic folder management** - Change photo source folder on-the-fly through the control interface
+- ⚡ **Real-time updates** - WebSocket communication for instant synchronization across all clients
+- 📱 **Responsive design** - Control interface adapts to all screen sizes and devices
+- ⌨️ **Keyboard shortcuts** - Quick slideshow control for streamlined operation
+- 🔧 **Advanced options** - Shuffle mode, repeat latest images, transparent backgrounds, configurable intervals
+- 🔄 **Hot reload** - New images appear automatically without restart or manual refresh
 
 ## 🚀 Installation and startup
 
@@ -68,13 +71,20 @@ Access the control interface at: `http://localhost:3001/control`
 
 #### Available controls
 
-- ▶️ **Play/Pause** slideshow
-- ⏭️ **Manual navigation** (previous/next)
-- ⏱️ **Interval** for image change (1-30 seconds)
-- 🎬 **Transitions**: Fade, Slide, Zoom
-- 🎨 **Filters**: None, Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cold, Warm
-- 🏷️ **Watermark**: Custom text with positioning
-- 🔧 **Advanced options**: Repeat last images, shuffle
+- ▶️ **Play/Pause** slideshow with real-time state sync
+- ⏭️ **Manual navigation** (previous/next/jump to specific image)
+- ⏱️ **Configurable interval** for automatic image changes (1-30 seconds)
+- 🎨 **Visual filters**: None, Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
+- 🏷️ **Watermark options**: 
+  - Text watermarks with custom content
+  - Image watermarks (PNG upload support)
+  - 5 position options with size and opacity controls
+- 📁 **Folder management**: Change photo source folder dynamically
+- 🔧 **Advanced settings**: 
+  - Shuffle images randomly
+  - Repeat only latest N images
+  - Transparent background for OBS
+  - Real-time image count and status
 
 ### Keyboard shortcuts
 
@@ -94,38 +104,78 @@ On the control interface:
 
 ```text
 photolive-obs/
-├── server.js              # Main server
-├── package.json           # npm configuration
+├── server.js              # Main Express server with WebSocket support
+├── package.json           # npm configuration and dependencies
 ├── config/
-│   └── default.json       # Default configuration
-├── photos/                # Images folder (to create)
-└── public/                # Static web files
-    ├── slideshow.html     # Slideshow page for OBS
-    ├── control.html       # Control interface
+│   └── default.json       # Complete application configuration
+├── photos/                # Default images folder (auto-created)
+├── uploads/               # Watermark images storage (auto-created)
+└── public/                # Static web files served by Express
+    ├── slideshow.html     # OBS-optimized slideshow page
+    ├── control.html       # Advanced control interface
     ├── css/
-    │   ├── slideshow.css
-    │   └── control.css
+    │   ├── slideshow.css  # Slideshow styling and effects
+    │   └── control.css    # Control interface styling
     └── js/
-        ├── slideshow.js
-        └── control.js
+        ├── slideshow.js   # WebSocket client for slideshow
+        └── control.js     # Control interface logic
 ```
 
 ### Server configuration
 
-The `config/default.json` file contains default settings:
+The `config/default.json` file contains comprehensive application settings:
 
 ```json
 {
   "server": {
     "port": 3001,
-    "photosPath": "./photos"
+    "photosPath": "./photos",
+    "allowedOrigins": ["*"]
   },
   "slideshow": {
-    "defaultInterval": 5000,
-    "supportedFormats": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"]
+    "interval": 5000,
+    "minInterval": 1000,
+    "maxInterval": 30000,
+    "supportedFormats": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+    "maxImageSize": "10MB",
+    "thumbnailSize": 200
+  },
+  "features": {
+    "filters": [...],
+    "watermarkPositions": [...],
+    "watermarkTypes": [
+      { "id": "text", "name": "Texte" },
+      { "id": "image", "name": "Image PNG" }
+    ]
+  },
+  "defaults": {
+    "shuffleImages": true,
+    "transparentBackground": true,
+    "repeatLatest": false,
+    "latestCount": 5
   }
 }
 ```
+
+## 🏗️ Technical Architecture
+
+PhotoLive OBS is built as a modern web application using:
+
+- **Backend**: Node.js with Express framework
+- **Real-time communication**: Socket.IO for WebSocket connections
+- **File monitoring**: Chokidar for cross-platform file system watching  
+- **File uploads**: Multer for handling watermark image uploads
+- **Security**: Input validation, path traversal protection, file type verification
+- **Frontend**: Vanilla JavaScript with modern ES6+ features
+- **Styling**: CSS Grid, Flexbox, and CSS animations for smooth image display
+
+### Key Dependencies
+
+- `express` - Web server framework
+- `socket.io` - Real-time bidirectional communication
+- `chokidar` - File system watcher
+- `multer` - Multipart form data handling
+- `cors` - Cross-origin resource sharing
 
 ## 🔧 Development
 
@@ -136,47 +186,61 @@ The `config/default.json` file contains default settings:
 
 ### REST API
 
-The application exposes a simple REST API:
+The application exposes a comprehensive REST API:
 
-- `GET /api/images`: List of images with metadata
-- `GET /api/settings`: Current slideshow settings
-- `POST /api/settings`: Update settings
+#### Core endpoints
+- `GET /api/images` - Retrieve list of images with metadata (filename, size, timestamps, new status)
+- `GET /api/settings` - Get current slideshow configuration
+- `POST /api/settings` - Update slideshow settings (interval, filter, watermark, etc.)
+
+#### Folder management
+- `POST /api/photos-path` - Change the source photos folder dynamically
+
+#### Watermark management
+- `GET /api/watermarks` - List available watermark images
+- `POST /api/watermark-upload` - Upload new watermark image (PNG format)
+
+#### Image serving
+- `GET /photos/:filename` - Serve images from current photos folder with security validation
 
 ### WebSocket Events
 
-Events emitted by the server:
+#### Events emitted by server
+- `images-updated` - New list of detected images with settings
+- `settings-updated` - Updated slideshow configuration
+- `slideshow-state` - Current slideshow state (current image, index, play status)
+- `image-changed` - Notification when current image changes
 
-- `images-updated`: New list of detected images
-- `settings-updated`: Updated settings
+#### Events received from clients
+- `next-image` - Advance to next image
+- `prev-image` - Go to previous image  
+- `jump-to-image` - Jump to specific image by index
+- `pause-slideshow` - Pause automatic progression
+- `resume-slideshow` - Resume automatic progression
+- `get-slideshow-state` - Request current slideshow state
 
-Events received from client:
+## 🎯 Use Cases
 
-- `next-image`: Show next image
-- `prev-image`: Show previous image
-- `pause-slideshow`: Pause
-- `resume-slideshow`: Resume playback
+### Live streaming and events
 
-## 🎯 Use cases
+- **Wedding photography** - Display photos taken during the ceremony in real-time
+- **Conference presentations** - Show speaker photos, audience shots, or event highlights
+- **Concert visuals** - Dynamic backdrop with artist photos and fan submissions
+- **Gaming streams** - Showcase community art, screenshots, or memorable moments
 
-### Live events
+### Content creation
 
-- Weddings, concerts, conferences
-- Display photos taken in real time during the event
+- **Twitch/YouTube integration** - Automated photo rotations during stream breaks
+- **Podcast visuals** - Display guest photos, topic-related images, or listener submissions
+- **Educational content** - Visual aids that update automatically during lessons
+- **Product showcases** - Rotating product photography for e-commerce streams
 
-### Streaming
+### Professional applications
 
-- Integration into Twitch/YouTube streams
-- Slideshow during breaks or intermissions
-
-### Presentations
-
-- Automatic display of visual content
-- Presentation support with dynamic images
-
-### Photography
-
-- Real-time portfolio for photographers
-- Showcase of recent work
+- **Photography portfolios** - Real-time client galleries that update as you shoot
+- **Digital signage** - Dynamic displays for businesses, galleries, or exhibitions
+- **Event displays** - Information screens with rotating content at venues
+- **Surveillance monitoring** - Continuous display of security camera snapshots
 
 ## 🔍 Troubleshooting
 
@@ -200,9 +264,23 @@ Events received from client:
 
 ### Performance issues
 
-- Reduce image size (recommended: < 2MB per image)
-- Limit number of images in folder (< 1000 recommended)
-- Increase interval between images
+- **Reduce image size** (recommended: < 2MB per image, max 10MB supported)
+- **Limit folder contents** (< 1000 images recommended for optimal performance)
+- **Increase image change interval** to reduce CPU usage
+- **Disable shuffle mode** for better performance with large image sets
+- **Use SSD storage** for faster image loading
+
+### Watermark issues
+
+- **Text watermark not showing**: Check watermark is enabled and text is not empty
+- **Image watermark not appearing**: Ensure uploaded file is PNG format and < 5MB
+- **Watermark position issues**: Try different position settings in control interface
+
+### Network and connectivity
+
+- **Control interface not responding**: Check WebSocket connection in browser console
+- **Images not syncing**: Verify both slideshow and control pages are connected
+- **Slow image loading**: Check network speed and image file sizes
 
 ## 📝 License
 
