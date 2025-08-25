@@ -264,10 +264,10 @@ class PhotoLiveSlideshow {
             nextElement.classList.remove('z-front');
             nextElement.classList.add('z-back');
             
-            // Set up the next image for fade in (behind current image)
+            // Set up the next image for fade in (behind current image, start invisible)
             nextElement.src = imagePath;
             nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
-            nextElement.style.opacity = '1';
+            nextElement.style.opacity = '0'; // Start invisible to prevent flash
             nextElement.style.transform = '';
             nextElement.style.visibility = 'visible';
             
@@ -278,7 +278,7 @@ class PhotoLiveSlideshow {
             // Trigger the fade animation
             requestAnimationFrame(() => {
                 currentElement.style.opacity = '0';
-                // nextElement already has opacity 1, so it will show through
+                nextElement.style.opacity = '1'; // Fade in the next image
             });
             
             // After transition completes, finalize the switch
@@ -306,10 +306,10 @@ class PhotoLiveSlideshow {
             nextElement.classList.remove('z-front');
             nextElement.classList.add('z-back');
             
-            // Set up the next image positioned off-screen (behind current)
+            // Set up the next image completely hidden first to prevent flash
             nextElement.src = imagePath;
             nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
-            nextElement.style.opacity = '1';
+            nextElement.style.opacity = '0'; // Start hidden to prevent flash
             nextElement.style.visibility = 'visible';
             nextElement.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
             
@@ -319,6 +319,7 @@ class PhotoLiveSlideshow {
             
             // Start the slide animation
             requestAnimationFrame(() => {
+                nextElement.style.opacity = '1'; // Make visible now that it's positioned off-screen
                 currentElement.style.transform = direction > 0 ? 'translateX(-100%)' : 'translateX(100%)';
                 nextElement.style.transform = 'translateX(0)';
             });
