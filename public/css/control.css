@@ -610,54 +610,52 @@ header h1 {
 .zoom-control {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 0.85rem;
     color: #6b7280;
 }
 
-.zoom-control label {
+.zoom-label {
     font-size: 0.9rem;
-    cursor: pointer;
 }
 
-.zoom-control input[type="range"] {
-    width: 60px;
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 2px;
-    outline: none;
-    appearance: none;
-    cursor: pointer;
+.zoom-buttons {
+    display: flex;
+    gap: 2px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
 }
 
-.zoom-control input[type="range"]::-webkit-slider-thumb {
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    background: #3b82f6;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.zoom-control input[type="range"]::-webkit-slider-thumb:hover {
-    background: #2563eb;
-    transform: scale(1.1);
-}
-
-.zoom-control input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    background: #3b82f6;
+.zoom-btn {
+    padding: 4px 8px;
     border: none;
-    border-radius: 50%;
+    background: white;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    min-width: 28px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.zoom-control input[type="range"]::-moz-range-thumb:hover {
+.zoom-btn:hover {
+    background: #f8fafc;
+    color: #374151;
+}
+
+.zoom-btn.active {
+    background: #3b82f6;
+    color: white;
+}
+
+.zoom-btn.active:hover {
     background: #2563eb;
-    transform: scale(1.1);
 }
 
 /* Grille d'images */

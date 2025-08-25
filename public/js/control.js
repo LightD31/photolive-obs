@@ -117,8 +117,8 @@ class PhotoLiveControl {
         this.shuffleImages = document.getElementById('shuffle-images');
         this.transparentBackground = document.getElementById('transparent-background');
         
-        // Grid zoom control
-        this.gridZoom = document.getElementById('grid-zoom');
+        // Grid zoom control buttons
+        this.zoomButtons = document.querySelectorAll('.zoom-btn');
         
         // Folder selection elements
         this.photosPath = document.getElementById('photos-path');
@@ -269,10 +269,12 @@ class PhotoLiveControl {
             this.updateSetting('transparentBackground', e.target.checked);
         });
 
-        // Grid zoom control
-        this.gridZoom.addEventListener('input', (e) => {
-            const zoomLevel = parseInt(e.target.value);
-            this.updateGridZoom(zoomLevel);
+        // Grid zoom control buttons
+        this.zoomButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const zoomLevel = parseInt(e.target.dataset.zoom);
+                this.updateGridZoom(zoomLevel);
+            });
         });
 
         // Folder selection
@@ -832,6 +834,16 @@ class PhotoLiveControl {
         // Remove existing zoom classes
         this.imagesPreview.classList.remove('zoom-small', 'zoom-normal', 'zoom-large', 'zoom-xlarge');
         
+        // Update button states
+        this.zoomButtons.forEach(button => {
+            const buttonZoom = parseInt(button.dataset.zoom);
+            if (buttonZoom === zoomLevel) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+        
         // Add new zoom class based on level
         const zoomClasses = {
             1: 'zoom-small',
@@ -853,10 +865,7 @@ class PhotoLiveControl {
         const savedZoom = localStorage.getItem('photoLiveGridZoom');
         const zoomLevel = savedZoom ? parseInt(savedZoom) : 2;
         
-        // Set slider value
-        this.gridZoom.value = zoomLevel;
-        
-        // Apply zoom level
+        // Apply zoom level (this will also update button states)
         this.updateGridZoom(zoomLevel);
     }
 
