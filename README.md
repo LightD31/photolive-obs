@@ -11,7 +11,7 @@ A real-time photo slideshow application specifically designed for OBS Studio int
 - 🔄 **Real-time monitoring** - Automatically detects new images added to the folder with Chokidar file watcher
 - 🌐 **Web interface for OBS** - Optimized slideshow page for seamless OBS Studio browser source integration  
 - 🎛️ **Advanced control interface** - Comprehensive web-based control panel with real-time preview
-- 🌍 **Multilingual support** - Full internationalization with English and French languages, automatic browser detection
+- 🌍 **Multilingual support** - English and French interface languages
 - 🎨 **Visual filters** - 9 built-in filters: Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Dual watermark support** - Custom text watermarks OR image watermarks (PNG) with flexible positioning
 - 📁 **Dynamic folder management** - Change photo source folder on-the-fly through the control interface
@@ -53,38 +53,12 @@ The application will be accessible at: `http://localhost:3001`
 
 ## 🌍 Multilingual Support
 
-PhotoLive OBS includes comprehensive internationalization (i18n) support with intelligent language detection.
+The application supports English and French languages:
 
-### Available Languages
-
-- **English (en)** - Complete interface translation
-- **French (fr)** - Interface complète en français
-
-### Language Detection
-
-The application automatically detects the user's language preference through:
-
-1. **Saved preference** - Previously selected language in the control interface
-2. **Browser settings** - Automatic detection from `navigator.language`
-3. **Fallback** - Default to English if no preference is found
-
-### Language Selection
-
-Users can change the interface language through:
-
-- **Control interface** - Language dropdown in the Quick Settings section
-- **Automatic persistence** - Selected language is saved and remembered
-- **Real-time switching** - Interface updates immediately without page reload
-
-### Supported Interface Elements
-
-All user-facing text is translated including:
-
-- Control interface labels and buttons
-- Status messages and notifications
-- Filter and watermark option names
-- Section headers and instructions
-- Error messages and tooltips
+- **Language detection**: Automatic browser language detection with fallback to English
+- **Language selection**: Language dropdown in control interface 
+- **Persistence**: Selected language is saved in browser storage
+- **Coverage**: All interface elements including labels, buttons, messages, and filter names
 
 ## 📋 Usage
 
@@ -110,7 +84,7 @@ Access the control interface at: `http://localhost:3001/control`
 - ▶️ **Play/Pause** slideshow with real-time state sync
 - ⏭️ **Manual navigation** (previous/next/jump to specific image)
 - ⏱️ **Configurable interval** for automatic image changes (1-30 seconds)
-- 🌍 **Language selection** - Switch between English and French with automatic browser detection
+- 🌍 **Language selection** - Switch between English and French
 - 🎨 **Visual filters**: None, Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Watermark options**: 
   - Text watermarks with custom content
@@ -207,7 +181,7 @@ PhotoLive OBS is built as a modern web application using:
 - **Real-time communication**: Socket.IO for WebSocket connections
 - **File monitoring**: Chokidar for cross-platform file system watching  
 - **File uploads**: Multer for handling watermark image uploads
-- **Internationalization**: Custom i18n system with automatic browser language detection
+- **Internationalization**: Custom i18n system
 - **Security**: Input validation, path traversal protection, file type verification
 - **Frontend**: Vanilla JavaScript with modern ES6+ features
 - **Styling**: CSS Grid, Flexbox, and CSS animations for smooth image display
@@ -330,10 +304,9 @@ The application exposes a comprehensive REST API:
 
 ### Language and localization
 
-- **Interface not in expected language**: Check browser language settings or use language selector in control interface
-- **Missing translations**: Verify localization files exist in `/locales/` directory
-- **Language not persisting**: Check browser localStorage and ensure settings are saved properly
-- **Translation loading errors**: Check browser console for failed requests to `/api/locales/` endpoints
+- **Language not switching**: Check language selector in control interface or browser language settings
+- **Missing translations**: Verify `/locales/` directory contains `en.json` and `fr.json` files
+- **Settings not saved**: Check browser localStorage support
 
 ## 📝 License
 
@@ -358,4 +331,4 @@ For any questions or problems:
 
 ---
 
-**PhotoLive OBS** - Transform your photos into a professional slideshow for OBS Studio! 🎬✨
+**PhotoLive OBS** - Real-time photo slideshow for OBS Studio
