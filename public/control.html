@@ -90,42 +90,42 @@
 
                     <!-- Quick settings -->
                     <section class="control-section compact">
-                        <h2>⚙️ Quick Settings</h2>
+                        <h2 data-i18n="sections.quick_settings">⚙️ Quick Settings</h2>
                         <div class="quick-settings">
 
                             <div class="setting-row">
-                                <label for="filter-select">Filter:</label>
+                                <label for="filter-select" data-i18n="settings.filter">Filter:</label>
                                 <select id="filter-select" class="compact-select">
-                                    <option value="none">None</option>
-                                    <option value="sepia">Sepia</option>
-                                    <option value="grayscale">B&W</option>
-                                    <option value="blur">Blur</option>
-                                    <option value="brightness">Bright</option>
-                                    <option value="contrast">Contrast</option>
-                                    <option value="vintage">Vintage</option>
-                                    <option value="cool">Cool</option>
-                                    <option value="warm">Warm</option>
+                                    <option value="none" data-i18n="filters.none">None</option>
+                                    <option value="sepia" data-i18n="filters.sepia">Sepia</option>
+                                    <option value="grayscale" data-i18n="filters.grayscale">B&W</option>
+                                    <option value="blur" data-i18n="filters.blur">Blur</option>
+                                    <option value="brightness" data-i18n="filters.brightness">Bright</option>
+                                    <option value="contrast" data-i18n="filters.contrast">Contrast</option>
+                                    <option value="vintage" data-i18n="filters.vintage">Vintage</option>
+                                    <option value="cool" data-i18n="filters.cool">Cool</option>
+                                    <option value="warm" data-i18n="filters.warm">Warm</option>
                                 </select>
                             </div>
                             <div class="setting-row">
-                                <label for="transition-select">Transition:</label>
+                                <label for="transition-select" data-i18n="settings.transition">Transition:</label>
                                 <select id="transition-select" class="compact-select">
-                                    <option value="none">None</option>
-                                    <option value="fade">Fade</option>
-                                    <option value="slide">Slide</option>
-                                    <option value="zoom">Zoom</option>
+                                    <option value="none" data-i18n="transitions.none">None</option>
+                                    <option value="fade" data-i18n="transitions.fade">Fade</option>
+                                    <option value="slide" data-i18n="transitions.slide">Slide</option>
+                                    <option value="zoom" data-i18n="transitions.zoom">Zoom</option>
                                 </select>
                             </div>
                             <div class="setting-row checkbox-row">
                                 <label class="checkbox-label compact">
                                     <input type="checkbox" id="shuffle-images">
                                     <span class="checkmark"></span>
-                                    Shuffle
+                                    <span data-i18n="settings.shuffle">Shuffle</span>
                                 </label>
                                 <label class="checkbox-label compact">
                                     <input type="checkbox" id="transparent-background">
                                     <span class="checkmark"></span>
-                                    Transparent BG
+                                    <span data-i18n="settings.transparent_bg">Transparent BG</span>
                                 </label>
                             </div>
                         </div>
@@ -133,11 +133,11 @@
 
                     <!-- Folder settings -->
                     <section class="control-section compact">
-                        <h2>📁 Photos Folder</h2>
+                        <h2 data-i18n="sections.folder_settings">📁 Photos Folder</h2>
                         <div class="folder-settings">
                             <div class="path-input-container">
                                 <input type="text" id="photos-path" placeholder="Enter photos folder path...">
-                                <button id="change-folder-btn" class="btn btn-primary compact">Change</button>
+                                <button id="change-folder-btn" class="btn btn-primary compact" data-i18n="settings.change_folder">Change</button>
                             </div>
                             <div class="folder-options">
                                 <label class="checkbox-label compact">
@@ -158,53 +158,53 @@
 
                     <!-- Watermark settings -->
                     <section class="control-section compact">
-                        <h2>🏷️ Watermark</h2>
+                        <h2 data-i18n="sections.watermark_settings">🏷️ Watermark</h2>
                         <div class="watermark-settings">
                             <div class="setting-row">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="watermark-enabled">
                                     <span class="checkmark"></span>
-                                    Enable
+                                    <span data-i18n="settings.enable">Enable</span>
                                 </label>
                                 <select id="watermark-type" class="compact-select">
-                                    <option value="text">Text</option>
-                                    <option value="image">Image</option>
+                                    <option value="text" data-i18n="watermark.types.text">Text</option>
+                                    <option value="image" data-i18n="watermark.types.image">Image</option>
                                 </select>
                             </div>
                             
                             <div class="setting-row" id="watermark-text-group">
-                                <input type="text" id="watermark-text" value="PhotoLive OBS" placeholder="Watermark text...">
+                                <input type="text" id="watermark-text" value="PhotoLive OBS" data-i18n-placeholder="watermark.text_placeholder" placeholder="Watermark text...">
                             </div>
 
                             <div class="setting-row hidden" id="watermark-image-group">
                                 <div class="file-input-container">
                                     <input type="file" id="watermark-file" accept="image/*" class="file-input" style="display: none;">
-                                    <button type="button" id="watermark-browse-btn" class="btn btn-secondary compact">📁 Browse...</button>
-                                    <span id="watermark-file-name" class="file-name">No file selected</span>
+                                    <button type="button" id="watermark-browse-btn" class="btn btn-secondary compact" data-i18n="watermark.file_browse">📁 Browse...</button>
+                                    <span id="watermark-file-name" class="file-name" data-i18n="watermark.no_file_selected">No file selected</span>
                                 </div>
                             </div>
 
                             <div class="setting-row">
                                 <select id="watermark-position" class="compact-select">
-                                    <option value="top-left">Top Left</option>
-                                    <option value="top-right">Top Right</option>
-                                    <option value="bottom-left">Bottom Left</option>
-                                    <option value="bottom-right" selected>Bottom Right</option>
-                                    <option value="center">Center</option>
+                                    <option value="top-left" data-i18n="watermark.positions.top-left">Top Left</option>
+                                    <option value="top-right" data-i18n="watermark.positions.top-right">Top Right</option>
+                                    <option value="bottom-left" data-i18n="watermark.positions.bottom-left">Bottom Left</option>
+                                    <option value="bottom-right" selected data-i18n="watermark.positions.bottom-right">Bottom Right</option>
+                                    <option value="center" data-i18n="watermark.positions.center">Center</option>
                                 </select>
                             </div>
                             
                             <div class="setting-row" id="watermark-size-group">
                                 <select id="watermark-size" class="compact-select">
-                                    <option value="small">Small</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="large">Large</option>
-                                    <option value="xlarge">XL</option>
+                                    <option value="small" data-i18n="watermark.sizes.small">Small</option>
+                                    <option value="medium" selected data-i18n="watermark.sizes.medium">Medium</option>
+                                    <option value="large" data-i18n="watermark.sizes.large">Large</option>
+                                    <option value="xlarge" data-i18n="watermark.sizes.xlarge">XL</option>
                                 </select>
                             </div>
 
                             <div class="setting-row">
-                                <label>Opacity:</label>
+                                <label data-i18n="settings.opacity">Opacity:</label>
                                 <div class="slider-container">
                                     <input type="range" id="watermark-opacity" min="10" max="100" step="10" value="80">
                                     <span id="watermark-opacity-value">80%</span>
@@ -215,15 +215,15 @@
 
                     <!-- Instructions -->
                     <section class="control-section compact collapsible">
-                        <h2 class="collapsible-header">📖 Instructions <span class="collapse-icon">−</span></h2>
+                        <h2 class="collapsible-header" data-i18n="sections.instructions">📖 Instructions <span class="collapse-icon">−</span></h2>
                         <div class="collapsible-content">
                             <div class="instructions compact">
                                 <div class="instruction-group">
-                                    <strong>OBS Setup:</strong>
-                                    <p>Add Browser source with URL: <code id="slideshow-url">http://localhost:3001</code></p>
+                                    <strong data-i18n="instructions.obs_setup">OBS Setup:</strong>
+                                    <p><span data-i18n="instructions.obs_url_text">Add Browser source with URL:</span> <code id="slideshow-url">http://localhost:3001</code></p>
                                 </div>
                                 <div class="instruction-group">
-                                    <strong>Shortcuts:</strong> <kbd>→</kbd>/<kbd>Space</kbd> Next, <kbd>←</kbd> Previous, <kbd>P</kbd> Pause
+                                    <strong data-i18n="instructions.shortcuts">Shortcuts:</strong> <kbd>→</kbd>/<kbd>Space</kbd> <span data-i18n="controls.next">Next</span>, <kbd>←</kbd> <span data-i18n="controls.previous">Previous</span>, <kbd>P</kbd> <span data-i18n="controls.pause">Pause</span>
                                 </div>
                             </div>
                         </div>
@@ -235,9 +235,9 @@
                     <!-- Image preview grid -->
                     <section class="control-section full-height">
                         <div class="section-header">
-                            <h2>🖼️ Images <span id="images-grid-count">0 images</span></h2>
+                            <h2 data-i18n="grid.all_images">🖼️ Images <span id="images-grid-count">0 images</span></h2>
                             <div class="zoom-control">
-                                <span class="zoom-label">🔍</span>
+                                <span class="zoom-label" data-i18n="grid.zoom">🔍</span>
                                 <div class="zoom-buttons">
                                     <button id="zoom-small" class="zoom-btn" data-zoom="1" title="Small">S</button>
                                     <button id="zoom-normal" class="zoom-btn active" data-zoom="2" title="Normal">M</button>
