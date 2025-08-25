@@ -424,7 +424,7 @@ app.post('/api/settings', (req, res) => {
   try {
     // Validation des données d'entrée
     const allowedSettings = [
-      'interval', 'filter', 'showWatermark', 'watermarkText',
+      'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
       'transparentBackground', 'photosPath'

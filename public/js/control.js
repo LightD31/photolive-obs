@@ -4,6 +4,7 @@ class PhotoLiveControl {
         this.images = [];
         this.settings = {
             interval: 5000,
+            transition: 'none',
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
@@ -91,6 +92,7 @@ class PhotoLiveControl {
         this.intervalValue = document.getElementById('interval-value');
 
         this.filterSelect = document.getElementById('filter-select');
+        this.transitionSelect = document.getElementById('transition-select');
         
         // Watermark elements
         this.watermarkEnabled = document.getElementById('watermark-enabled');
@@ -208,6 +210,11 @@ class PhotoLiveControl {
         // Filter select
         this.filterSelect.addEventListener('change', (e) => {
             this.updateSetting('filter', e.target.value);
+        });
+
+        // Transition select
+        this.transitionSelect.addEventListener('change', (e) => {
+            this.updateSetting('transition', e.target.value);
         });
 
         // Watermark settings
@@ -398,6 +405,9 @@ class PhotoLiveControl {
         
         // Update filter
         this.filterSelect.value = this.settings.filter;
+        
+        // Update transition
+        this.transitionSelect.value = this.settings.transition || 'none';
         
         // Update watermark
         this.watermarkEnabled.checked = this.settings.showWatermark;

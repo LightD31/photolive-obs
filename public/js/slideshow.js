@@ -5,6 +5,7 @@ class PhotoLiveSlideshow {
         this.currentIndex = 0;
         this.settings = {
             interval: 5000,
+            transition: 'none',
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
@@ -35,6 +36,7 @@ class PhotoLiveSlideshow {
 
     setupElements() {
         this.currentImage = document.getElementById('current-image');
+        this.nextImage = document.getElementById('next-image');
         this.watermark = document.getElementById('watermark');
         this.overlay = document.getElementById('overlay');
         this.loading = document.getElementById('loading');
@@ -192,9 +194,144 @@ class PhotoLiveSlideshow {
     }
 
     transitionToServerImage(imagePath, direction = 1) {
-        // Display the image directly without transitions
-        console.log('Displaying image:', imagePath);
-        this.displayImageDirectly(imagePath);
+        console.log('Transitioning to image:', imagePath, 'with transition:', this.settings.transition);
+        
+        // If no transition or same image, display directly
+        if (this.settings.transition === 'none' || this.currentImage.src.endsWith(imagePath.split('/').pop())) {
+            this.displayImageDirectly(imagePath);
+            return;
+        }
+        
+        // Implement transition based on settings
+        switch (this.settings.transition) {
+            case 'fade':
+                this.fadeTransition(imagePath);
+                break;
+            case 'slide':
+                this.slideTransition(imagePath, direction);
+                break;
+            case 'zoom':
+                this.zoomTransition(imagePath);
+                break;
+            default:
+                this.displayImageDirectly(imagePath);
+        }
+    }
+
+    fadeTransition(imagePath) {
+        // Preload the new image
+        const img = new Image();
+        img.onload = () => {
+            // Set up the next image
+            this.nextImage.src = imagePath;
+            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-fade`;
+            this.nextImage.style.opacity = '0';
+            this.nextImage.style.visibility = 'visible';
+            
+            // Fade out current image
+            this.currentImage.className = `slide-image filter-${this.settings.filter} transition-fade`;
+            this.currentImage.style.opacity = '0';
+            
+            // Fade in next image
+            requestAnimationFrame(() => {
+                this.nextImage.style.opacity = '1';
+            });
+            
+            // After transition completes, swap the images
+            setTimeout(() => {
+                this.swapImages();
+            }, 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for fade transition:', imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    slideTransition(imagePath, direction) {
+        // Preload the new image
+        const img = new Image();
+        img.onload = () => {
+            // Set up the next image positioned off-screen
+            this.nextImage.src = imagePath;
+            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-slide`;
+            this.nextImage.style.opacity = '1';
+            this.nextImage.style.visibility = 'visible';
+            this.nextImage.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+            
+            // Add transition to current image
+            this.currentImage.className = `slide-image filter-${this.settings.filter} transition-slide`;
+            
+            // Start the slide animation
+            requestAnimationFrame(() => {
+                this.currentImage.style.transform = direction > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+                this.nextImage.style.transform = 'translateX(0)';
+            });
+            
+            // After transition completes, swap the images
+            setTimeout(() => {
+                this.swapImages();
+            }, 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for slide transition:', imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    zoomTransition(imagePath) {
+        // Preload the new image
+        const img = new Image();
+        img.onload = () => {
+            // Set up the next image scaled down and transparent
+            this.nextImage.src = imagePath;
+            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-in`;
+            this.nextImage.style.transform = 'scale(1.2)';
+            this.nextImage.style.opacity = '0';
+            this.nextImage.style.visibility = 'visible';
+            
+            // Zoom out current image
+            this.currentImage.className = `slide-image filter-${this.settings.filter} transition-zoom-out`;
+            this.currentImage.style.transform = 'scale(0.8)';
+            this.currentImage.style.opacity = '0';
+            
+            // Zoom in next image
+            requestAnimationFrame(() => {
+                this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-visible`;
+                this.nextImage.style.transform = 'scale(1)';
+                this.nextImage.style.opacity = '1';
+            });
+            
+            // After transition completes, swap the images
+            setTimeout(() => {
+                this.swapImages();
+            }, 1500);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for zoom transition:', imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    swapImages() {
+        // Swap the current and next image references
+        const temp = this.currentImage;
+        this.currentImage = this.nextImage;
+        this.nextImage = temp;
+        
+        // Reset the next image
+        this.nextImage.className = 'slide-image hidden';
+        this.nextImage.style.opacity = '';
+        this.nextImage.style.transform = '';
+        this.nextImage.style.visibility = 'hidden';
+        
+        // Ensure current image is properly styled
+        this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
+        this.currentImage.style.opacity = '1';
+        this.currentImage.style.transform = '';
+        this.currentImage.style.visibility = 'visible';
+        
+        console.log('Images swapped, transition complete');
     }
 
     displayImageDirectly(imagePath) {
@@ -211,6 +348,15 @@ class PhotoLiveSlideshow {
             this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
             this.currentImage.style.opacity = '1';
             this.currentImage.style.transform = '';
+            this.currentImage.style.visibility = 'visible';
+            
+            // Ensure next image is hidden
+            if (this.nextImage) {
+                this.nextImage.className = 'slide-image hidden';
+                this.nextImage.style.opacity = '';
+                this.nextImage.style.transform = '';
+                this.nextImage.style.visibility = 'hidden';
+            }
             
             console.log('Image displayed:', imagePath);
         };
