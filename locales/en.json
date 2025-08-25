@@ -98,6 +98,9 @@
   "grid": {
     "all_images": "All Images",
     "zoom": "Zoom",
+    "sort": "Sort",
+    "sort_newest_first": "Newest First",
+    "sort_oldest_first": "Oldest First",
     "loading_thumbnails": "Loading thumbnails...",
     "no_images": "No images in folder",
     "add_images_hint": "Add images to the photos folder to see them here",

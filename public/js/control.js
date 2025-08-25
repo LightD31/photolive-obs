@@ -34,6 +34,7 @@ class PhotoLiveControl {
         this.pendingGridUpdate = false;
         this.lastImageListHash = null;
         this.sortedImagesCache = null;
+        this.gridSortOrder = 'desc'; // 'desc' for newest first, 'asc' for oldest first
         
         this.init();
     }
@@ -49,6 +50,7 @@ class PhotoLiveControl {
         this.loadInitialData();
         this.updateSlideshowUrl();
         this.initializeGridZoom();
+        this.initializeGridSort();
         this.setupGridEventDelegation();
         
         // Request current slideshow state
@@ -193,10 +195,11 @@ class PhotoLiveControl {
 
     // Generate a hash for the images array to detect changes
     generateImageListHash(images) {
-        return images.map(img => {
+        const imageHashes = images.map(img => {
             const isExcluded = this.settings.excludedImages && this.settings.excludedImages.includes(img.filename);
             return `${img.path}-${img.modified}-${isExcluded}`;
         }).join('|');
+        return `${imageHashes}-sort:${this.gridSortOrder}`;
     }
 
     // Setup event delegation for grid clicks to improve performance
@@ -269,6 +272,9 @@ class PhotoLiveControl {
         
         // Grid zoom control buttons
         this.zoomButtons = document.querySelectorAll('.zoom-btn');
+        
+        // Grid sort control buttons
+        this.sortButtons = document.querySelectorAll('.sort-btn');
         
         // Folder selection elements
         this.photosPath = document.getElementById('photos-path');
@@ -441,6 +447,14 @@ class PhotoLiveControl {
             });
         });
 
+        // Grid sort control buttons
+        this.sortButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const sortOrder = e.target.dataset.sort;
+                this.updateGridSort(sortOrder);
+            });
+        });
+
         // Folder selection
         this.changeFolderBtn.addEventListener('click', () => {
             this.changePhotosFolder();
@@ -542,6 +556,9 @@ class PhotoLiveControl {
         this.images = images;
         this.updateImagesCount();
         this.renderImagesPreview();
+        
+        // Ensure sort button states are updated after images are loaded
+        this.updateSortButtonStates();
     }
 
     updateImagesCount() {
@@ -808,7 +825,11 @@ class PhotoLiveControl {
             this.sortedImagesCache = [...this.images].map((image, originalIndex) => ({
                 ...image,
                 originalIndex
-            })).sort((a, b) => new Date(b.modified) - new Date(a.modified));
+            })).sort((a, b) => {
+                const dateA = new Date(a.modified);
+                const dateB = new Date(b.modified);
+                return this.gridSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+            });
             this.lastImageListHash = currentHash;
         }
 
@@ -1109,6 +1130,45 @@ class PhotoLiveControl {
         
         // Apply zoom level (this will also update button states)
         this.updateGridZoom(zoomLevel);
+    }
+
+    updateGridSort(sortOrder) {
+        // Update sort order and invalidate cache
+        this.gridSortOrder = sortOrder;
+        this.sortedImagesCache = null;
+        this.lastImageListHash = null;
+        
+        // Store sort preference locally
+        localStorage.setItem('photoLiveGridSort', sortOrder);
+        
+        // Update button states
+        this.updateSortButtonStates();
+        
+        // Trigger re-render only if images are loaded
+        if (this.images && this.images.length > 0) {
+            this.renderImagesPreview();
+        }
+    }
+
+    updateSortButtonStates() {
+        // Update button states
+        this.sortButtons.forEach(button => {
+            const buttonSort = button.dataset.sort;
+            if (buttonSort === this.gridSortOrder) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+    }
+
+    initializeGridSort() {
+        // Load saved sort order or default to descending (newest first)
+        const savedSort = localStorage.getItem('photoLiveGridSort');
+        const sortOrder = savedSort || 'desc';
+        
+        // Apply sort order (this will also update button states)
+        this.updateGridSort(sortOrder);
     }
 
     async handleWatermarkFileSelection(file) {
