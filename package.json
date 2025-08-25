@@ -65,9 +65,15 @@
         "filter": ["**/*"]
       }
     ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
     "win": {
       "target": "nsis",
-      "icon": "public/favicon.ico"
+      "icon": "public/favicon.ico",
+      "sign": null,
+      "verifyUpdateCodeSignature": false
     },
     "mac": {
       "target": "dmg",

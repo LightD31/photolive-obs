@@ -45,6 +45,16 @@ npm run build-linux   # Linux
 npm run build -- --publish=never
 ```
 
+#### Windows Build Notes
+
+The Windows build is configured to skip code signing to avoid permission issues during development. If you encounter errors like "cannot create symbolic link" or permission issues, ensure:
+
+- You're running the command in a regular command prompt (not as administrator)
+- The build configuration correctly disables code signing (already configured)
+- Your system has the latest Node.js and npm versions
+
+For production releases, you can add code signing certificates by modifying the `win` section in `package.json`.
+
 ### Using the Native Folder Picker
 
 1. **In Electron App**: Click the "📁 Browse..." button to open native folder dialog
