@@ -236,13 +236,22 @@
                     <section class="control-section full-height">
                         <div class="section-header">
                             <h2 data-i18n="grid.all_images">🖼️ Images <span id="images-grid-count">0 images</span></h2>
-                            <div class="zoom-control">
-                                <span class="zoom-label" data-i18n="grid.zoom">🔍</span>
-                                <div class="zoom-buttons">
-                                    <button id="zoom-small" class="zoom-btn" data-zoom="1" title="Small">S</button>
-                                    <button id="zoom-normal" class="zoom-btn active" data-zoom="2" title="Normal">M</button>
-                                    <button id="zoom-large" class="zoom-btn" data-zoom="3" title="Large">L</button>
-                                    <button id="zoom-xlarge" class="zoom-btn" data-zoom="4" title="Extra Large">XL</button>
+                            <div class="grid-controls">
+                                <div class="sort-control">
+                                    <span class="sort-label" data-i18n="grid.sort">📅</span>
+                                    <div class="sort-buttons">
+                                        <button id="sort-desc" class="sort-btn active" data-sort="desc" data-i18n="grid.sort_newest_first" title="Newest First">↓</button>
+                                        <button id="sort-asc" class="sort-btn" data-sort="asc" data-i18n="grid.sort_oldest_first" title="Oldest First">↑</button>
+                                    </div>
+                                </div>
+                                <div class="zoom-control">
+                                    <span class="zoom-label" data-i18n="grid.zoom">🔍</span>
+                                    <div class="zoom-buttons">
+                                        <button id="zoom-small" class="zoom-btn" data-zoom="1" title="Small">S</button>
+                                        <button id="zoom-normal" class="zoom-btn active" data-zoom="2" title="Normal">M</button>
+                                        <button id="zoom-large" class="zoom-btn" data-zoom="3" title="Large">L</button>
+                                        <button id="zoom-xlarge" class="zoom-btn" data-zoom="4" title="Extra Large">XL</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -673,6 +673,65 @@ header h1 {
     background: #2563eb;
 }
 
+/* Grid controls layout */
+.grid-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Sort control */
+.sort-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.sort-label {
+    font-size: 0.9rem;
+}
+
+.sort-buttons {
+    display: flex;
+    gap: 2px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+}
+
+.sort-btn {
+    padding: 4px 8px;
+    border: none;
+    background: white;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 28px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sort-btn:hover {
+    background: #f8fafc;
+    color: #374151;
+}
+
+.sort-btn.active {
+    background: #3b82f6;
+    color: white;
+}
+
+.sort-btn.active:hover {
+    background: #2563eb;
+}
+
 /* Grille d'images */
 .images-grid {
     display: grid;

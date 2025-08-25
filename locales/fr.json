@@ -98,6 +98,9 @@
   "grid": {
     "all_images": "Toutes les Images",
     "zoom": "Zoom",
+    "sort": "Tri",
+    "sort_newest_first": "Plus Récent",
+    "sort_oldest_first": "Plus Ancien",
     "loading_thumbnails": "Chargement des miniatures...",
     "no_images": "Aucune image dans le dossier",
     "add_images_hint": "Ajoutez des images au dossier photos pour les voir ici",
