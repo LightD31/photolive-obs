@@ -188,13 +188,28 @@ header h1 {
     margin-bottom: 8px;
 }
 
-/* Current preview styles */
+/* Current and Next preview styles */
 .preview-section {
     position: sticky;
     top: 12px;
 }
 
-.current-preview {
+.preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.preview-item h3 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 8px 0;
+    text-align: center;
+}
+
+.current-preview,
+.next-preview {
     display: flex;
     flex-direction: column;
     gap: 8px;
