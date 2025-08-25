@@ -800,19 +800,26 @@ io.on('connection', (socket) => {
         console.log(`Image ${filename} exclue du diaporama`);
       }
       
+      // Track if we need to restart timer (only if current image state changes)
+      let shouldRestartTimer = false;
+      
       // Update slideshow state if current image was excluded
       const filteredImages = getCurrentImagesList();
       if (filteredImages.length === 0) {
         slideshowState.currentImage = null;
         slideshowState.currentIndex = 0;
+        shouldRestartTimer = true; // No images left, need to stop timer
       } else if (slideshowState.currentImage && slideshowSettings.excludedImages.includes(slideshowState.currentImage.filename)) {
         // Current image was excluded, move to next available image
         slideshowState.currentIndex = 0;
         updateSlideshowState();
+        shouldRestartTimer = true; // Current image changed, need to reset timer
       }
       
-      // Restart slideshow timer with new filtered list
-      restartSlideshowTimer();
+      // Only restart slideshow timer if the current image state changed
+      if (shouldRestartTimer) {
+        restartSlideshowTimer();
+      }
       
       // Broadcast updated settings and images to all clients
       io.emit('settings-updated', slideshowSettings);
