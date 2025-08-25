@@ -38,7 +38,10 @@ class PhotoLiveControl {
         this.init();
     }
 
-    init() {
+    async init() {
+        // Initialize i18n first
+        await this.initializeI18n();
+        
         this.setupElements();
         this.setupSocket();
         this.setupEventListeners();
@@ -51,6 +54,140 @@ class PhotoLiveControl {
         // Request current slideshow state
         if (this.socket) {
             this.socket.emit('get-slideshow-state');
+        }
+    }
+
+    async initializeI18n() {
+        try {
+            // Get saved language preference from settings or localStorage
+            const savedLanguage = this.settings.language || localStorage.getItem('photolive-language');
+            await window.i18n.init(savedLanguage);
+            
+            // Update language selector
+            const languageSelect = document.getElementById('language-select');
+            if (languageSelect) {
+                languageSelect.value = window.i18n.getCurrentLanguage();
+            }
+            
+            // Listen for language changes
+            document.addEventListener('languageChanged', (event) => {
+                this.onLanguageChanged(event.detail.language);
+            });
+            
+        } catch (error) {
+            console.error('Failed to initialize i18n:', error);
+        }
+    }
+
+    onLanguageChanged(language) {
+        // Update the settings to save language preference
+        this.updateSetting('language', language);
+        
+        // Update dropdowns with translated values
+        this.updateDropdownTranslations();
+        
+        // Update status text
+        this.updateImagesCount();
+    }
+
+    updateDropdownTranslations() {
+        // Update filter dropdown
+        const filterSelect = document.getElementById('filter-select');
+        if (filterSelect) {
+            const currentValue = filterSelect.value;
+            filterSelect.innerHTML = `
+                <option value="none" data-i18n="filters.none">None</option>
+                <option value="sepia" data-i18n="filters.sepia">Sepia</option>
+                <option value="grayscale" data-i18n="filters.grayscale">B&W</option>
+                <option value="blur" data-i18n="filters.blur">Blur</option>
+                <option value="brightness" data-i18n="filters.brightness">Bright</option>
+                <option value="contrast" data-i18n="filters.contrast">Contrast</option>
+                <option value="vintage" data-i18n="filters.vintage">Vintage</option>
+                <option value="cool" data-i18n="filters.cool">Cool</option>
+                <option value="warm" data-i18n="filters.warm">Warm</option>
+            `;
+            filterSelect.value = currentValue;
+            
+            // Translate options
+            filterSelect.querySelectorAll('[data-i18n]').forEach(option => {
+                const key = option.getAttribute('data-i18n');
+                option.textContent = window.i18n.t(key);
+            });
+        }
+
+        // Update transition dropdown
+        const transitionSelect = document.getElementById('transition-select');
+        if (transitionSelect) {
+            const currentValue = transitionSelect.value;
+            transitionSelect.innerHTML = `
+                <option value="none" data-i18n="transitions.none">None</option>
+                <option value="fade" data-i18n="transitions.fade">Fade</option>
+                <option value="slide" data-i18n="transitions.slide">Slide</option>
+                <option value="zoom" data-i18n="transitions.zoom">Zoom</option>
+            `;
+            transitionSelect.value = currentValue;
+            
+            // Translate options
+            transitionSelect.querySelectorAll('[data-i18n]').forEach(option => {
+                const key = option.getAttribute('data-i18n');
+                option.textContent = window.i18n.t(key);
+            });
+        }
+
+        // Update watermark position dropdown
+        const watermarkPosition = document.getElementById('watermark-position');
+        if (watermarkPosition) {
+            const currentValue = watermarkPosition.value;
+            watermarkPosition.innerHTML = `
+                <option value="top-left" data-i18n="watermark.positions.top-left">Top Left</option>
+                <option value="top-right" data-i18n="watermark.positions.top-right">Top Right</option>
+                <option value="bottom-left" data-i18n="watermark.positions.bottom-left">Bottom Left</option>
+                <option value="bottom-right" data-i18n="watermark.positions.bottom-right">Bottom Right</option>
+                <option value="center" data-i18n="watermark.positions.center">Center</option>
+            `;
+            watermarkPosition.value = currentValue;
+            
+            // Translate options
+            watermarkPosition.querySelectorAll('[data-i18n]').forEach(option => {
+                const key = option.getAttribute('data-i18n');
+                option.textContent = window.i18n.t(key);
+            });
+        }
+
+        // Update watermark size dropdown
+        const watermarkSize = document.getElementById('watermark-size');
+        if (watermarkSize) {
+            const currentValue = watermarkSize.value;
+            watermarkSize.innerHTML = `
+                <option value="small" data-i18n="watermark.sizes.small">Small</option>
+                <option value="medium" data-i18n="watermark.sizes.medium">Medium</option>
+                <option value="large" data-i18n="watermark.sizes.large">Large</option>
+                <option value="xlarge" data-i18n="watermark.sizes.xlarge">XL</option>
+            `;
+            watermarkSize.value = currentValue;
+            
+            // Translate options
+            watermarkSize.querySelectorAll('[data-i18n]').forEach(option => {
+                const key = option.getAttribute('data-i18n');
+                option.textContent = window.i18n.t(key);
+            });
+        }
+
+        // Update watermark type dropdown
+        const watermarkType = document.getElementById('watermark-type');
+        if (watermarkType) {
+            const currentValue = watermarkType.value;
+            watermarkType.innerHTML = `
+                <option value="text" data-i18n="watermark.types.text">Text</option>
+                <option value="image" data-i18n="watermark.types.image">Image</option>
+            `;
+            watermarkType.value = currentValue;
+            
+            // Translate options
+            watermarkType.querySelectorAll('[data-i18n]').forEach(option => {
+                const key = option.getAttribute('data-i18n');
+                option.textContent = window.i18n.t(key);
+            });
         }
     }
 
@@ -197,6 +334,14 @@ class PhotoLiveControl {
     }
 
     setupEventListeners() {
+        // Language selector
+        const languageSelect = document.getElementById('language-select');
+        if (languageSelect) {
+            languageSelect.addEventListener('change', async (e) => {
+                await window.i18n.setLanguage(e.target.value);
+            });
+        }
+
         // Control buttons
         this.prevBtn.addEventListener('click', () => {
             this.socket.emit('prev-image');
@@ -395,12 +540,18 @@ class PhotoLiveControl {
 
     updateImages(images) {
         this.images = images;
-        const countText = `${images.length} image${images.length > 1 ? 's' : ''}`;
+        this.updateImagesCount();
+        this.renderImagesPreview();
+    }
+
+    updateImagesCount() {
+        const count = this.images.length;
+        const key = count === 1 ? 'status.images_count_singular' : 'status.images_count';
+        const countText = window.i18n.t(key, { count: count });
         this.imagesCount.textContent = countText;
         if (this.imagesGridCount) {
             this.imagesGridCount.textContent = countText;
         }
-        this.renderImagesPreview();
     }
 
     updateSettings(settings) {

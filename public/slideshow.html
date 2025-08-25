@@ -6,11 +6,11 @@
     <title>PhotoLive OBS - Slideshow</title>
     <link rel="stylesheet" href="css/slideshow.css">
 </head>
-<body>
+<body data-i18n-title="app.slideshow_title">
     <div id="slideshow-container">
         <div id="image-container">
-            <img id="current-image" class="slide-image" alt="Current photo">
-            <img id="next-image" class="slide-image hidden" alt="Next photo">
+            <img id="current-image" class="slide-image" data-i18n-alt="slideshow.alt_current" alt="Current photo">
+            <img id="next-image" class="slide-image hidden" data-i18n-alt="slideshow.alt_next" alt="Next photo">
         </div>
         
         <!-- Watermark -->
@@ -25,16 +25,17 @@
     <!-- Loading indicator -->
     <div id="loading" class="loading">
         <div class="spinner"></div>
-        <p>Loading photos...</p>
+        <p data-i18n="slideshow.loading">Loading photos...</p>
     </div>
 
     <!-- Message if no images -->
     <div id="no-images" class="no-images hidden">
-        <h2>No images found</h2>
-        <p>Add images to the "photos" folder to start the slideshow.</p>
+        <h2 data-i18n="slideshow.no_images_found">No images found</h2>
+        <p data-i18n="slideshow.add_images_instruction">Add images to the "photos" folder to start the slideshow.</p>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/slideshow.js"></script>
 </body>
 </html>
