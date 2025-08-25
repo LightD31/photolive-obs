@@ -1,9 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-co// Serve watermarks statically
-app.use('/watermarks', express.static(path.join(__dirname, 'uploads/watermarks')));
-// Serve uploaded watermarks path = require('path');
+const path = require('path');
 const fs = require('fs').promises;
 const chokidar = require('chokidar');
 const cors = require('cors');
