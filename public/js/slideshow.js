@@ -35,8 +35,8 @@ class PhotoLiveSlideshow {
     }
 
     setupElements() {
-        this.currentImage = document.getElementById('current-image');
-        this.nextImage = document.getElementById('next-image');
+        this.currentImageElement = document.getElementById('current-image');
+        this.nextImageElement = document.getElementById('next-image');
         this.watermark = document.getElementById('watermark');
         this.overlay = document.getElementById('overlay');
         this.loading = document.getElementById('loading');
@@ -94,9 +94,31 @@ class PhotoLiveSlideshow {
         });
     }
 
+    getVisibleImageElement() {
+        // Return the image element that is currently visible
+        if (!this.currentImageElement.classList.contains('hidden') && 
+            this.currentImageElement.style.visibility !== 'hidden' &&
+            this.currentImageElement.src) {
+            return this.currentImageElement;
+        }
+        if (!this.nextImageElement.classList.contains('hidden') && 
+            this.nextImageElement.style.visibility !== 'hidden' &&
+            this.nextImageElement.src) {
+            return this.nextImageElement;
+        }
+        // Default to current-image element if neither is clearly visible
+        return this.currentImageElement;
+    }
+
+    getHiddenImageElement() {
+        // Return the image element that is currently hidden
+        const visible = this.getVisibleImageElement();
+        return visible === this.currentImageElement ? this.nextImageElement : this.currentImageElement;
+    }
+
     setupEventListeners() {
         // Gestion des erreurs de chargement d'images
-        this.currentImage.addEventListener('error', () => {
+        this.currentImageElement.addEventListener('error', () => {
             console.error('Erreur de chargement de l\'image courante');
             this.nextSlide();
         });
@@ -174,7 +196,8 @@ class PhotoLiveSlideshow {
         this.isPlaying = data.isPlaying !== undefined ? data.isPlaying : this.isPlaying;
 
         // Vérifier si l'image affichée est différente
-        const currentPath = this.currentImage.src;
+        const visibleElement = this.getVisibleImageElement();
+        const currentPath = visibleElement.src;
         const newPath = data.currentImage.path;
         
         if (!currentPath || currentPath === '') {
@@ -203,7 +226,8 @@ class PhotoLiveSlideshow {
         }
         
         // Check if we're transitioning to the same image
-        const currentUrl = this.currentImage.src ? new URL(this.currentImage.src, window.location.origin).pathname : '';
+        const visibleElement = this.getVisibleImageElement();
+        const currentUrl = visibleElement.src ? new URL(visibleElement.src, window.location.origin).pathname : '';
         const newUrl = imagePath;
         
         if (currentUrl === newUrl) {
@@ -228,29 +252,33 @@ class PhotoLiveSlideshow {
     }
 
     fadeTransition(imagePath) {
+        // Get the currently visible and hidden elements
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+        
         // Preload the new image
         const img = new Image();
         img.onload = () => {
             // Set up the next image for fade in
-            this.nextImage.src = imagePath;
-            this.nextImage.className = `slide-image filter-${this.settings.filter}`;
-            this.nextImage.style.opacity = '0';
-            this.nextImage.style.transform = '';
-            this.nextImage.style.visibility = 'visible';
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter}`;
+            nextElement.style.opacity = '0';
+            nextElement.style.transform = '';
+            nextElement.style.visibility = 'visible';
             
             // Start the crossfade transition
-            this.currentImage.className = `slide-image filter-${this.settings.filter} transition-fade`;
-            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-fade`;
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-fade`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-fade`;
             
             // Trigger the fade animation
             requestAnimationFrame(() => {
-                this.currentImage.style.opacity = '0';
-                this.nextImage.style.opacity = '1';
+                currentElement.style.opacity = '0';
+                nextElement.style.opacity = '1';
             });
             
-            // After transition completes, swap the images
+            // After transition completes, hide the old image
             setTimeout(() => {
-                this.swapImages();
+                this.completeTransition(currentElement, nextElement);
             }, 1000);
         };
         img.onerror = () => {
@@ -261,29 +289,33 @@ class PhotoLiveSlideshow {
     }
 
     slideTransition(imagePath, direction) {
+        // Get the currently visible and hidden elements
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+        
         // Preload the new image
         const img = new Image();
         img.onload = () => {
             // Set up the next image positioned off-screen
-            this.nextImage.src = imagePath;
-            this.nextImage.className = `slide-image filter-${this.settings.filter}`;
-            this.nextImage.style.opacity = '1';
-            this.nextImage.style.visibility = 'visible';
-            this.nextImage.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter}`;
+            nextElement.style.opacity = '1';
+            nextElement.style.visibility = 'visible';
+            nextElement.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
             
             // Add transition classes to both images
-            this.currentImage.className = `slide-image filter-${this.settings.filter} transition-slide`;
-            this.nextImage.className = `slide-image filter-${this.settings.filter} transition-slide`;
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-slide`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-slide`;
             
             // Start the slide animation
             requestAnimationFrame(() => {
-                this.currentImage.style.transform = direction > 0 ? 'translateX(-100%)' : 'translateX(100%)';
-                this.nextImage.style.transform = 'translateX(0)';
+                currentElement.style.transform = direction > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+                nextElement.style.transform = 'translateX(0)';
             });
             
-            // After transition completes, swap the images
+            // After transition completes, hide the old image
             setTimeout(() => {
-                this.swapImages();
+                this.completeTransition(currentElement, nextElement);
             }, 1000);
         };
         img.onerror = () => {
@@ -294,33 +326,37 @@ class PhotoLiveSlideshow {
     }
 
     zoomTransition(imagePath) {
+        // Get the currently visible and hidden elements
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+        
         // Preload the new image
         const img = new Image();
         img.onload = () => {
             // Phase 1: Zoom out current image
-            this.currentImage.className = `slide-image filter-${this.settings.filter} transition-zoom-out`;
-            this.currentImage.style.transform = 'scale(0.8)';
-            this.currentImage.style.opacity = '0';
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-zoom-out`;
+            currentElement.style.transform = 'scale(0.8)';
+            currentElement.style.opacity = '0';
             
             // After zoom out completes, start zoom in
             setTimeout(() => {
                 // Set up the next image for zoom in
-                this.nextImage.src = imagePath;
-                this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-in`;
-                this.nextImage.style.transform = 'scale(0.8)';
-                this.nextImage.style.opacity = '0';
-                this.nextImage.style.visibility = 'visible';
+                nextElement.src = imagePath;
+                nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-in`;
+                nextElement.style.transform = 'scale(0.8)';
+                nextElement.style.opacity = '0';
+                nextElement.style.visibility = 'visible';
                 
                 // Phase 2: Zoom in next image
                 requestAnimationFrame(() => {
-                    this.nextImage.className = `slide-image filter-${this.settings.filter} transition-zoom-visible`;
-                    this.nextImage.style.transform = 'scale(1)';
-                    this.nextImage.style.opacity = '1';
+                    nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-visible`;
+                    nextElement.style.transform = 'scale(1)';
+                    nextElement.style.opacity = '1';
                 });
                 
-                // After zoom in completes, swap the images
+                // After zoom in completes, hide the old image
                 setTimeout(() => {
-                    this.swapImages();
+                    this.completeTransition(currentElement, nextElement);
                 }, 750); // Half the total duration for second phase
             }, 750); // Half the total duration for first phase
         };
@@ -331,49 +367,47 @@ class PhotoLiveSlideshow {
         img.src = imagePath;
     }
 
-    swapImages() {
-        // Swap the current and next image references
-        const temp = this.currentImage;
-        this.currentImage = this.nextImage;
-        this.nextImage = temp;
+    completeTransition(oldElement, newElement) {
+        // Hide the old image element
+        oldElement.className = 'slide-image hidden';
+        oldElement.style.opacity = '';
+        oldElement.style.transform = '';
+        oldElement.style.visibility = 'hidden';
         
-        // Reset the next image
-        this.nextImage.className = 'slide-image hidden';
-        this.nextImage.style.opacity = '';
-        this.nextImage.style.transform = '';
-        this.nextImage.style.visibility = 'hidden';
+        // Ensure new image is properly styled as visible
+        newElement.className = `slide-image visible filter-${this.settings.filter}`;
+        newElement.style.opacity = '1';
+        newElement.style.transform = '';
+        newElement.style.visibility = 'visible';
         
-        // Ensure current image is properly styled
-        this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
-        this.currentImage.style.opacity = '1';
-        this.currentImage.style.transform = '';
-        this.currentImage.style.visibility = 'visible';
-        
-        console.log('Images swapped, transition complete');
+        console.log('Transition complete, old element hidden, new element visible');
     }
 
     displayImageDirectly(imagePath) {
         // Display image directly without transitions
-        if (!this.currentImage) {
-            console.error('currentImage element not found');
+        const currentElement = this.getVisibleImageElement();
+        
+        if (!currentElement) {
+            console.error('No image element found');
             return;
         }
 
         const img = new Image();
         img.onload = () => {
-            // Set the image and apply filter
-            this.currentImage.src = imagePath;
-            this.currentImage.className = `slide-image visible filter-${this.settings.filter}`;
-            this.currentImage.style.opacity = '1';
-            this.currentImage.style.transform = '';
-            this.currentImage.style.visibility = 'visible';
+            // Set the image in the currently visible element
+            currentElement.src = imagePath;
+            currentElement.className = `slide-image visible filter-${this.settings.filter}`;
+            currentElement.style.opacity = '1';
+            currentElement.style.transform = '';
+            currentElement.style.visibility = 'visible';
             
-            // Ensure next image is hidden
-            if (this.nextImage) {
-                this.nextImage.className = 'slide-image hidden';
-                this.nextImage.style.opacity = '';
-                this.nextImage.style.transform = '';
-                this.nextImage.style.visibility = 'hidden';
+            // Ensure the other image element is hidden
+            const otherElement = this.getHiddenImageElement();
+            if (otherElement) {
+                otherElement.className = 'slide-image hidden';
+                otherElement.style.opacity = '';
+                otherElement.style.transform = '';
+                otherElement.style.visibility = 'hidden';
             }
             
             console.log('Image displayed:', imagePath);
@@ -416,7 +450,8 @@ class PhotoLiveSlideshow {
         // Si on a déjà une image à afficher, la montrer
         if (this.getImagesList().length > 0 && this.currentIndex < this.getImagesList().length) {
             const currentImageData = this.getCurrentImageData();
-            if (currentImageData && (!this.currentImage.src || this.currentImage.src === '')) {
+            const visibleElement = this.getVisibleImageElement();
+            if (currentImageData && (!visibleElement.src || visibleElement.src === '')) {
                 this.displayImageDirectly(currentImageData.path);
             }
         }
