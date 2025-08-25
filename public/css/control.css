@@ -929,7 +929,7 @@ header h1 {
 /* Responsive */
 @media (max-width: 1400px) {
     .main-layout {
-        grid-template-columns: 300px 280px 1fr;
+        grid-template-columns: 300px 1fr;
         gap: 10px;
     }
     
