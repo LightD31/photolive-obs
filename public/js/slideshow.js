@@ -264,10 +264,10 @@ class PhotoLiveSlideshow {
             nextElement.classList.remove('z-front');
             nextElement.classList.add('z-back');
             
-            // Set up the next image for fade in (behind current image)
+            // Set up the next image for fade in (behind current image, start invisible)
             nextElement.src = imagePath;
             nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
-            nextElement.style.opacity = '1';
+            nextElement.style.opacity = '0'; // Start invisible to prevent flash
             nextElement.style.transform = '';
             nextElement.style.visibility = 'visible';
             
@@ -278,7 +278,7 @@ class PhotoLiveSlideshow {
             // Trigger the fade animation
             requestAnimationFrame(() => {
                 currentElement.style.opacity = '0';
-                // nextElement already has opacity 1, so it will show through
+                nextElement.style.opacity = '1'; // Fade in the next image
             });
             
             // After transition completes, finalize the switch
@@ -306,12 +306,12 @@ class PhotoLiveSlideshow {
             nextElement.classList.remove('z-front');
             nextElement.classList.add('z-back');
             
-            // Set up the next image positioned off-screen (behind current)
+            // Set up the next image completely hidden first to prevent flash
             nextElement.src = imagePath;
             nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
-            nextElement.style.opacity = '1';
+            nextElement.style.opacity = '0'; // Start hidden to prevent flash
             nextElement.style.visibility = 'visible';
-            nextElement.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+            nextElement.style.transform = direction > 0 ? 'translateX(120%)' : 'translateX(-120%)';
             
             // Add transition classes to both images
             currentElement.className = `slide-image filter-${this.settings.filter} transition-slide z-front`;
@@ -319,7 +319,8 @@ class PhotoLiveSlideshow {
             
             // Start the slide animation
             requestAnimationFrame(() => {
-                currentElement.style.transform = direction > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+                nextElement.style.opacity = '1'; // Make visible now that it's positioned off-screen
+                currentElement.style.transform = direction > 0 ? 'translateX(-120%)' : 'translateX(120%)';
                 nextElement.style.transform = 'translateX(0)';
             });
             
@@ -343,43 +344,29 @@ class PhotoLiveSlideshow {
         // Preload the new image
         const img = new Image();
         img.onload = () => {
-            // Set up proper z-index: current element on top during first phase
-            currentElement.classList.add('z-front');
-            nextElement.classList.remove('z-front');
-            nextElement.classList.add('z-back');
+            // Set up proper z-index: next element on top (will zoom in over current)
+            nextElement.classList.add('z-front');
+            currentElement.classList.remove('z-front');
+            currentElement.classList.add('z-back');
             
-            // Phase 1: Zoom out current image
-            currentElement.className = `slide-image filter-${this.settings.filter} transition-zoom-out z-front`;
-            currentElement.style.transform = 'scale(0.1)';
-            currentElement.style.opacity = '0';
+            // Set up the next image for zoom in (start small and hidden)
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter} z-front`;
+            nextElement.style.transform = 'scale(0.1)';
+            nextElement.style.opacity = '0';
+            nextElement.style.visibility = 'visible';
             
-            // After zoom out completes, start zoom in
+            // Start zoom in animation for next image
+            requestAnimationFrame(() => {
+                nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-in z-front`;
+                nextElement.style.transform = 'scale(1)';
+                nextElement.style.opacity = '1';
+            });
+            
+            // After zoom in completes, remove the current image
             setTimeout(() => {
-                // Switch z-index: next element comes to front
-                currentElement.classList.remove('z-front');
-                currentElement.classList.add('z-back');
-                nextElement.classList.remove('z-back');
-                nextElement.classList.add('z-front');
-                
-                // Set up the next image for zoom in (start small and hidden)
-                nextElement.src = imagePath;
-                nextElement.className = `slide-image filter-${this.settings.filter} z-front`;
-                nextElement.style.transform = 'scale(0.1)';
-                nextElement.style.opacity = '0';
-                nextElement.style.visibility = 'visible';
-                
-                // Phase 2: Zoom in next image
-                requestAnimationFrame(() => {
-                    nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-in z-front`;
-                    nextElement.style.transform = 'scale(1)';
-                    nextElement.style.opacity = '1';
-                });
-                
-                // After zoom in completes, finalize the transition
-                setTimeout(() => {
-                    this.completeTransition(currentElement, nextElement);
-                }, 750); // Half the total duration for second phase
-            }, 750); // Half the total duration for first phase
+                this.completeTransition(currentElement, nextElement);
+            }, 1500); // Full duration for zoom in animation
         };
         img.onerror = () => {
             console.error('Error loading image for zoom transition:', imagePath);
