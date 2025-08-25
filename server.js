@@ -496,10 +496,29 @@ app.post('/api/settings', (req, res) => {
     // Si l'état du mélange a changé, recréer la liste mélangée
     if (newSettings.shuffleImages !== undefined && previousShuffleState !== newSettings.shuffleImages) {
       console.log(`🔄 Mode mélange changé: ${previousShuffleState} → ${newSettings.shuffleImages}`);
+      
+      // Remember the current image before shuffling to keep it as current
+      const currentImageFilename = slideshowState.currentImage ? slideshowState.currentImage.filename : null;
+      
       updateShuffledImagesList();
       
-      // Réajuster l'index si nécessaire
+      // After shuffling, find the current image in the new list and update index accordingly
       const imagesList = getCurrentImagesList();
+      if (currentImageFilename && imagesList.length > 0) {
+        const newIndex = imagesList.findIndex(img => img.filename === currentImageFilename);
+        if (newIndex !== -1) {
+          // Found the current image in the new list, update index to point to it
+          slideshowState.currentIndex = newIndex;
+        } else {
+          // Current image not found (maybe excluded), reset to 0
+          slideshowState.currentIndex = 0;
+        }
+      } else {
+        // No current image or empty list, reset to 0
+        slideshowState.currentIndex = 0;
+      }
+      
+      // Ensure index is still valid after all adjustments
       if (slideshowState.currentIndex >= imagesList.length) {
         slideshowState.currentIndex = 0;
       }
