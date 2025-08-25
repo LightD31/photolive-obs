@@ -259,24 +259,29 @@ class PhotoLiveSlideshow {
         // Preload the new image
         const img = new Image();
         img.onload = () => {
-            // Set up the next image for fade in
+            // Set up proper z-index: current element on top during fade
+            currentElement.classList.add('z-front');
+            nextElement.classList.remove('z-front');
+            nextElement.classList.add('z-back');
+            
+            // Set up the next image for fade in (behind current image)
             nextElement.src = imagePath;
-            nextElement.className = `slide-image filter-${this.settings.filter}`;
-            nextElement.style.opacity = '0';
+            nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
+            nextElement.style.opacity = '1';
             nextElement.style.transform = '';
             nextElement.style.visibility = 'visible';
             
             // Start the crossfade transition
-            currentElement.className = `slide-image filter-${this.settings.filter} transition-fade`;
-            nextElement.className = `slide-image filter-${this.settings.filter} transition-fade`;
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-fade z-front`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-fade z-back`;
             
             // Trigger the fade animation
             requestAnimationFrame(() => {
                 currentElement.style.opacity = '0';
-                nextElement.style.opacity = '1';
+                // nextElement already has opacity 1, so it will show through
             });
             
-            // After transition completes, hide the old image
+            // After transition completes, finalize the switch
             setTimeout(() => {
                 this.completeTransition(currentElement, nextElement);
             }, 1000);
@@ -296,16 +301,21 @@ class PhotoLiveSlideshow {
         // Preload the new image
         const img = new Image();
         img.onload = () => {
-            // Set up the next image positioned off-screen
+            // Set up proper z-index: current element on top during slide
+            currentElement.classList.add('z-front');
+            nextElement.classList.remove('z-front');
+            nextElement.classList.add('z-back');
+            
+            // Set up the next image positioned off-screen (behind current)
             nextElement.src = imagePath;
-            nextElement.className = `slide-image filter-${this.settings.filter}`;
+            nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
             nextElement.style.opacity = '1';
             nextElement.style.visibility = 'visible';
             nextElement.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
             
             // Add transition classes to both images
-            currentElement.className = `slide-image filter-${this.settings.filter} transition-slide`;
-            nextElement.className = `slide-image filter-${this.settings.filter} transition-slide`;
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-slide z-front`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-slide z-back`;
             
             // Start the slide animation
             requestAnimationFrame(() => {
@@ -313,7 +323,7 @@ class PhotoLiveSlideshow {
                 nextElement.style.transform = 'translateX(0)';
             });
             
-            // After transition completes, hide the old image
+            // After transition completes, finalize the switch
             setTimeout(() => {
                 this.completeTransition(currentElement, nextElement);
             }, 1000);
@@ -333,28 +343,39 @@ class PhotoLiveSlideshow {
         // Preload the new image
         const img = new Image();
         img.onload = () => {
+            // Set up proper z-index: current element on top during first phase
+            currentElement.classList.add('z-front');
+            nextElement.classList.remove('z-front');
+            nextElement.classList.add('z-back');
+            
             // Phase 1: Zoom out current image
-            currentElement.className = `slide-image filter-${this.settings.filter} transition-zoom-out`;
-            currentElement.style.transform = 'scale(0.8)';
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-zoom-out z-front`;
+            currentElement.style.transform = 'scale(0.1)';
             currentElement.style.opacity = '0';
             
             // After zoom out completes, start zoom in
             setTimeout(() => {
-                // Set up the next image for zoom in
+                // Switch z-index: next element comes to front
+                currentElement.classList.remove('z-front');
+                currentElement.classList.add('z-back');
+                nextElement.classList.remove('z-back');
+                nextElement.classList.add('z-front');
+                
+                // Set up the next image for zoom in (start small and hidden)
                 nextElement.src = imagePath;
-                nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-in`;
-                nextElement.style.transform = 'scale(0.8)';
+                nextElement.className = `slide-image filter-${this.settings.filter} z-front`;
+                nextElement.style.transform = 'scale(0.1)';
                 nextElement.style.opacity = '0';
                 nextElement.style.visibility = 'visible';
                 
                 // Phase 2: Zoom in next image
                 requestAnimationFrame(() => {
-                    nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-visible`;
+                    nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-in z-front`;
                     nextElement.style.transform = 'scale(1)';
                     nextElement.style.opacity = '1';
                 });
                 
-                // After zoom in completes, hide the old image
+                // After zoom in completes, finalize the transition
                 setTimeout(() => {
                     this.completeTransition(currentElement, nextElement);
                 }, 750); // Half the total duration for second phase
@@ -373,14 +394,15 @@ class PhotoLiveSlideshow {
         oldElement.style.opacity = '';
         oldElement.style.transform = '';
         oldElement.style.visibility = 'hidden';
+        oldElement.classList.remove('z-front', 'z-back');
         
-        // Ensure new image is properly styled as visible
-        newElement.className = `slide-image visible filter-${this.settings.filter}`;
+        // Ensure new image is properly styled as visible with correct z-index
+        newElement.className = `slide-image visible filter-${this.settings.filter} z-front`;
         newElement.style.opacity = '1';
         newElement.style.transform = '';
         newElement.style.visibility = 'visible';
         
-        console.log('Transition complete, old element hidden, new element visible');
+        console.log('Transition complete, old element hidden, new element visible with proper z-index');
     }
 
     displayImageDirectly(imagePath) {
@@ -396,18 +418,19 @@ class PhotoLiveSlideshow {
         img.onload = () => {
             // Set the image in the currently visible element
             currentElement.src = imagePath;
-            currentElement.className = `slide-image visible filter-${this.settings.filter}`;
+            currentElement.className = `slide-image visible filter-${this.settings.filter} z-front`;
             currentElement.style.opacity = '1';
             currentElement.style.transform = '';
             currentElement.style.visibility = 'visible';
             
-            // Ensure the other image element is hidden
+            // Ensure the other image element is hidden with proper z-index
             const otherElement = this.getHiddenImageElement();
             if (otherElement) {
                 otherElement.className = 'slide-image hidden';
                 otherElement.style.opacity = '';
                 otherElement.style.transform = '';
                 otherElement.style.visibility = 'hidden';
+                otherElement.classList.remove('z-front', 'z-back');
             }
             
             console.log('Image displayed:', imagePath);

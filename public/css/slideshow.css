@@ -45,6 +45,15 @@ body.transparent {
     will-change: opacity, transform;
 }
 
+/* Z-index management for transitions */
+.slide-image.z-front {
+    z-index: 2;
+}
+
+.slide-image.z-back {
+    z-index: 1;
+}
+
 .slide-image.hidden {
     opacity: 0;
     visibility: hidden;
