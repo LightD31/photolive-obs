@@ -56,7 +56,10 @@ class PhotoLiveControl {
 
     // Generate a hash for the images array to detect changes
     generateImageListHash(images) {
-        return images.map(img => `${img.path}-${img.modified}`).join('|');
+        return images.map(img => {
+            const isExcluded = this.settings.excludedImages && this.settings.excludedImages.includes(img.filename);
+            return `${img.path}-${img.modified}-${isExcluded}`;
+        }).join('|');
     }
 
     // Setup event delegation for grid clicks to improve performance
@@ -396,6 +399,11 @@ class PhotoLiveControl {
     updateSettings(settings) {
         this.settings = { ...this.settings, ...settings };
         this.updateUI();
+        
+        // If excludedImages changed, force a grid re-render
+        if (settings.hasOwnProperty('excludedImages')) {
+            this.renderImagesPreview();
+        }
     }
 
     updateUI() {
