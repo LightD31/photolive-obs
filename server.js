@@ -261,7 +261,7 @@ async function scanImages(newImageFilename = null) {
 }
 
 // Mettre à jour l'état du diaporama
-function updateSlideshowState() {
+function updateSlideshowState(emitEvent = true) {
   const imagesList = getCurrentImagesList();
   
   if (imagesList.length === 0) {
@@ -279,13 +279,15 @@ function updateSlideshowState() {
 
   slideshowState.currentImage = imagesList[slideshowState.currentIndex];
   
-  // Émettre l'état mis à jour aux clients
-  io.emit('slideshow-state', {
-    currentImage: slideshowState.currentImage,
-    currentIndex: slideshowState.currentIndex,
-    isPlaying: slideshowState.isPlaying,
-    totalImages: imagesList.length
-  });
+  // Émettre l'état mis à jour aux clients uniquement si demandé
+  if (emitEvent) {
+    io.emit('slideshow-state', {
+      currentImage: slideshowState.currentImage,
+      currentIndex: slideshowState.currentIndex,
+      isPlaying: slideshowState.isPlaying,
+      totalImages: imagesList.length
+    });
+  }
 }
 
 // Changer d'image avec émission d'événement
@@ -294,7 +296,7 @@ function changeImage(direction = 1) {
   if (imagesList.length === 0) return;
   
   slideshowState.currentIndex += direction;
-  updateSlideshowState();
+  updateSlideshowState(false); // Don't emit slideshow-state event, we'll emit image-changed instead
   
   // Émettre le changement d'image aux clients slideshow
   io.emit('image-changed', {
@@ -703,11 +705,22 @@ io.on('connection', (socket) => {
   socket.on('jump-to-image', (index) => {
     const imagesList = getCurrentImagesList();
     if (index >= 0 && index < imagesList.length) {
+      const previousIndex = slideshowState.currentIndex;
       slideshowState.currentIndex = index;
-      updateSlideshowState();
+      updateSlideshowState(false); // Don't emit slideshow-state, we'll emit image-changed instead
+      
+      // Determine direction for transition
+      const direction = index > previousIndex ? 1 : -1;
+      
+      // Emit image-changed event for smooth transition
+      io.emit('image-changed', {
+        currentImage: slideshowState.currentImage,
+        currentIndex: slideshowState.currentIndex,
+        direction: direction
+      });
+      
       // Redémarrer le timer pour réinitialiser l'intervalle
       restartSlideshowTimer();
-      io.emit('jump-to-image', index);
     }
   });
 
