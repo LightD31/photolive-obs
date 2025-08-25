@@ -22,13 +22,12 @@ body {
 /* Two column layout */
 .main-layout {
     display: grid;
-    grid-template-columns: 320px 300px 1fr;
+    grid-template-columns: 400px 1fr;
     gap: 12px;
     align-items: start;
 }
 
 .left-column,
-.center-column,
 .right-column {
     display: flex;
     flex-direction: column;
@@ -963,16 +962,8 @@ header h1 {
 
 @media (max-width: 1200px) {
     .main-layout {
-        grid-template-columns: 280px 1fr;
+        grid-template-columns: 350px 1fr;
         gap: 10px;
-    }
-    
-    .center-column {
-        display: none;
-    }
-    
-    .right-column {
-        grid-column: 2;
     }
     
     .images-grid {
@@ -1010,7 +1001,6 @@ header h1 {
     }
     
     .left-column,
-    .center-column,
     .right-column {
         gap: 8px;
     }
