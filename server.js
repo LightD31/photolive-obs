@@ -69,7 +69,8 @@ function loadConfig() {
         shuffleImages: false,
         repeatLatest: false,
         latestCount: 5,
-        transparentBackground: false
+        transparentBackground: false,
+        excludedImages: []
       }
     };
   }
@@ -176,9 +177,18 @@ function shuffleArray(array) {
   return shuffled;
 }
 
-// Fonction pour obtenir la liste d'images actuelle (mélangée ou non)
-function getCurrentImagesList() {
+// Fonction pour obtenir la liste complète d'images (pour l'affichage de la grille)
+function getAllImagesList() {
   return slideshowSettings.shuffleImages ? shuffledImages : currentImages;
+}
+
+// Fonction pour obtenir la liste d'images actuelle filtrée (pour le diaporama)
+function getCurrentImagesList() {
+  const allImages = slideshowSettings.shuffleImages ? shuffledImages : currentImages;
+  const excludedImages = slideshowSettings.excludedImages || [];
+  
+  // Filtrer les images exclues
+  return allImages.filter(image => !excludedImages.includes(image.filename));
 }
 
 // Fonction pour créer/mettre à jour la liste mélangée
@@ -244,7 +254,8 @@ async function scanImages(newImageFilename = null) {
     
     // Émettre la liste mise à jour aux clients avec la liste appropriée
     io.emit('images-updated', {
-      images: getCurrentImagesList(), // Envoyer la liste appropriée (mélangée ou non)
+      allImages: getAllImagesList(), // Liste complète pour l'affichage de la grille
+      images: getCurrentImagesList(), // Liste filtrée pour le diaporama
       settings: slideshowSettings,
       newImageAdded: newImageFilename
     });
@@ -413,6 +424,7 @@ function setupFileWatcher() {
 // Routes API
 app.get('/api/images', (req, res) => {
   res.json({
+    allImages: getAllImagesList(),
     images: getCurrentImagesList(),
     settings: slideshowSettings
   });
@@ -429,7 +441,7 @@ app.post('/api/settings', (req, res) => {
       'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
-      'transparentBackground', 'photosPath'
+      'transparentBackground', 'photosPath', 'excludedImages'
     ];
     
     const newSettings = {};
@@ -465,6 +477,11 @@ app.post('/api/settings', (req, res) => {
               newSettings[key] = value;
             }
             break;
+          case 'excludedImages':
+            if (Array.isArray(value) && value.every(item => typeof item === 'string')) {
+              newSettings[key] = value;
+            }
+            break;
           default:
             if (typeof value === 'string' && value.length <= 100) {
               newSettings[key] = value;
@@ -492,7 +509,8 @@ app.post('/api/settings', (req, res) => {
       
       // Émettre la nouvelle liste d'images aux clients
       io.emit('images-updated', {
-        images: imagesList,
+        allImages: getAllImagesList(),
+        images: getCurrentImagesList(),
         settings: slideshowSettings
       });
     }
@@ -671,6 +689,7 @@ io.on('connection', (socket) => {
   
   // Envoyer l'état actuel au nouveau client
   socket.emit('images-updated', {
+    allImages: getAllImagesList(),
     images: getCurrentImagesList(),
     settings: slideshowSettings
   });
@@ -759,6 +778,53 @@ io.on('connection', (socket) => {
       isPlaying: slideshowState.isPlaying,
       totalImages: currentImages.length
     });
+  });
+
+  socket.on('toggle-image-exclusion', (filename) => {
+    try {
+      if (typeof filename !== 'string') {
+        console.error('Invalid filename for exclusion toggle:', filename);
+        return;
+      }
+
+      const excludedImages = slideshowSettings.excludedImages || [];
+      const isExcluded = excludedImages.includes(filename);
+      
+      if (isExcluded) {
+        // Remove from excluded list
+        slideshowSettings.excludedImages = excludedImages.filter(img => img !== filename);
+        console.log(`Image ${filename} réintégrée dans le diaporama`);
+      } else {
+        // Add to excluded list
+        slideshowSettings.excludedImages = [...excludedImages, filename];
+        console.log(`Image ${filename} exclue du diaporama`);
+      }
+      
+      // Update slideshow state if current image was excluded
+      const filteredImages = getCurrentImagesList();
+      if (filteredImages.length === 0) {
+        slideshowState.currentImage = null;
+        slideshowState.currentIndex = 0;
+      } else if (slideshowState.currentImage && slideshowSettings.excludedImages.includes(slideshowState.currentImage.filename)) {
+        // Current image was excluded, move to next available image
+        slideshowState.currentIndex = 0;
+        updateSlideshowState();
+      }
+      
+      // Restart slideshow timer with new filtered list
+      restartSlideshowTimer();
+      
+      // Broadcast updated settings and images to all clients
+      io.emit('settings-updated', slideshowSettings);
+      io.emit('images-updated', {
+        allImages: getAllImagesList(),
+        images: getCurrentImagesList(),
+        settings: slideshowSettings
+      });
+      
+    } catch (error) {
+      console.error('Error toggling image exclusion:', error);
+    }
   });
 });
 
