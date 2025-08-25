@@ -86,6 +86,13 @@ class PhotoLiveControl {
         this.currentImageName = document.getElementById('current-image-name');
         this.currentImageIndexElement = document.getElementById('current-image-index');
         
+        // Next preview elements
+        this.nextPreviewContainer = document.getElementById('next-preview-container');
+        this.nextPreviewImage = document.getElementById('next-preview-image');
+        this.nextPreviewPlaceholder = this.nextPreviewContainer.querySelector('.preview-placeholder');
+        this.nextImageName = document.getElementById('next-image-name');
+        this.nextImageIndexElement = document.getElementById('next-image-index');
+        
         // Control buttons
         this.prevBtn = document.getElementById('prev-btn');
         this.playPauseBtn = document.getElementById('play-pause-btn');
@@ -531,14 +538,17 @@ class PhotoLiveControl {
         const currentIndex = data.currentIndex !== undefined ? data.currentIndex : 0;
         const totalImages = this.images.length;
 
-        // Update preview image
+        // Update current preview image
         this.currentPreviewImage.src = currentImage.path;
         this.currentPreviewImage.style.display = 'block';
         this.previewPlaceholder.style.display = 'none';
 
-        // Update image info
+        // Update current image info
         this.currentImageName.textContent = currentImage.filename || 'Unknown';
         this.currentImageIndexElement.textContent = `${currentIndex + 1} / ${totalImages}`;
+
+        // Update next image preview
+        this.updateNextImagePreview(currentIndex, totalImages);
 
         // Highlight current image in grid
         this.highlightCurrentImageInGrid(currentIndex);
@@ -548,15 +558,49 @@ class PhotoLiveControl {
         this.currentImageIndex = currentIndex;
     }
 
+    updateNextImagePreview(currentIndex, totalImages) {
+        if (!this.images || this.images.length === 0) {
+            this.showNextPreviewPlaceholder();
+            return;
+        }
+
+        // Calculate next image index (wrapping around at the end)
+        const nextIndex = (currentIndex + 1) % totalImages;
+        const nextImage = this.images[nextIndex];
+
+        if (nextImage) {
+            // Update next preview image
+            this.nextPreviewImage.src = nextImage.path;
+            this.nextPreviewImage.style.display = 'block';
+            this.nextPreviewPlaceholder.style.display = 'none';
+
+            // Update next image info
+            this.nextImageName.textContent = nextImage.filename || 'Unknown';
+            this.nextImageIndexElement.textContent = `${nextIndex + 1} / ${totalImages}`;
+        } else {
+            this.showNextPreviewPlaceholder();
+        }
+    }
+
     showPreviewPlaceholder() {
         this.currentPreviewImage.style.display = 'none';
         this.previewPlaceholder.style.display = 'flex';
         this.currentImageName.textContent = '-';
         this.currentImageIndexElement.textContent = '0 / 0';
         
+        // Also hide next preview
+        this.showNextPreviewPlaceholder();
+        
         // Remove highlighting from grid
         const items = this.imagesPreview.querySelectorAll('.image-item');
         items.forEach(item => item.classList.remove('current'));
+    }
+
+    showNextPreviewPlaceholder() {
+        this.nextPreviewImage.style.display = 'none';
+        this.nextPreviewPlaceholder.style.display = 'flex';
+        this.nextImageName.textContent = '-';
+        this.nextImageIndexElement.textContent = '0 / 0';
     }
 
     highlightCurrentImageInGrid(currentIndex) {
