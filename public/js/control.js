@@ -687,6 +687,8 @@ class PhotoLiveControl {
 
         const currentImage = data.currentImage;
         const currentIndex = data.currentIndex !== undefined ? data.currentIndex : 0;
+        const originalIndex = data.originalIndex !== undefined ? data.originalIndex : currentIndex;
+        const totalOriginalImages = data.totalOriginalImages || this.images.length;
         const totalImages = this.images.length;
 
         // Update current preview image
@@ -694,30 +696,34 @@ class PhotoLiveControl {
         this.currentPreviewImage.style.display = 'block';
         this.previewPlaceholder.style.display = 'none';
 
-        // Update current image info
+        // Update current image info - use original index for display
         this.currentImageName.textContent = currentImage.filename || 'Unknown';
-        this.currentImageIndexElement.textContent = `${currentIndex + 1} / ${totalImages}`;
+        this.currentImageIndexElement.textContent = `${originalIndex + 1} / ${totalOriginalImages}`;
 
-        // Update next image preview
-        this.updateNextImagePreview(currentIndex, totalImages);
+        // Update next image preview - pass original index for calculation
+        this.updateNextImagePreview(originalIndex, totalOriginalImages);
 
-        // Highlight current image in grid
-        this.highlightCurrentImageInGrid(currentIndex);
+        // Highlight current image in grid - use original index for highlighting
+        this.highlightCurrentImageInGrid(originalIndex);
 
         // Store current image data
         this.currentImageData = currentImage;
-        this.currentImageIndex = currentIndex;
+        this.currentImageIndex = originalIndex; // Store original index
     }
 
-    updateNextImagePreview(currentIndex, totalImages) {
+    updateNextImagePreview(currentOriginalIndex, totalOriginalImages) {
         if (!this.images || this.images.length === 0) {
             this.showNextPreviewPlaceholder();
             return;
         }
 
-        // Calculate next image index (wrapping around at the end)
-        const nextIndex = (currentIndex + 1) % totalImages;
-        const nextImage = this.images[nextIndex];
+        // Calculate next image index in original order (wrapping around at the end)
+        const nextOriginalIndex = (currentOriginalIndex + 1) % totalOriginalImages;
+        
+        // Find the next image by its original position in chronological order
+        // Since this.images array may not be in chronological order, we need to sort by modification date first
+        const chronologicalImages = [...this.images].sort((a, b) => new Date(b.modified) - new Date(a.modified));
+        const nextImage = chronologicalImages[nextOriginalIndex];
 
         if (nextImage) {
             // Update next preview image
@@ -725,9 +731,9 @@ class PhotoLiveControl {
             this.nextPreviewImage.style.display = 'block';
             this.nextPreviewPlaceholder.style.display = 'none';
 
-            // Update next image info
+            // Update next image info - use original index for display
             this.nextImageName.textContent = nextImage.filename || 'Unknown';
-            this.nextImageIndexElement.textContent = `${nextIndex + 1} / ${totalImages}`;
+            this.nextImageIndexElement.textContent = `${nextOriginalIndex + 1} / ${totalOriginalImages}`;
         } else {
             this.showNextPreviewPlaceholder();
         }
