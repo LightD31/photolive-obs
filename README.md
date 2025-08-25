@@ -11,6 +11,7 @@ A real-time photo slideshow application specifically designed for OBS Studio int
 - 🔄 **Real-time monitoring** - Automatically detects new images added to the folder with Chokidar file watcher
 - 🌐 **Web interface for OBS** - Optimized slideshow page for seamless OBS Studio browser source integration  
 - 🎛️ **Advanced control interface** - Comprehensive web-based control panel with real-time preview
+- 🌍 **Multilingual support** - English and French interface languages
 - 🎨 **Visual filters** - 9 built-in filters: Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Dual watermark support** - Custom text watermarks OR image watermarks (PNG) with flexible positioning
 - 📁 **Dynamic folder management** - Change photo source folder on-the-fly through the control interface
@@ -50,6 +51,15 @@ npm start
 
 The application will be accessible at: `http://localhost:3001`
 
+## 🌍 Multilingual Support
+
+The application supports English and French languages:
+
+- **Language detection**: Automatic browser language detection with fallback to English
+- **Language selection**: Language dropdown in control interface 
+- **Persistence**: Selected language is saved in browser storage
+- **Coverage**: All interface elements including labels, buttons, messages, and filter names
+
 ## 📋 Usage
 
 ### Configuration in OBS Studio
@@ -74,6 +84,7 @@ Access the control interface at: `http://localhost:3001/control`
 - ▶️ **Play/Pause** slideshow with real-time state sync
 - ⏭️ **Manual navigation** (previous/next/jump to specific image)
 - ⏱️ **Configurable interval** for automatic image changes (1-30 seconds)
+- 🌍 **Language selection** - Switch between English and French
 - 🎨 **Visual filters**: None, Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm
 - 🏷️ **Watermark options**: 
   - Text watermarks with custom content
@@ -108,6 +119,9 @@ photolive-obs/
 ├── package.json           # npm configuration and dependencies
 ├── config/
 │   └── default.json       # Complete application configuration
+├── locales/               # Internationalization files
+│   ├── en.json           # English translations
+│   └── fr.json           # French translations
 ├── photos/                # Default images folder (auto-created)
 ├── uploads/               # Watermark images storage (auto-created)
 └── public/                # Static web files served by Express
@@ -118,7 +132,8 @@ photolive-obs/
     │   └── control.css    # Control interface styling
     └── js/
         ├── slideshow.js   # WebSocket client for slideshow
-        └── control.js     # Control interface logic
+        ├── control.js     # Control interface logic
+        └── i18n.js        # Internationalization system
 ```
 
 ### Server configuration
@@ -152,7 +167,8 @@ The `config/default.json` file contains comprehensive application settings:
     "shuffleImages": true,
     "transparentBackground": true,
     "repeatLatest": false,
-    "latestCount": 5
+    "latestCount": 5,
+    "language": "en"
   }
 }
 ```
@@ -165,6 +181,7 @@ PhotoLive OBS is built as a modern web application using:
 - **Real-time communication**: Socket.IO for WebSocket connections
 - **File monitoring**: Chokidar for cross-platform file system watching  
 - **File uploads**: Multer for handling watermark image uploads
+- **Internationalization**: Custom i18n system
 - **Security**: Input validation, path traversal protection, file type verification
 - **Frontend**: Vanilla JavaScript with modern ES6+ features
 - **Styling**: CSS Grid, Flexbox, and CSS animations for smooth image display
@@ -195,6 +212,9 @@ The application exposes a comprehensive REST API:
 
 #### Folder management
 - `POST /api/photos-path` - Change the source photos folder dynamically
+
+#### Internationalization
+- `GET /api/locales/:language` - Get translations for specified language (en, fr)
 
 #### Watermark management
 - `GET /api/watermarks` - List available watermark images
@@ -282,6 +302,12 @@ The application exposes a comprehensive REST API:
 - **Images not syncing**: Verify both slideshow and control pages are connected
 - **Slow image loading**: Check network speed and image file sizes
 
+### Language and localization
+
+- **Language not switching**: Check language selector in control interface or browser language settings
+- **Missing translations**: Verify `/locales/` directory contains `en.json` and `fr.json` files
+- **Settings not saved**: Check browser localStorage support
+
 ## 📝 License
 
 MIT License - You are free to use, modify and distribute this application.
@@ -305,4 +331,4 @@ For any questions or problems:
 
 ---
 
-**PhotoLive OBS** - Transform your photos into a professional slideshow for OBS Studio! 🎬✨
+**PhotoLive OBS** - Real-time photo slideshow for OBS Studio
