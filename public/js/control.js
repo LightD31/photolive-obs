@@ -716,8 +716,8 @@ class PhotoLiveControl {
         this.currentImageName.textContent = currentImage.filename || 'Unknown';
         this.currentImageIndexElement.textContent = `${originalIndex + 1} / ${totalOriginalImages}`;
 
-        // Update next image preview using original index
-        this.updateNextImagePreview(originalIndex, totalOriginalImages);
+        // Update next image preview using actual next image data from server
+        this.updateNextImagePreview(data);
 
         // Highlight current image in grid (still use currentIndex for functional highlighting)
         this.highlightCurrentImageInGrid(currentIndex);
@@ -728,37 +728,23 @@ class PhotoLiveControl {
         this.currentOriginalIndex = originalIndex;
     }
 
-    updateNextImagePreview(currentOriginalIndex, totalOriginalImages) {
-        if (!this.images || this.images.length === 0) {
-            this.showNextPreviewPlaceholder();
-            return;
-        }
+    updateNextImagePreview(data) {
+        // Use actual next image data from server if available
+        if (data && data.nextImage && data.nextOriginalIndex !== undefined) {
+            const nextImage = data.nextImage;
+            const nextOriginalIndex = data.nextOriginalIndex;
+            const totalOriginalImages = data.totalOriginalImages || this.images.length;
 
-        // Calculate next original index (wrapping around at the end)
-        const nextOriginalIndex = (currentOriginalIndex + 1) % totalOriginalImages;
-        
-        // Find the next image by its original position in the chronological list
-        // We need to find the image that has the nextOriginalIndex in the sorted cache
-        let nextImage = null;
-        if (this.sortedImagesCache) {
-            nextImage = this.sortedImagesCache.find(img => img.originalIndex === nextOriginalIndex);
-        }
-        
-        // Fallback: if sortedImagesCache is not available, use the images array directly
-        if (!nextImage && nextOriginalIndex < this.images.length) {
-            nextImage = this.images[nextOriginalIndex];
-        }
-
-        if (nextImage) {
             // Update next preview image
             this.nextPreviewImage.src = nextImage.path;
             this.nextPreviewImage.style.display = 'block';
             this.nextPreviewPlaceholder.style.display = 'none';
 
-            // Update next image info using original index
+            // Update next image info using actual next original index
             this.nextImageName.textContent = nextImage.filename || 'Unknown';
             this.nextImageIndexElement.textContent = `${nextOriginalIndex + 1} / ${totalOriginalImages}`;
         } else {
+            // Fallback to placeholder if no next image data
             this.showNextPreviewPlaceholder();
         }
     }

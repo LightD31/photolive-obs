@@ -345,12 +345,24 @@ function updateSlideshowState(emitEvent = true) {
   const originalIndex = slideshowState.currentImage ? 
     currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
   
+  // Calculate next image information
+  let nextImage = null;
+  let nextOriginalIndex = -1;
+  if (imagesList.length > 1) {
+    const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+    nextImage = imagesList[nextIndex];
+    nextOriginalIndex = nextImage ? 
+      currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+  }
+  
   // Émettre l'état mis à jour aux clients uniquement si demandé
   if (emitEvent) {
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
       originalIndex: originalIndex,
+      nextImage: nextImage,
+      nextOriginalIndex: nextOriginalIndex,
       isPlaying: slideshowState.isPlaying,
       totalImages: imagesList.length,
       totalOriginalImages: currentImages.length
@@ -370,11 +382,23 @@ function changeImage(direction = 1) {
   const originalIndex = slideshowState.currentImage ? 
     currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
   
+  // Calculate next image information
+  let nextImage = null;
+  let nextOriginalIndex = -1;
+  if (imagesList.length > 1) {
+    const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+    nextImage = imagesList[nextIndex];
+    nextOriginalIndex = nextImage ? 
+      currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+  }
+  
   // Émettre le changement d'image aux clients slideshow
   io.emit('image-changed', {
     currentImage: slideshowState.currentImage,
     currentIndex: slideshowState.currentIndex,
     originalIndex: originalIndex,
+    nextImage: nextImage,
+    nextOriginalIndex: nextOriginalIndex,
     direction: direction
   });
 }
@@ -857,11 +881,23 @@ io.on('connection', (socket) => {
       const originalIndex = slideshowState.currentImage ? 
         currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
       
+      // Calculate next image information
+      let nextImage = null;
+      let nextOriginalIndex = -1;
+      if (imagesList.length > 1) {
+        const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+        nextImage = imagesList[nextIndex];
+        nextOriginalIndex = nextImage ? 
+          currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+      }
+      
       // Emit image-changed event for smooth transition
       io.emit('image-changed', {
         currentImage: slideshowState.currentImage,
         currentIndex: slideshowState.currentIndex,
         originalIndex: originalIndex,
+        nextImage: nextImage,
+        nextOriginalIndex: nextOriginalIndex,
         direction: direction
       });
       
@@ -874,15 +910,28 @@ io.on('connection', (socket) => {
     slideshowState.isPlaying = false;
     stopSlideshowTimer();
     
+    const imagesList = getCurrentImagesList();
     const originalIndex = slideshowState.currentImage ? 
       currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+    
+    // Calculate next image information
+    let nextImage = null;
+    let nextOriginalIndex = -1;
+    if (imagesList.length > 1) {
+      const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+      nextImage = imagesList[nextIndex];
+      nextOriginalIndex = nextImage ? 
+        currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+    }
     
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
       originalIndex: originalIndex,
+      nextImage: nextImage,
+      nextOriginalIndex: nextOriginalIndex,
       isPlaying: slideshowState.isPlaying,
-      totalImages: getCurrentImagesList().length,
+      totalImages: imagesList.length,
       totalOriginalImages: currentImages.length
     });
     socket.broadcast.emit('pause-slideshow');
@@ -893,15 +942,28 @@ io.on('connection', (socket) => {
     slideshowState.isPlaying = true;
     startSlideshowTimer();
     
+    const imagesList = getCurrentImagesList();
     const originalIndex = slideshowState.currentImage ? 
       currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+    
+    // Calculate next image information
+    let nextImage = null;
+    let nextOriginalIndex = -1;
+    if (imagesList.length > 1) {
+      const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+      nextImage = imagesList[nextIndex];
+      nextOriginalIndex = nextImage ? 
+        currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+    }
     
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
       originalIndex: originalIndex,
+      nextImage: nextImage,
+      nextOriginalIndex: nextOriginalIndex,
       isPlaying: slideshowState.isPlaying,
-      totalImages: getCurrentImagesList().length,
+      totalImages: imagesList.length,
       totalOriginalImages: currentImages.length
     });
     socket.broadcast.emit('resume-slideshow');
@@ -909,15 +971,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get-slideshow-state', () => {
+    const imagesList = getCurrentImagesList();
     const originalIndex = slideshowState.currentImage ? 
       currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+    
+    // Calculate next image information
+    let nextImage = null;
+    let nextOriginalIndex = -1;
+    if (imagesList.length > 1) {
+      const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+      nextImage = imagesList[nextIndex];
+      nextOriginalIndex = nextImage ? 
+        currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+    }
       
     socket.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
       originalIndex: originalIndex,
+      nextImage: nextImage,
+      nextOriginalIndex: nextOriginalIndex,
       isPlaying: slideshowState.isPlaying,
-      totalImages: getCurrentImagesList().length,
+      totalImages: imagesList.length,
       totalOriginalImages: currentImages.length
     });
   });
