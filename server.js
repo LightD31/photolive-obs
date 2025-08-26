@@ -306,32 +306,80 @@ function updateShuffledImagesList(newImageAdded = null) {
   }
 }
 
+// Function to recursively scan for image files
+async function scanImagesRecursive(dirPath, relativePath = '') {
+  const images = [];
+  
+  try {
+    const items = await fs.readdir(dirPath, { withFileTypes: true });
+    
+    for (const item of items) {
+      const fullPath = path.join(dirPath, item.name);
+      const itemRelativePath = relativePath ? path.join(relativePath, item.name) : item.name;
+      
+      if (item.isDirectory()) {
+        // Recursively scan subdirectory
+        const subImages = await scanImagesRecursive(fullPath, itemRelativePath);
+        images.push(...subImages);
+      } else if (item.isFile()) {
+        const ext = path.extname(item.name).toLowerCase();
+        if (config.supportedFormats.includes(ext)) {
+          const stats = await fs.stat(fullPath);
+          const photoDate = await getPhotoDate(fullPath);
+          
+          images.push({
+            filename: itemRelativePath,
+            path: `/photos/${itemRelativePath.replace(/\\/g, '/')}`, // Ensure forward slashes for web
+            size: stats.size,
+            created: stats.birthtime,
+            modified: stats.mtime,
+            photoDate: photoDate,
+            isNew: newlyAddedImages.has(itemRelativePath) // Use relative path for tracking
+          });
+        }
+      }
+    }
+  } catch (error) {
+    logger.error(`Error scanning directory ${dirPath}:`, error);
+  }
+  
+  return images;
+}
+
 // Fonction pour scanner les images
 async function scanImages(newImageFilename = null) {
   try {
-    const files = await fs.readdir(currentPhotosPath);
-    const imageFiles = files.filter(file => {
-      const ext = path.extname(file).toLowerCase();
-      return config.supportedFormats.includes(ext);
-    });
-
-    const images = [];
-    for (const file of imageFiles) {
-      const filePath = path.join(currentPhotosPath, file);
-      const stats = await fs.stat(filePath);
-      
-      // Get the actual photo date from EXIF data, falling back to modification time
-      const photoDate = await getPhotoDate(filePath);
-      
-      images.push({
-        filename: file,
-        path: `/photos/${file}`,
-        size: stats.size,
-        created: stats.birthtime,
-        modified: stats.mtime,
-        photoDate: photoDate, // Actual photo date from EXIF or file modification time
-        isNew: newlyAddedImages.has(file) // Mark new images
+    let images = [];
+    
+    if (slideshowSettings.recursiveSearch) {
+      // Recursive scanning
+      images = await scanImagesRecursive(currentPhotosPath);
+      logger.debug(`Recursive scan found ${images.length} images`);
+    } else {
+      // Original non-recursive scanning
+      const files = await fs.readdir(currentPhotosPath);
+      const imageFiles = files.filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return config.supportedFormats.includes(ext);
       });
+
+      for (const file of imageFiles) {
+        const filePath = path.join(currentPhotosPath, file);
+        const stats = await fs.stat(filePath);
+        
+        // Get the actual photo date from EXIF data, falling back to modification time
+        const photoDate = await getPhotoDate(filePath);
+        
+        images.push({
+          filename: file,
+          path: `/photos/${file}`,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+          photoDate: photoDate, // Actual photo date from EXIF or file modification time
+          isNew: newlyAddedImages.has(file) // Mark new images
+        });
+      }
     }
 
     // Sort by photo date (oldest first - ascending chronological order)
@@ -498,11 +546,19 @@ function setupFileWatcher() {
     logger.debug('Stopping previous monitoring');
   }
 
-  fileWatcher = chokidar.watch(currentPhotosPath, {
+  const watchOptions = {
     ignored: /^\./, // Ignorer les fichiers cachés
     persistent: true,
     ignoreInitial: true
-  });
+  };
+
+  // Enable recursive watching if the setting is enabled
+  if (slideshowSettings.recursiveSearch) {
+    // Chokidar watches recursively by default, no need to set specific option
+    logger.debug('Setting up recursive file monitoring');
+  }
+
+  fileWatcher = chokidar.watch(currentPhotosPath, watchOptions);
 
   fileWatcher
     .on('add', (filePath) => {
@@ -511,19 +567,23 @@ function setupFileWatcher() {
         const ext = path.extname(filename).toLowerCase();
         
         if (config.supportedFormats.includes(ext)) {
-          logger.debug(`New image detected: ${filename}`);
+          // For recursive monitoring, use the relative path from the base photos directory
+          const relativePath = path.relative(currentPhotosPath, filePath);
+          const trackingKey = slideshowSettings.recursiveSearch ? relativePath : filename;
           
-          // Mark as new image
-          newlyAddedImages.add(filename);
+          logger.debug(`New image detected: ${trackingKey}`);
+          
+          // Mark as new image using appropriate key
+          newlyAddedImages.add(trackingKey);
           
           // Rescan with new image information
-          scanImages(filename);
+          scanImages(trackingKey);
           
           // Clean marking after 5 minutes with error handling
           setTimeout(() => {
             try {
-              newlyAddedImages.delete(filename);
-              logger.debug(`Image ${filename} is no longer considered new`);
+              newlyAddedImages.delete(trackingKey);
+              logger.debug(`Image ${trackingKey} is no longer considered new`);
               
               // Nettoyage périodique pour éviter les fuites mémoire
               if (newlyAddedImages.size > 100) {
@@ -542,14 +602,31 @@ function setupFileWatcher() {
     .on('unlink', (filePath) => {
       try {
         const filename = path.basename(filePath);
-        logger.debug(`Image supprimée: ${filename}`);
+        const relativePath = path.relative(currentPhotosPath, filePath);
+        const trackingKey = slideshowSettings.recursiveSearch ? relativePath : filename;
+        
+        logger.debug(`Image supprimée: ${trackingKey}`);
         
         // Remove from new images tracker if present
-        newlyAddedImages.delete(filename);
+        newlyAddedImages.delete(trackingKey);
         
         scanImages(); // Rescan all images
       } catch (error) {
         logger.error('Error processing file removal:', error);
+      }
+    })
+    .on('addDir', (dirPath) => {
+      if (slideshowSettings.recursiveSearch) {
+        const relativePath = path.relative(currentPhotosPath, dirPath);
+        logger.debug(`New directory detected: ${relativePath}`);
+      }
+    })
+    .on('unlinkDir', (dirPath) => {
+      if (slideshowSettings.recursiveSearch) {
+        const relativePath = path.relative(currentPhotosPath, dirPath);
+        logger.debug(`Directory removed: ${relativePath}`);
+        // Rescan when directories are removed in recursive mode
+        scanImages();
       }
     })
     .on('error', error => {
@@ -561,7 +638,8 @@ function setupFileWatcher() {
       }, 5000);
     });
 
-  logger.info(`Monitoring folder: ${currentPhotosPath}`);
+  const mode = slideshowSettings.recursiveSearch ? 'recursive' : 'non-recursive';
+  logger.info(`Monitoring folder: ${currentPhotosPath} (${mode})`);
 }
 
 // Routes API
@@ -584,7 +662,8 @@ app.post('/api/settings', (req, res) => {
       'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
-      'transparentBackground', 'photosPath', 'excludedImages', 'language'
+      'transparentBackground', 'photosPath', 'excludedImages', 'language',
+      'recursiveSearch'
     ];
     
     const newSettings = {};
@@ -616,6 +695,7 @@ app.post('/api/settings', (req, res) => {
           case 'shuffleImages':
           case 'repeatLatest':
           case 'transparentBackground':
+          case 'recursiveSearch':
             if (typeof value === 'boolean') {
               newSettings[key] = value;
             }
@@ -685,6 +765,14 @@ app.post('/api/settings', (req, res) => {
     // Si l'intervalle a changé, redémarrer le timer
     if (newSettings.interval) {
       restartSlideshowTimer();
+    }
+    
+    // If recursive search setting changed, restart file watcher and rescan
+    if (newSettings.recursiveSearch !== undefined) {
+      logger.debug(`🔄 Recursive search mode changed to: ${newSettings.recursiveSearch}`);
+      setupFileWatcher();
+      // Rescan images with new recursive setting
+      scanImages();
     }
     
     // Émettre les nouveaux réglages aux clients
@@ -836,13 +924,14 @@ app.post('/api/photos-path', async (req, res) => {
 });
 
 // Route dynamique pour servir les photos du dossier actuel
+// Photos route with subdirectory support
 app.get('/photos/:filename', (req, res) => {
   try {
     const filename = req.params.filename;
     
-    // Validation du nom de fichier
-    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return res.status(400).json({ error: 'Nom de fichier invalide' });
+    // Validation du nom de fichier/chemin
+    if (!filename || filename.includes('..')) {
+      return res.status(400).json({ error: 'Chemin de fichier invalide' });
     }
     
     // Vérifier l'extension
@@ -852,6 +941,87 @@ app.get('/photos/:filename', (req, res) => {
     }
     
     const filePath = path.join(currentPhotosPath, filename);
+    
+    // Vérifier que le fichier existe et est dans le dossier autorisé
+    const resolvedPath = path.resolve(filePath);
+    const resolvedPhotosPath = path.resolve(currentPhotosPath);
+    
+    if (!resolvedPath.startsWith(resolvedPhotosPath + path.sep) && resolvedPath !== resolvedPhotosPath) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+    
+    res.sendFile(resolvedPath, (err) => {
+      if (err) {
+        logger.error('Error sending file:', err);
+        res.status(404).json({ error: 'Image non trouvée' });
+      }
+    });
+  } catch (error) {
+    logger.error('Error in /photos route:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+// Route for subdirectory photos
+app.get('/photos/:subfolder/:filename', (req, res) => {
+  try {
+    const subfolder = req.params.subfolder;
+    const filename = req.params.filename;
+    const relativePath = path.join(subfolder, filename);
+    
+    // Validation du chemin
+    if (!filename || !subfolder || relativePath.includes('..')) {
+      return res.status(400).json({ error: 'Chemin de fichier invalide' });
+    }
+    
+    // Vérifier l'extension
+    const ext = path.extname(filename).toLowerCase();
+    if (!config.supportedFormats.includes(ext)) {
+      return res.status(400).json({ error: 'Format de fichier non supporté' });
+    }
+    
+    const filePath = path.join(currentPhotosPath, relativePath);
+    
+    // Vérifier que le fichier existe et est dans le dossier autorisé
+    const resolvedPath = path.resolve(filePath);
+    const resolvedPhotosPath = path.resolve(currentPhotosPath);
+    
+    if (!resolvedPath.startsWith(resolvedPhotosPath + path.sep) && resolvedPath !== resolvedPhotosPath) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+    
+    res.sendFile(resolvedPath, (err) => {
+      if (err) {
+        logger.error('Error sending file:', err);
+        res.status(404).json({ error: 'Image non trouvée' });
+      }
+    });
+  } catch (error) {
+    logger.error('Error in /photos route:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+// Route for nested subdirectory photos
+app.get('/photos/:subfolder/:nestedfolder/:filename', (req, res) => {
+  try {
+    const subfolder = req.params.subfolder;
+    const nestedfolder = req.params.nestedfolder;
+    const filename = req.params.filename;
+    const relativePath = path.join(subfolder, nestedfolder, filename);
+    
+    // Validation du chemin
+    if (!filename || !subfolder || !nestedfolder || relativePath.includes('..')) {
+      return res.status(400).json({ error: 'Chemin de fichier invalide' });
+    }
+    
+    // Vérifier l'extension
+    const ext = path.extname(filename).toLowerCase();
+    if (!config.supportedFormats.includes(ext)) {
+      return res.status(400).json({ error: 'Format de fichier non supporté' });
+    }
+    
+    const filePath = path.join(currentPhotosPath, relativePath);
     
     // Vérifier que le fichier existe et est dans le dossier autorisé
     const resolvedPath = path.resolve(filePath);
