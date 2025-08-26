@@ -341,13 +341,19 @@ function updateSlideshowState(emitEvent = true) {
 
   slideshowState.currentImage = imagesList[slideshowState.currentIndex];
   
+  // Calculate original index (position in chronological order)
+  const originalIndex = slideshowState.currentImage ? 
+    currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+  
   // Émettre l'état mis à jour aux clients uniquement si demandé
   if (emitEvent) {
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
+      originalIndex: originalIndex,
       isPlaying: slideshowState.isPlaying,
-      totalImages: imagesList.length
+      totalImages: imagesList.length,
+      totalOriginalImages: currentImages.length
     });
   }
 }
@@ -360,10 +366,15 @@ function changeImage(direction = 1) {
   slideshowState.currentIndex += direction;
   updateSlideshowState(false); // Don't emit slideshow-state event, we'll emit image-changed instead
   
+  // Calculate original index for the changed image
+  const originalIndex = slideshowState.currentImage ? 
+    currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+  
   // Émettre le changement d'image aux clients slideshow
   io.emit('image-changed', {
     currentImage: slideshowState.currentImage,
     currentIndex: slideshowState.currentIndex,
+    originalIndex: originalIndex,
     direction: direction
   });
 }
@@ -806,8 +817,11 @@ io.on('connection', (socket) => {
   socket.emit('slideshow-state', {
     currentImage: slideshowState.currentImage,
     currentIndex: slideshowState.currentIndex,
+    originalIndex: slideshowState.currentImage ? 
+      currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1,
     isPlaying: slideshowState.isPlaying,
-    totalImages: currentImages.length
+    totalImages: getCurrentImagesList().length,
+    totalOriginalImages: currentImages.length
   });
 
   socket.on('disconnect', () => {
@@ -839,10 +853,15 @@ io.on('connection', (socket) => {
       // Determine direction for transition
       const direction = index > previousIndex ? 1 : -1;
       
+      // Calculate original index for the jumped image
+      const originalIndex = slideshowState.currentImage ? 
+        currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+      
       // Emit image-changed event for smooth transition
       io.emit('image-changed', {
         currentImage: slideshowState.currentImage,
         currentIndex: slideshowState.currentIndex,
+        originalIndex: originalIndex,
         direction: direction
       });
       
@@ -855,11 +874,16 @@ io.on('connection', (socket) => {
     slideshowState.isPlaying = false;
     stopSlideshowTimer();
     
+    const originalIndex = slideshowState.currentImage ? 
+      currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+    
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
+      originalIndex: originalIndex,
       isPlaying: slideshowState.isPlaying,
-      totalImages: currentImages.length
+      totalImages: getCurrentImagesList().length,
+      totalOriginalImages: currentImages.length
     });
     socket.broadcast.emit('pause-slideshow');
     logger.debug('Slideshow paused by a client');
@@ -869,22 +893,32 @@ io.on('connection', (socket) => {
     slideshowState.isPlaying = true;
     startSlideshowTimer();
     
+    const originalIndex = slideshowState.currentImage ? 
+      currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+    
     io.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
+      originalIndex: originalIndex,
       isPlaying: slideshowState.isPlaying,
-      totalImages: currentImages.length
+      totalImages: getCurrentImagesList().length,
+      totalOriginalImages: currentImages.length
     });
     socket.broadcast.emit('resume-slideshow');
     logger.debug('Slideshow resumed by a client');
   });
 
   socket.on('get-slideshow-state', () => {
+    const originalIndex = slideshowState.currentImage ? 
+      currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
+      
     socket.emit('slideshow-state', {
       currentImage: slideshowState.currentImage,
       currentIndex: slideshowState.currentIndex,
+      originalIndex: originalIndex,
       isPlaying: slideshowState.isPlaying,
-      totalImages: currentImages.length
+      totalImages: getCurrentImagesList().length,
+      totalOriginalImages: currentImages.length
     });
   });
 
