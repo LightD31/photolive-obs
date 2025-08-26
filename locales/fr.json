@@ -47,6 +47,7 @@
     "opacity": "Opacité",
     "repeat_latest": "Répéter les Récentes",
     "latest_count": "Nombre Récentes",
+    "recursive_search": "Rechercher dans les sous-dossiers",
     "language": "Langue"
   },
   "filters": {

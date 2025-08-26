@@ -269,6 +269,7 @@ class PhotoLiveControl {
         this.latestCountContainer = document.getElementById('latest-count-container');
         this.shuffleImages = document.getElementById('shuffle-images');
         this.transparentBackground = document.getElementById('transparent-background');
+        this.recursiveSearch = document.getElementById('recursive-search');
         
         // Grid zoom control buttons
         this.zoomButtons = document.querySelectorAll('.zoom-btn');
@@ -437,6 +438,10 @@ class PhotoLiveControl {
 
         this.transparentBackground.addEventListener('change', (e) => {
             this.updateSetting('transparentBackground', e.target.checked);
+        });
+
+        this.recursiveSearch.addEventListener('change', (e) => {
+            this.updateSetting('recursiveSearch', e.target.checked);
         });
 
         // Grid zoom control buttons
@@ -623,6 +628,7 @@ class PhotoLiveControl {
         this.toggleLatestCountContainer(this.settings.repeatLatest);
         this.shuffleImages.checked = this.settings.shuffleImages;
         this.transparentBackground.checked = this.settings.transparentBackground;
+        this.recursiveSearch.checked = this.settings.recursiveSearch;
         
         // Update photos path
         if (this.settings.photosPath) {

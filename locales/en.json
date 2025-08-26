@@ -47,6 +47,7 @@
     "opacity": "Opacity",
     "repeat_latest": "Repeat Latest",
     "latest_count": "Latest Count",
+    "recursive_search": "Search subdirectories",
     "language": "Language"
   },
   "filters": {
