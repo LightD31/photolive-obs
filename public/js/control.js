@@ -34,7 +34,7 @@ class PhotoLiveControl {
         this.pendingGridUpdate = false;
         this.lastImageListHash = null;
         this.sortedImagesCache = null;
-        this.gridSortOrder = 'desc'; // 'desc' for newest first, 'asc' for oldest first
+        this.gridSortOrder = 'asc'; // 'asc' for oldest first (ascending chronological), 'desc' for newest first
         
         this.init();
     }
@@ -704,48 +704,47 @@ class PhotoLiveControl {
 
         const currentImage = data.currentImage;
         const currentIndex = data.currentIndex !== undefined ? data.currentIndex : 0;
-        const totalImages = this.images.length;
+        const originalIndex = data.originalIndex !== undefined ? data.originalIndex : currentIndex;
+        const totalOriginalImages = data.totalOriginalImages !== undefined ? data.totalOriginalImages : this.images.length;
 
         // Update current preview image
         this.currentPreviewImage.src = currentImage.path;
         this.currentPreviewImage.style.display = 'block';
         this.previewPlaceholder.style.display = 'none';
 
-        // Update current image info
+        // Update current image info using original index
         this.currentImageName.textContent = currentImage.filename || 'Unknown';
-        this.currentImageIndexElement.textContent = `${currentIndex + 1} / ${totalImages}`;
+        this.currentImageIndexElement.textContent = `${originalIndex + 1} / ${totalOriginalImages}`;
 
-        // Update next image preview
-        this.updateNextImagePreview(currentIndex, totalImages);
+        // Update next image preview using actual next image data from server
+        this.updateNextImagePreview(data);
 
-        // Highlight current image in grid
+        // Highlight current image in grid (still use currentIndex for functional highlighting)
         this.highlightCurrentImageInGrid(currentIndex);
 
         // Store current image data
         this.currentImageData = currentImage;
         this.currentImageIndex = currentIndex;
+        this.currentOriginalIndex = originalIndex;
     }
 
-    updateNextImagePreview(currentIndex, totalImages) {
-        if (!this.images || this.images.length === 0) {
-            this.showNextPreviewPlaceholder();
-            return;
-        }
+    updateNextImagePreview(data) {
+        // Use actual next image data from server if available
+        if (data && data.nextImage && data.nextOriginalIndex !== undefined) {
+            const nextImage = data.nextImage;
+            const nextOriginalIndex = data.nextOriginalIndex;
+            const totalOriginalImages = data.totalOriginalImages || this.images.length;
 
-        // Calculate next image index (wrapping around at the end)
-        const nextIndex = (currentIndex + 1) % totalImages;
-        const nextImage = this.images[nextIndex];
-
-        if (nextImage) {
             // Update next preview image
             this.nextPreviewImage.src = nextImage.path;
             this.nextPreviewImage.style.display = 'block';
             this.nextPreviewPlaceholder.style.display = 'none';
 
-            // Update next image info
+            // Update next image info using actual next original index
             this.nextImageName.textContent = nextImage.filename || 'Unknown';
-            this.nextImageIndexElement.textContent = `${nextIndex + 1} / ${totalImages}`;
+            this.nextImageIndexElement.textContent = `${nextOriginalIndex + 1} / ${totalOriginalImages}`;
         } else {
+            // Fallback to placeholder if no next image data
             this.showNextPreviewPlaceholder();
         }
     }
