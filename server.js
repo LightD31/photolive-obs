@@ -229,8 +229,9 @@ function shuffleArray(array) {
 }
 
 // Function to get complete image list (for grid display)
+// Always return chronological order for grid reference, regardless of shuffle setting
 function getAllImagesList() {
-  return slideshowSettings.shuffleImages ? shuffledImages : currentImages;
+  return currentImages;
 }
 
 // Function to get current filtered image list (for slideshow)
