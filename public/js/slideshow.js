@@ -514,17 +514,20 @@ class PhotoLiveSlideshow {
 
     updateImageCornerRadius() {
         const radius = this.settings.imageCornerRadius || 0;
-        const radiusValue = radius > 0 ? `${radius}px` : '0';
         
-        // Apply border-radius to both image elements
+        // Use clip-path for proper corner radius with object-fit: contain
+        // This ensures the corners are rounded regardless of aspect ratio differences
+        const clipPath = radius > 0 ? `inset(0 round ${radius}px)` : 'none';
+        
+        // Apply clip-path to both image elements
         if (this.currentImageElement) {
-            this.currentImageElement.style.borderRadius = radiusValue;
+            this.currentImageElement.style.clipPath = clipPath;
         }
         if (this.nextImageElement) {
-            this.nextImageElement.style.borderRadius = radiusValue;
+            this.nextImageElement.style.clipPath = clipPath;
         }
         
-        console.log('Corner radius updated to:', radiusValue);
+        console.log('Corner radius updated with clip-path:', clipPath);
     }
 
     updateWatermark() {
