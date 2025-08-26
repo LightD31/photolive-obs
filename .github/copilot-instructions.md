@@ -20,6 +20,14 @@ PhotoLive OBS is a Node.js real-time photo slideshow application for OBS Studio 
 - `npm run clean`: Remove dist, node_modules, package-lock.json
 - `npm run reinstall`: Clean and reinstall dependencies
 
+### Debug Logging
+- **Enable debug logging**: Set `LOG_LEVEL=DEBUG` environment variable before starting
+- **Windows PowerShell**: `$env:LOG_LEVEL="DEBUG"; node server.js`
+- **Windows Command Prompt**: `set LOG_LEVEL=DEBUG && node server.js`
+- **Linux/macOS**: `LOG_LEVEL=DEBUG node server.js`
+- **Debug levels available**: ERROR, WARN, INFO, DEBUG (default: INFO)
+- **Debug output includes**: File monitoring events, WebSocket connections, API requests, image processing, real-time state changes
+
 ### No Build Process Required
 - This application requires NO building, compiling, or transpilation
 - Static files served directly from `/public` directory
