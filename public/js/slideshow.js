@@ -80,14 +80,6 @@ class PhotoLiveSlideshow {
             this.updateSettings(settings);
         });
 
-        this.socket.on('next-image', () => {
-            this.nextSlide();
-        });
-
-        this.socket.on('prev-image', () => {
-            this.prevSlide();
-        });
-
         this.socket.on('pause-slideshow', () => {
             this.pauseSlideshow();
         });
@@ -181,40 +173,43 @@ class PhotoLiveSlideshow {
     handleImageChange(data) {
         // Gérer un changement d'image avec transition
         if (!data || !data.currentImage) {
+            console.warn('Image change event with invalid data:', data);
             return;
         }
 
-        console.log('Changement d\'image avec transition:', data.currentImage.filename);
+        console.log('Changement d\'image avec transition:', data.currentImage.filename, 'index:', data.currentIndex);
 
-        // Stocker les données d'image fournies par le serveur
+        // Stocker les données d'image fournies par le serveur - TOUJOURS synchroniser avec le serveur
         this.serverCurrentImage = data.currentImage;
         this.currentIndex = data.currentIndex;
         this.isPlaying = data.isPlaying !== undefined ? data.isPlaying : this.isPlaying;
 
         // Toujours faire une transition pour les changements d'image
-        this.transitionToServerImage(data.currentImage.path, data.direction);
+        this.transitionToServerImage(data.currentImage.path, data.direction || 1);
     }
 
     handleStateSync(data) {
         // Gérer une synchronisation d'état (première connexion, etc.)
         if (!data || !data.currentImage) {
+            console.log('State sync without current image, waiting...');
             return;
         }
 
-        console.log('Synchronisation d\'état:', data.currentImage.filename);
+        console.log('Synchronisation d\'état:', data.currentImage.filename, 'index:', data.currentIndex);
 
-        // Stocker les données d'image fournies par le serveur
+        // Stocker les données d'image fournies par le serveur - TOUJOURS synchroniser avec le serveur
         this.serverCurrentImage = data.currentImage;
         this.currentIndex = data.currentIndex;
         this.isPlaying = data.isPlaying !== undefined ? data.isPlaying : this.isPlaying;
 
         // Vérifier si l'image affichée est différente
         const visibleElement = this.getVisibleImageElement();
-        const currentPath = visibleElement.src;
+        const currentPath = visibleElement ? visibleElement.src : '';
         const newPath = data.currentImage.path;
         
         if (!currentPath || currentPath === '') {
             // Première image, affichage direct
+            console.log('Première image, affichage direct');
             this.displayImageDirectly(data.currentImage.path);
         } else {
             // Construire l'URL complète pour la comparaison

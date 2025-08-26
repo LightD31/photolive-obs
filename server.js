@@ -268,7 +268,16 @@ function getCurrentImagesList() {
   const excludedImages = slideshowSettings.excludedImages || [];
   
   // Filter excluded images
-  return allImages.filter(image => !excludedImages.includes(image.filename));
+  let filteredImages = allImages.filter(image => !excludedImages.includes(image.filename));
+  
+  // Apply repeatLatest filter if enabled
+  if (slideshowSettings.repeatLatest && filteredImages.length > 0) {
+    const latestCount = Math.min(slideshowSettings.latestCount || 5, filteredImages.length);
+    filteredImages = filteredImages.slice(0, latestCount);
+    logger.debug(`Mode repeatLatest: affichage des ${latestCount} dernières images sur ${allImages.length} total`);
+  }
+  
+  return filteredImages;
 }
 
 // Function to create/update shuffled image list
@@ -408,8 +417,22 @@ function changeImage(direction = 1) {
   const imagesList = getCurrentImagesList();
   if (imagesList.length === 0) return;
   
-  slideshowState.currentIndex += direction;
-  updateSlideshowState(false); // Don't emit slideshow-state event, we'll emit image-changed instead
+  // Calculate new index with proper wrap-around
+  const oldIndex = slideshowState.currentIndex;
+  let newIndex = slideshowState.currentIndex + direction;
+  
+  // Handle wrap-around properly
+  if (newIndex >= imagesList.length) {
+    newIndex = 0;
+  } else if (newIndex < 0) {
+    newIndex = imagesList.length - 1;
+  }
+  
+  // Update the current index
+  slideshowState.currentIndex = newIndex;
+  slideshowState.currentImage = imagesList[slideshowState.currentIndex];
+  
+  logger.debug(`Changed image: ${oldIndex} -> ${newIndex} (direction: ${direction}), current: ${slideshowState.currentImage?.filename}`);
   
   // Calculate original index for the changed image
   const originalIndex = slideshowState.currentImage ? 
@@ -432,7 +455,8 @@ function changeImage(direction = 1) {
     originalIndex: originalIndex,
     nextImage: nextImage,
     nextOriginalIndex: nextOriginalIndex,
-    direction: direction
+    direction: direction,
+    totalImages: imagesList.length
   });
 }
 
@@ -859,6 +883,11 @@ app.get('/control', (req, res) => {
   res.sendFile(path.join(config.publicPath, 'control.html'));
 });
 
+// Route for test navigation (debug)
+app.get('/test', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test_navigation.html'));
+});
+
 // Gestion des connexions WebSocket
 io.on('connection', (socket) => {
   logger.debug('Client connected:', socket.id);
@@ -887,28 +916,32 @@ io.on('connection', (socket) => {
 
   // Handle control commands
   socket.on('next-image', () => {
+    logger.debug('Next image requested from client');
     changeImage(1);
     // Restart timer to reset interval
     restartSlideshowTimer();
-    socket.broadcast.emit('next-image');
   });
 
   socket.on('prev-image', () => {
+    logger.debug('Previous image requested from client');
     changeImage(-1);
     // Restart timer to reset interval
     restartSlideshowTimer();
-    socket.broadcast.emit('prev-image');
   });
 
   socket.on('jump-to-image', (index) => {
     const imagesList = getCurrentImagesList();
     if (index >= 0 && index < imagesList.length) {
       const previousIndex = slideshowState.currentIndex;
+      
+      // Update to new index
       slideshowState.currentIndex = index;
-      updateSlideshowState(false); // Don't emit slideshow-state, we'll emit image-changed instead
+      slideshowState.currentImage = imagesList[slideshowState.currentIndex];
       
       // Determine direction for transition
-      const direction = index > previousIndex ? 1 : -1;
+      const direction = index > previousIndex ? 1 : (index < previousIndex ? -1 : 0);
+      
+      logger.debug(`Jumped to image: ${previousIndex} -> ${index}, current: ${slideshowState.currentImage?.filename}`);
       
       // Calculate original index for the jumped image
       const originalIndex = slideshowState.currentImage ? 
@@ -931,7 +964,8 @@ io.on('connection', (socket) => {
         originalIndex: originalIndex,
         nextImage: nextImage,
         nextOriginalIndex: nextOriginalIndex,
-        direction: direction
+        direction: direction,
+        totalImages: imagesList.length
       });
       
       // Restart timer to reset interval
