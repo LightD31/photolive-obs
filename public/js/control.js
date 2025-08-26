@@ -1100,7 +1100,7 @@ class PhotoLiveControl {
 
     updateGridZoom(zoomLevel) {
         // Remove existing zoom classes
-        this.imagesPreview.classList.remove('zoom-normal', 'zoom-large', 'zoom-xlarge', 'zoom-xxlarge');
+        this.imagesPreview.classList.remove('zoom-small', 'zoom-normal', 'zoom-large', 'zoom-xlarge');
         
         // Update button states
         this.zoomButtons.forEach(button => {
@@ -1114,10 +1114,10 @@ class PhotoLiveControl {
         
         // Add new zoom class based on level
         const zoomClasses = {
-            1: 'zoom-normal',
-            2: 'zoom-large', 
-            3: 'zoom-xlarge',
-            4: 'zoom-xxlarge'
+            1: 'zoom-small',
+            2: 'zoom-normal', 
+            3: 'zoom-large',
+            4: 'zoom-xlarge'
         };
         
         if (zoomClasses[zoomLevel]) {
@@ -1129,9 +1129,9 @@ class PhotoLiveControl {
     }
 
     initializeGridZoom() {
-        // Load saved zoom level or default to normal (level 1, which is now the smallest)
+        // Load saved zoom level or default to normal (level 2)
         const savedZoom = localStorage.getItem('photoLiveGridZoom');
-        const zoomLevel = savedZoom ? parseInt(savedZoom) : 1;
+        const zoomLevel = savedZoom ? parseInt(savedZoom) : 2;
         
         // Apply zoom level (this will also update button states)
         this.updateGridZoom(zoomLevel);
