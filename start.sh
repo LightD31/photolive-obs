@@ -13,6 +13,7 @@ if ! command -v node &> /dev/null; then
     echo "Veuillez installer Node.js depuis https://nodejs.org/"
     echo "Ou utilisez votre gestionnaire de paquets :"
     echo "  Ubuntu/Debian: sudo apt install nodejs npm"
+    echo "  Fedora: sudo dnf install nodejs npm"
     echo "  CentOS/RHEL: sudo yum install nodejs npm"
     echo "  macOS: brew install node"
     echo ""
