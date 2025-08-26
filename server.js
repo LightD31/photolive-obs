@@ -1134,13 +1134,16 @@ async function initialize() {
     // Démarrer le timer du diaporama
     startSlideshowTimer();
     
-    // Démarrer le serveur
-    server.listen(config.port, () => {
+    // Fonction pour afficher les messages de démarrage
+    const logServerStarted = () => {
       logger.info(`PhotoLive OBS server started on http://localhost:${config.port}`);
       logger.info(`Control interface: http://localhost:${config.port}/control`);
       logger.info(`Slideshow for OBS: http://localhost:${config.port}/`);
       logger.info(`Photos folder monitored: ${currentPhotosPath}`);
-    }).on('error', (err) => {
+    };
+
+    // Démarrer le serveur
+    server.listen(config.port, logServerStarted).on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         logger.warn(`Port ${config.port} already in use, trying port ${config.port + 1}...`);
         config.port = config.port + 1;
@@ -1151,12 +1154,7 @@ async function initialize() {
           process.exit(1);
         }
         
-        server.listen(config.port, () => {
-          logger.info(`PhotoLive OBS server started on http://localhost:${config.port}`);
-          logger.info(`Control interface: http://localhost:${config.port}/control`);
-          logger.info(`Slideshow for OBS: http://localhost:${config.port}/`);
-          logger.info(`Photos folder monitored: ${currentPhotosPath}`);
-        });
+        server.listen(config.port, logServerStarted);
       } else {
         logger.error('Error starting server:', err);
         process.exit(1);
