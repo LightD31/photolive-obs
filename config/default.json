@@ -66,6 +66,7 @@
     "transparentBackground": true,
     "excludedImages": [],
     "language": "en",
-    "recursiveSearch": false
+    "recursiveSearch": false,
+    "gridSortOrder": "asc"
   }
 }

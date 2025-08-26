@@ -34,7 +34,7 @@ class PhotoLiveControl {
         this.pendingGridUpdate = false;
         this.lastImageListHash = null;
         this.sortedImagesCache = null;
-        this.gridSortOrder = 'asc'; // 'asc' for oldest first (ascending chronological), 'desc' for newest first
+        this.gridSortOrder = null; // Will be set by initializeGridSort() from config or localStorage
         
         this.init();
     }
@@ -1168,9 +1168,10 @@ class PhotoLiveControl {
     }
 
     initializeGridSort() {
-        // Load saved sort order or default to descending (newest first)
+        // Load saved sort order from localStorage, then from settings, or fallback to 'asc'
         const savedSort = localStorage.getItem('photoLiveGridSort');
-        const sortOrder = savedSort || 'desc';
+        const defaultSort = this.settings.gridSortOrder || 'asc';
+        const sortOrder = savedSort || defaultSort;
         
         // Apply sort order (this will also update button states)
         this.updateGridSort(sortOrder);
