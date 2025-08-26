@@ -663,7 +663,7 @@ app.post('/api/settings', (req, res) => {
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
       'transparentBackground', 'photosPath', 'excludedImages', 'language',
-      'recursiveSearch'
+      'recursiveSearch', 'imageCornerRadius'
     ];
     
     const newSettings = {};
@@ -683,6 +683,11 @@ app.post('/api/settings', (req, res) => {
             break;
           case 'latestCount':
             if (typeof value === 'number' && value >= 1 && value <= 50) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'imageCornerRadius':
+            if (typeof value === 'number' && value >= 0 && value <= 50) {
               newSettings[key] = value;
             }
             break;

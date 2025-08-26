@@ -35,6 +35,7 @@
   "settings": {
     "filter": "Filtre",
     "transition": "Transition",
+    "corner_radius": "Rayon des Coins",
     "shuffle": "Mélanger",
     "transparent_bg": "Fond Transparent",
     "photos_folder": "Dossier Photos",

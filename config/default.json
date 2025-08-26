@@ -68,6 +68,7 @@
     "language": "en",
     "recursiveSearch": false,
     "gridSortOrder": "asc",
-    "gridZoomLevel": 2
+    "gridZoomLevel": 2,
+    "imageCornerRadius": 0
   }
 }

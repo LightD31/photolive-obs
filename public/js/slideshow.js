@@ -17,7 +17,8 @@ class PhotoLiveSlideshow {
             shuffleImages: false,
             repeatLatest: false,
             latestCount: 5,
-            transparentBackground: false
+            transparentBackground: false,
+            imageCornerRadius: 0
         };
         this.isPlaying = true;
         
@@ -504,8 +505,26 @@ class PhotoLiveSlideshow {
         // Mettre à jour l'overlay
         this.updateOverlay();
         
+        // Mettre à jour le rayon des coins des images
+        this.updateImageCornerRadius();
+        
         // Le timer est maintenant géré côté serveur
         console.log('Paramètres mis à jour, shuffle géré par le serveur');
+    }
+
+    updateImageCornerRadius() {
+        const radius = this.settings.imageCornerRadius || 0;
+        const radiusValue = radius > 0 ? `${radius}px` : '0';
+        
+        // Apply border-radius to both image elements
+        if (this.currentImageElement) {
+            this.currentImageElement.style.borderRadius = radiusValue;
+        }
+        if (this.nextImageElement) {
+            this.nextImageElement.style.borderRadius = radiusValue;
+        }
+        
+        console.log('Corner radius updated to:', radiusValue);
     }
 
     updateWatermark() {

@@ -35,6 +35,7 @@
   "settings": {
     "filter": "Filter",
     "transition": "Transition",
+    "corner_radius": "Corner Radius",
     "shuffle": "Shuffle",
     "transparent_bg": "Transparent BG",
     "photos_folder": "Photos Folder",

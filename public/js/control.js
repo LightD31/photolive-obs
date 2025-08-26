@@ -244,6 +244,8 @@ class PhotoLiveControl {
 
         this.filterSelect = document.getElementById('filter-select');
         this.transitionSelect = document.getElementById('transition-select');
+        this.cornerRadiusSlider = document.getElementById('corner-radius');
+        this.cornerRadiusValue = document.getElementById('corner-radius-value');
         
         // Watermark elements
         this.watermarkEnabled = document.getElementById('watermark-enabled');
@@ -379,6 +381,13 @@ class PhotoLiveControl {
         // Transition select
         this.transitionSelect.addEventListener('change', (e) => {
             this.updateSetting('transition', e.target.value);
+        });
+
+        // Corner radius slider
+        this.cornerRadiusSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.cornerRadiusValue.textContent = value + 'px';
+            this.updateSetting('imageCornerRadius', value);
         });
 
         // Watermark settings
@@ -598,6 +607,10 @@ class PhotoLiveControl {
         
         // Update transition
         this.transitionSelect.value = this.settings.transition || 'none';
+        
+        // Update corner radius
+        this.cornerRadiusSlider.value = this.settings.imageCornerRadius || 0;
+        this.cornerRadiusValue.textContent = (this.settings.imageCornerRadius || 0) + 'px';
         
         // Update watermark
         this.watermarkEnabled.checked = this.settings.showWatermark;
