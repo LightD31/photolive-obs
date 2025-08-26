@@ -6,6 +6,7 @@ const fs = require('fs').promises;
 const chokidar = require('chokidar');
 const cors = require('cors');
 const multer = require('multer');
+const exifr = require('exifr');
 
 const app = express();
 const server = http.createServer(app);
@@ -218,6 +219,34 @@ let slideshowState = {
 // Server-side slideshow timer
 let slideshowTimer = null;
 
+// Function to extract photo date from EXIF data
+async function getPhotoDate(filePath) {
+  try {
+    const exifData = await exifr.parse(filePath, ['DateTimeOriginal', 'DateTime', 'CreateDate']);
+    
+    // Try to get the original photo date in order of preference
+    const photoDate = exifData?.DateTimeOriginal || 
+                     exifData?.DateTime || 
+                     exifData?.CreateDate;
+    
+    if (photoDate && photoDate instanceof Date && !isNaN(photoDate)) {
+      return photoDate;
+    }
+  } catch (error) {
+    // EXIF reading failed, will fall back to file modification time
+    logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
+  }
+  
+  // Fall back to file modification time if EXIF date is not available
+  try {
+    const stats = await fs.stat(filePath);
+    return stats.mtime;
+  } catch (error) {
+    logger.warn(`Could not get file stats for ${filePath}: ${error.message}`);
+    return new Date(); // Use current time as last resort
+  }
+}
+
 // Fonction pour mélanger un tableau (Fisher-Yates shuffle)
 function shuffleArray(array) {
   const shuffled = [...array];
@@ -282,18 +311,22 @@ async function scanImages(newImageFilename = null) {
       const filePath = path.join(currentPhotosPath, file);
       const stats = await fs.stat(filePath);
       
+      // Get the actual photo date from EXIF data, falling back to modification time
+      const photoDate = await getPhotoDate(filePath);
+      
       images.push({
         filename: file,
         path: `/photos/${file}`,
         size: stats.size,
         created: stats.birthtime,
         modified: stats.mtime,
+        photoDate: photoDate, // Actual photo date from EXIF or file modification time
         isNew: newlyAddedImages.has(file) // Mark new images
       });
     }
 
-    // Sort by modification date (oldest first - ascending chronological order)
-    images.sort((a, b) => a.modified - b.modified);
+    // Sort by photo date (oldest first - ascending chronological order)
+    images.sort((a, b) => a.photoDate - b.photoDate);
     
     currentImages = images;
     
