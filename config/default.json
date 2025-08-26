@@ -67,6 +67,7 @@
     "excludedImages": [],
     "language": "en",
     "recursiveSearch": false,
-    "gridSortOrder": "asc"
+    "gridSortOrder": "asc",
+    "gridZoomLevel": 2
   }
 }

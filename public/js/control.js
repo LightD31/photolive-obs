@@ -1129,9 +1129,10 @@ class PhotoLiveControl {
     }
 
     initializeGridZoom() {
-        // Load saved zoom level or default to normal (level 2)
+        // Load saved zoom level from localStorage, then from settings, or fallback to normal (level 2)
         const savedZoom = localStorage.getItem('photoLiveGridZoom');
-        const zoomLevel = savedZoom ? parseInt(savedZoom) : 2;
+        const defaultZoom = this.settings.gridZoomLevel || 2;
+        const zoomLevel = savedZoom ? parseInt(savedZoom) : defaultZoom;
         
         // Apply zoom level (this will also update button states)
         this.updateGridZoom(zoomLevel);
