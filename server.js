@@ -292,8 +292,8 @@ async function scanImages(newImageFilename = null) {
       });
     }
 
-    // Sort by modification date (most recent first)
-    images.sort((a, b) => b.modified - a.modified);
+    // Sort by modification date (oldest first - ascending chronological order)
+    images.sort((a, b) => a.modified - b.modified);
     
     currentImages = images;
     

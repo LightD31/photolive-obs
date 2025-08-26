@@ -34,7 +34,7 @@ class PhotoLiveControl {
         this.pendingGridUpdate = false;
         this.lastImageListHash = null;
         this.sortedImagesCache = null;
-        this.gridSortOrder = 'desc'; // 'desc' for newest first, 'asc' for oldest first
+        this.gridSortOrder = 'asc'; // 'asc' for oldest first (ascending chronological), 'desc' for newest first
         
         this.init();
     }
