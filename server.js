@@ -259,7 +259,12 @@ function shuffleArray(array) {
 
 // Function to get complete image list (for grid display)
 function getAllImagesList() {
-  return slideshowSettings.shuffleImages ? shuffledImages : currentImages;
+  const baseImages = slideshowSettings.shuffleImages ? shuffledImages : currentImages;
+  // Add originalIndex property to each image pointing to its position in currentImages
+  return baseImages.map(image => ({
+    ...image,
+    originalIndex: currentImages.findIndex(img => img.filename === image.filename)
+  }));
 }
 
 // Function to get current filtered image list (for slideshow)
@@ -1099,47 +1104,58 @@ io.on('connection', (socket) => {
     restartSlideshowTimer();
   });
 
-  socket.on('jump-to-image', (index) => {
+  socket.on('jump-to-image', (originalIndex) => {
     const imagesList = getCurrentImagesList();
-    if (index >= 0 && index < imagesList.length) {
-      const previousIndex = slideshowState.currentIndex;
+    
+    // Find the target image by originalIndex in the complete images list
+    if (originalIndex >= 0 && originalIndex < currentImages.length) {
+      const targetImage = currentImages[originalIndex];
       
-      // Update to new index
-      slideshowState.currentIndex = index;
-      slideshowState.currentImage = imagesList[slideshowState.currentIndex];
+      // Find the position of this image in the current filtered/shuffled list
+      const filteredIndex = imagesList.findIndex(img => img.filename === targetImage.filename);
       
-      // Determine direction for transition
-      const direction = index > previousIndex ? 1 : (index < previousIndex ? -1 : 0);
-      
-      logger.debug(`Jumped to image: ${previousIndex} -> ${index}, current: ${slideshowState.currentImage?.filename}`);
-      
-      // Calculate original index for the jumped image
-      const originalIndex = slideshowState.currentImage ? 
-        currentImages.findIndex(img => img.filename === slideshowState.currentImage.filename) : -1;
-      
-      // Calculate next image information
-      let nextImage = null;
-      let nextOriginalIndex = -1;
-      if (imagesList.length > 1) {
-        const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
-        nextImage = imagesList[nextIndex];
-        nextOriginalIndex = nextImage ? 
-          currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+      if (filteredIndex !== -1) {
+        // Image is found in the current filtered list, jump to it
+        const previousIndex = slideshowState.currentIndex;
+        
+        // Update to new index
+        slideshowState.currentIndex = filteredIndex;
+        slideshowState.currentImage = imagesList[slideshowState.currentIndex];
+        
+        // Determine direction for transition
+        const direction = filteredIndex > previousIndex ? 1 : (filteredIndex < previousIndex ? -1 : 0);
+        
+        logger.debug(`Jumped to image by originalIndex: ${originalIndex} -> filteredIndex: ${filteredIndex}, current: ${slideshowState.currentImage?.filename}`);
+        
+        // Calculate next image information
+        let nextImage = null;
+        let nextOriginalIndex = -1;
+        if (imagesList.length > 1) {
+          const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+          nextImage = imagesList[nextIndex];
+          nextOriginalIndex = nextImage ? 
+            currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+        }
+        
+        // Emit image-changed event for smooth transition
+        io.emit('image-changed', {
+          currentImage: slideshowState.currentImage,
+          currentIndex: slideshowState.currentIndex,
+          originalIndex: originalIndex,
+          nextImage: nextImage,
+          nextOriginalIndex: nextOriginalIndex,
+          direction: direction,
+          totalImages: imagesList.length
+        });
+        
+        // Restart timer to reset interval
+        restartSlideshowTimer();
+      } else {
+        // Image is excluded from the current slideshow, log a warning
+        logger.warn(`Cannot jump to excluded image: ${targetImage?.filename} (originalIndex: ${originalIndex})`);
       }
-      
-      // Emit image-changed event for smooth transition
-      io.emit('image-changed', {
-        currentImage: slideshowState.currentImage,
-        currentIndex: slideshowState.currentIndex,
-        originalIndex: originalIndex,
-        nextImage: nextImage,
-        nextOriginalIndex: nextOriginalIndex,
-        direction: direction,
-        totalImages: imagesList.length
-      });
-      
-      // Restart timer to reset interval
-      restartSlideshowTimer();
+    } else {
+      logger.warn(`Invalid originalIndex for jump-to-image: ${originalIndex}, valid range: 0-${currentImages.length - 1}`);
     }
   });
 

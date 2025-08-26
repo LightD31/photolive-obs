@@ -827,9 +827,10 @@ class PhotoLiveControl {
 
         // Cache the sorted images to avoid re-sorting on every render
         if (!this.sortedImagesCache || currentHash !== this.lastImageListHash) {
-            this.sortedImagesCache = [...this.images].map((image, originalIndex) => ({
+            this.sortedImagesCache = [...this.images].map((image, index) => ({
                 ...image,
-                originalIndex
+                // Keep the originalIndex from server, don't override it
+                displayIndex: index
             })).sort((a, b) => {
                 const dateA = new Date(a.modified);
                 const dateB = new Date(b.modified);
