@@ -270,7 +270,8 @@ header h1 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 200px;
+    flex: 1;
+    min-width: 0;
 }
 
 .preview-info span:last-child {

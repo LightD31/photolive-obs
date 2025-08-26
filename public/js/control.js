@@ -713,7 +713,9 @@ class PhotoLiveControl {
         this.previewPlaceholder.style.display = 'none';
 
         // Update current image info using original index
-        this.currentImageName.textContent = currentImage.filename || 'Unknown';
+        const currentFilename = currentImage.filename || 'Unknown';
+        this.currentImageName.textContent = currentFilename;
+        this.currentImageName.title = currentFilename; // Add tooltip for full filename
         this.currentImageIndexElement.textContent = `${originalIndex + 1} / ${totalOriginalImages}`;
 
         // Update next image preview using actual next image data from server
@@ -741,7 +743,9 @@ class PhotoLiveControl {
             this.nextPreviewPlaceholder.style.display = 'none';
 
             // Update next image info using actual next original index
-            this.nextImageName.textContent = nextImage.filename || 'Unknown';
+            const nextFilename = nextImage.filename || 'Unknown';
+            this.nextImageName.textContent = nextFilename;
+            this.nextImageName.title = nextFilename; // Add tooltip for full filename
             this.nextImageIndexElement.textContent = `${nextOriginalIndex + 1} / ${totalOriginalImages}`;
         } else {
             // Fallback to placeholder if no next image data
@@ -753,6 +757,7 @@ class PhotoLiveControl {
         this.currentPreviewImage.style.display = 'none';
         this.previewPlaceholder.style.display = 'flex';
         this.currentImageName.textContent = '-';
+        this.currentImageName.title = ''; // Clear tooltip
         this.currentImageIndexElement.textContent = '0 / 0';
         
         // Also hide next preview
@@ -767,6 +772,7 @@ class PhotoLiveControl {
         this.nextPreviewImage.style.display = 'none';
         this.nextPreviewPlaceholder.style.display = 'flex';
         this.nextImageName.textContent = '-';
+        this.nextImageName.title = ''; // Clear tooltip
         this.nextImageIndexElement.textContent = '0 / 0';
     }
 
