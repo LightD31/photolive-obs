@@ -282,12 +282,6 @@ async function getPhotoDate(filePath) {
               ],
               // Skip unnecessary parsing to reduce file I/O
               skip: ['thumbnail', 'ifd1', 'interop'],
-              // Ensure proper date parsing
-              translateValues: true,  // Enable value translation to get Date objects
-              reviveValues: true,     // Enable value revival for proper date parsing
-              translateKeys: true,    // Enable key translation to get readable field names
-              mergeOutput: false,
-              sanitize: false,
               // Disable chunked reading to reduce file handle complexity
               chunked: false,
               // Use the most efficient parsing approach
