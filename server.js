@@ -279,9 +279,9 @@ async function getPhotoDate(filePath) {
               // Skip unnecessary parsing to reduce file I/O
               skip: ['thumbnail', 'ifd1', 'interop'],
               // Ensure minimal memory usage and proper cleanup
-              translateValues: false,
-              reviveValues: false,
-              translateKeys: false,
+              translateValues: true,  // Enable value translation to get Date objects
+              reviveValues: true,     // Enable value revival for proper date parsing
+              translateKeys: true,    // Enable key translation to get readable field names
               mergeOutput: false,
               sanitize: false,
               // Disable chunked reading to reduce file handle complexity
@@ -294,7 +294,7 @@ async function getPhotoDate(filePath) {
             
             // Use the static parse method with controlled options
             const exifData = await exifr.parse(filePath, options);
-            
+            console.log("EXIF data:", exifData);
             // Try to get the original photo date in order of preference
             const photoDate = exifData?.DateTimeOriginal || 
                              exifData?.DateTime || 
