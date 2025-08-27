@@ -1048,7 +1048,7 @@ function setupFileWatcher() {
   fileWatcher = chokidar.watch(currentPhotosPath, watchOptions);
 
   fileWatcher
-    .on('add', (filePath) => {
+    .on('add', async (filePath) => {
       try {
         const filename = path.basename(filePath);
         const ext = path.extname(filename).toLowerCase();
@@ -1064,13 +1064,19 @@ function setupFileWatcher() {
           newlyAddedImages.add(trackingKey);
           
           // Instead of immediate scanning, first do a silent scan to load the image data
-          // then add to queue for ordered display
-          scanImagesForQueue(trackingKey).then(() => {
-            // Add to queue for sequential display
-            addImageToQueue(trackingKey);
-          }).catch(error => {
-            logger.error('Error scanning image for queue:', error);
+          // then add to queue for ordered display and emit UI update
+          await scanImagesForQueue(trackingKey);
+          
+          // Emit updated images to UI so control interface shows new images immediately
+          io.emit('images-updated', {
+            allImages: getAllImagesList(), // Complete list for grid display
+            images: getCurrentImagesList(), // Filtered list for slideshow
+            settings: slideshowSettings,
+            newImageAdded: trackingKey
           });
+          
+          // Add to queue for sequential display
+          addImageToQueue(trackingKey);
           
           // Clean marking after 5 minutes with error handling
           setTimeout(() => {
