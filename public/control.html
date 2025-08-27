@@ -145,6 +145,15 @@
                                     <span class="checkmark"></span>
                                     <span data-i18n="settings.recursive_search">Search subdirectories</span>
                                 </label>
+                                <div class="setting-row compact">
+                                    <label for="date-source-select" data-i18n="settings.date_source">Date source:</label>
+                                    <select id="date-source-select" class="compact-select">
+                                        <option value="filesystem" data-i18n="settings.date_source_filesystem">File System (Fast)</option>
+                                        <option value="exif" data-i18n="settings.date_source_exif">EXIF Data (Accurate)</option>
+                                        <option value="created" data-i18n="settings.date_source_created">File Created Date</option>
+                                        <option value="modified" data-i18n="settings.date_source_modified">File Modified Date</option>
+                                    </select>
+                                </div>
                                 <label class="checkbox-label compact">
                                     <input type="checkbox" id="repeat-latest">
                                     <span class="checkmark"></span>

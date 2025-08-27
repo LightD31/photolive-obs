@@ -270,6 +270,7 @@ class PhotoLiveControl {
         this.shuffleImages = document.getElementById('shuffle-images');
         this.transparentBackground = document.getElementById('transparent-background');
         this.recursiveSearch = document.getElementById('recursive-search');
+        this.dateSourceSelect = document.getElementById('date-source-select');
         
         // Grid zoom control buttons
         this.zoomButtons = document.querySelectorAll('.zoom-btn');
@@ -442,6 +443,10 @@ class PhotoLiveControl {
 
         this.recursiveSearch.addEventListener('change', (e) => {
             this.updateSetting('recursiveSearch', e.target.checked);
+        });
+
+        this.dateSourceSelect.addEventListener('change', (e) => {
+            this.updateSetting('dateSource', e.target.value);
         });
 
         // Grid zoom control buttons
@@ -629,6 +634,7 @@ class PhotoLiveControl {
         this.shuffleImages.checked = this.settings.shuffleImages;
         this.transparentBackground.checked = this.settings.transparentBackground;
         this.recursiveSearch.checked = this.settings.recursiveSearch;
+        this.dateSourceSelect.value = this.settings.dateSource || 'filesystem';
         
         // Update photos path
         if (this.settings.photosPath) {
@@ -831,8 +837,8 @@ class PhotoLiveControl {
                 ...image,
                 originalIndex
             })).sort((a, b) => {
-                const dateA = new Date(a.modified);
-                const dateB = new Date(b.modified);
+                const dateA = new Date(a.photoDate);
+                const dateB = new Date(b.photoDate);
                 return this.gridSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
             });
             this.lastImageListHash = currentHash;
@@ -897,7 +903,7 @@ class PhotoLiveControl {
         info.innerHTML = `
             <div>${this.escapeHtml(image.filename)}</div>
             <div>
-                ${this.formatFileSize(image.size)} • ${this.formatDate(image.modified)}
+                ${this.formatFileSize(image.size)} • ${this.formatDate(image.photoDate)}
             </div>
         `;
         
