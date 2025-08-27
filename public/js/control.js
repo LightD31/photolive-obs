@@ -872,7 +872,8 @@ class PhotoLiveControl {
         }
         
         const img = document.createElement('img');
-        img.src = image.path;
+        // Use thumbnail if available, otherwise fall back to full image path
+        img.src = image.thumbnail || image.path;
         img.alt = image.filename;
         img.loading = 'lazy';
         img.decoding = 'async'; // Improve performance for large images
