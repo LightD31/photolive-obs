@@ -224,6 +224,11 @@ let slideshowState = {
 // Server-side slideshow timer
 let slideshowTimer = null;
 
+// New image queue system
+let newImageQueue = []; // Queue of new images to display
+let isProcessingQueue = false; // Flag to track if we're processing the queue
+let queueTimer = null; // Timer for queue processing
+
 // Semaphore to limit concurrent EXIF operations and prevent file descriptor exhaustion
 class ExifSemaphore {
   constructor(maxConcurrent = 3) { // Reduced from 10 to 3 for more conservative approach
@@ -713,6 +718,66 @@ async function scanImages(newImageFilename = null) {
   }
 }
 
+// Silent image scanning for queue processing (doesn't emit events or restart timers)
+async function scanImagesForQueue(newImageFilename = null) {
+  try {
+    let images = [];
+    
+    if (slideshowSettings.recursiveSearch) {
+      // Recursive scanning with optimized processing
+      images = await scanImagesRecursive(currentPhotosPath);
+    } else {
+      // Non-recursive: scan only the base directory
+      const items = await fs.readdir(currentPhotosPath, { withFileTypes: true });
+      const imageFiles = items
+        .filter(item => item.isFile())
+        .map(item => item.name)
+        .filter(filename => {
+          const ext = path.extname(filename).toLowerCase();
+          return config.supportedFormats.includes(ext);
+        });
+
+      // Process images with semaphore to prevent resource exhaustion
+      for (const filename of imageFiles) {
+        const imagePath = path.join(currentPhotosPath, filename);
+        
+        const imageData = await exifSemaphore.execute(async () => {
+          const stats = await fs.stat(imagePath);
+          const photoDate = await getPhotoDate(imagePath);
+          const thumbnail = await extractExifThumbnail(imagePath);
+          
+          return {
+            filename: filename,
+            path: `/photos/${encodeURIComponent(filename)}`,
+            size: stats.size,
+            dateAdded: stats.birthtime || stats.mtime,
+            dateTaken: photoDate,
+            isNew: newlyAddedImages.has(filename),
+            thumbnail: thumbnail
+          };
+        });
+        
+        images.push(imageData);
+      }
+    }
+
+    // Sort by date (most recent first)
+    images.sort((a, b) => new Date(b.dateTaken) - new Date(a.dateTaken));
+    
+    // Update global images array silently
+    currentImages = images;
+    
+    // Update shuffled images list
+    updateShuffledImagesList(newImageFilename);
+    
+    logger.debug(`Silent scan completed: ${images.length} images, new: ${newImageFilename || 'none'}`);
+    return images;
+  } catch (error) {
+    logger.error('Error in silent image scan:', error);
+    return [];
+  }
+}
+
 // Update slideshow state
 function updateSlideshowState(emitEvent = true) {
   const imagesList = getCurrentImagesList();
@@ -834,9 +899,130 @@ function stopSlideshowTimer() {
 
 // Restart timer with new parameters
 function restartSlideshowTimer() {
-  if (slideshowState.isPlaying) {
+  if (slideshowState.isPlaying && !isProcessingQueue) {
     startSlideshowTimer();
   }
+}
+
+// Queue management functions
+function addImageToQueue(imagePath) {
+  logger.debug(`Adding image to queue: ${imagePath}`);
+  newImageQueue.push(imagePath);
+  
+  // If not already processing queue, schedule queue processing after current timer finishes
+  if (!isProcessingQueue && newImageQueue.length === 1) {
+    scheduleQueueProcessing();
+  }
+}
+
+function scheduleQueueProcessing() {
+  if (isProcessingQueue) {
+    return; // Already processing
+  }
+  
+  logger.debug('Scheduling queue processing after current timer finishes');
+  
+  // Stop the normal slideshow timer to prevent it from changing images during queue processing
+  stopSlideshowTimer();
+  
+  // Start queue processing immediately (the current image is already displayed)
+  processImageQueue();
+}
+
+function processImageQueue() {
+  if (newImageQueue.length === 0) {
+    // Queue is empty, resume normal slideshow
+    logger.debug('Queue processing complete, resuming normal slideshow');
+    isProcessingQueue = false;
+    restartSlideshowTimer();
+    return;
+  }
+  
+  if (!isProcessingQueue) {
+    isProcessingQueue = true;
+    logger.debug(`Starting queue processing with ${newImageQueue.length} images`);
+  }
+  
+  // Get next image from queue
+  const nextImagePath = newImageQueue.shift();
+  
+  // Find the image in the current images list to get full image data
+  const nextImage = currentImages.find(img => 
+    img.filename === path.basename(nextImagePath) || 
+    img.path === nextImagePath
+  );
+  
+  if (nextImage) {
+    logger.debug(`Processing queued image: ${nextImage.filename}`);
+    
+    // Update slideshow state to the queued image
+    const imagesList = getCurrentImagesList();
+    const newIndex = imagesList.findIndex(img => img.filename === nextImage.filename);
+    
+    if (newIndex !== -1) {
+      slideshowState.currentIndex = newIndex;
+      slideshowState.currentImage = nextImage;
+      
+      // Emit image change event
+      const originalIndex = currentImages.findIndex(img => img.filename === nextImage.filename);
+      
+      // Calculate next image information (from queue or normal slideshow)
+      let nextQueueImage = null;
+      let nextOriginalIndex = -1;
+      
+      if (newImageQueue.length > 0) {
+        // Next image is from queue
+        const nextQueuePath = newImageQueue[0];
+        nextQueueImage = currentImages.find(img => 
+          img.filename === path.basename(nextQueuePath) || 
+          img.path === nextQueuePath
+        );
+        nextOriginalIndex = nextQueueImage ? 
+          currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+      } else {
+        // Next image would be from normal slideshow after queue finishes
+        const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+        nextQueueImage = imagesList[nextIndex];
+        nextOriginalIndex = nextQueueImage ? 
+          currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+      }
+      
+      io.emit('image-changed', {
+        currentImage: slideshowState.currentImage,
+        currentIndex: slideshowState.currentIndex,
+        originalIndex: originalIndex,
+        nextImage: nextQueueImage,
+        nextOriginalIndex: nextOriginalIndex,
+        direction: 1, // Always forward for queue processing
+        totalImages: imagesList.length,
+        isQueueProcessing: true,
+        queueLength: newImageQueue.length
+      });
+      
+      // Schedule the next image in the queue or resume normal slideshow
+      queueTimer = setTimeout(() => {
+        processImageQueue();
+      }, slideshowSettings.interval);
+    } else {
+      logger.warn(`Queued image ${nextImage.filename} not found in current images list, skipping`);
+      // Skip this image and process next
+      processImageQueue();
+    }
+  } else {
+    logger.warn(`Queued image not found: ${nextImagePath}, skipping`);
+    // Skip this image and process next
+    processImageQueue();
+  }
+}
+
+function stopQueueProcessing() {
+  if (queueTimer) {
+    clearTimeout(queueTimer);
+    queueTimer = null;
+  }
+  isProcessingQueue = false;
+  newImageQueue = [];
+  logger.debug('Queue processing stopped');
 }
 
 // File change monitoring
@@ -877,8 +1063,14 @@ function setupFileWatcher() {
           // Mark as new image using appropriate key
           newlyAddedImages.add(trackingKey);
           
-          // Rescan with new image information
-          scanImages(trackingKey);
+          // Instead of immediate scanning, first do a silent scan to load the image data
+          // then add to queue for ordered display
+          scanImagesForQueue(trackingKey).then(() => {
+            // Add to queue for sequential display
+            addImageToQueue(trackingKey);
+          }).catch(error => {
+            logger.error('Error scanning image for queue:', error);
+          });
           
           // Clean marking after 5 minutes with error handling
           setTimeout(() => {
@@ -1662,6 +1854,10 @@ async function gracefulShutdown(signal) {
       logger.info('Slideshow timer stopped');
     }
     
+    // Stop queue processing
+    stopQueueProcessing();
+    logger.info('Queue processing stopped');
+    
     // Close socket connections
     io.close(() => {
       logger.info('Socket.io connections closed');
@@ -1708,6 +1904,9 @@ process.on('SIGINT', () => {
   // Arrêter le timer du diaporama
   stopSlideshowTimer();
   
+  // Stop queue processing
+  stopQueueProcessing();
+  
   if (fileWatcher) {
     fileWatcher.close();
     logger.info('File monitoring stopped');
@@ -1723,6 +1922,9 @@ process.on('SIGTERM', () => {
   
   // Arrêter le timer du diaporama
   stopSlideshowTimer();
+  
+  // Stop queue processing
+  stopQueueProcessing();
   
   if (fileWatcher) {
     fileWatcher.close();
