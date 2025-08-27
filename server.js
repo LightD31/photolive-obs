@@ -450,20 +450,19 @@ function updateShuffledImagesList(newImageAdded = null) {
     return;
   }
 
-  // Separate new images from existing ones
+  // Check if we have any new images
   const newImages = currentImages.filter(img => img.isNew);
   const existingImages = currentImages.filter(img => !img.isNew);
 
-  // Shuffle existing images
-  const shuffledExisting = shuffleArray([...existingImages]);
-  
-  // Priority: new images first, then shuffled existing ones
-  shuffledImages = [...newImages, ...shuffledExisting];
-  
-  logger.debug(`🔀 Shuffle mode: ${newImages.length} new images priority, ${existingImages.length} existing shuffled`);
-  
   if (newImages.length > 0) {
-    logger.debug('📸 New images:', newImages.map(img => img.filename));
+    // When new images are added, shuffle all images together to properly integrate them
+    shuffledImages = shuffleArray([...currentImages]);
+    logger.debug(`🔀 Shuffle mode: ${newImages.length} new images integrated with ${existingImages.length} existing images`);
+    logger.debug('📸 New images added to shuffle:', newImages.map(img => img.filename));
+  } else {
+    // No new images, just shuffle existing images
+    shuffledImages = shuffleArray([...currentImages]);
+    logger.debug(`🔀 Shuffle mode: ${currentImages.length} total images shuffled`);
   }
 }
 
@@ -1110,7 +1109,28 @@ function setupFileWatcher() {
         // Remove from new images tracker if present
         newlyAddedImages.delete(trackingKey);
         
-        scanImages(); // Rescan all images
+        // Store current image info before rescanning to preserve context
+        const currentImageFilename = slideshowState.currentImage ? slideshowState.currentImage.filename : null;
+        const wasCurrentImageDeleted = (currentImageFilename === filename);
+        
+        // Rescan all images
+        scanImages().then(() => {
+          if (wasCurrentImageDeleted) {
+            logger.debug(`Current image was deleted, slideshow state updated`);
+            // The updateSlideshowState in scanImages() will handle moving to a valid image
+          } else if (currentImageFilename) {
+            // Try to maintain position if the current image still exists
+            const imagesList = getCurrentImagesList();
+            const newIndex = imagesList.findIndex(img => img.filename === currentImageFilename);
+            if (newIndex !== -1 && newIndex !== slideshowState.currentIndex) {
+              slideshowState.currentIndex = newIndex;
+              updateSlideshowState();
+              logger.debug(`Slideshow position preserved after deletion`);
+            }
+          }
+        }).catch(error => {
+          logger.error('Error updating slideshow state after deletion:', error);
+        });
       } catch (error) {
         logger.error('Error processing file removal:', error);
       }
