@@ -748,10 +748,11 @@ async function scanImagesForQueue(newImageFilename = null) {
           
           return {
             filename: filename,
-            path: `/photos/${encodeURIComponent(filename)}`,
+            path: `/photos/${filename}`,
             size: stats.size,
-            dateAdded: stats.birthtime || stats.mtime,
-            dateTaken: photoDate,
+            created: stats.birthtime,
+            modified: stats.mtime,
+            photoDate: photoDate, // Use consistent field name with regular scanning
             isNew: newlyAddedImages.has(filename),
             thumbnail: thumbnail
           };
@@ -761,8 +762,8 @@ async function scanImagesForQueue(newImageFilename = null) {
       }
     }
 
-    // Sort by date (most recent first)
-    images.sort((a, b) => new Date(b.dateTaken) - new Date(a.dateTaken));
+    // Sort by photo date (oldest first - ascending chronological order)
+    images.sort((a, b) => a.photoDate - b.photoDate);
     
     // Update global images array silently
     currentImages = images;
@@ -1068,9 +1069,17 @@ function setupFileWatcher() {
           await scanImagesForQueue(trackingKey);
           
           // Emit updated images to UI so control interface shows new images immediately
+          const allImagesList = getAllImagesList();
+          const currentImagesList = getCurrentImagesList();
+          
+          // Debug: Log the first image to see what's being sent
+          if (allImagesList.length > 0) {
+            logger.debug('First image being sent to client:', JSON.stringify(allImagesList[0], null, 2));
+          }
+          
           io.emit('images-updated', {
-            allImages: getAllImagesList(), // Complete list for grid display
-            images: getCurrentImagesList(), // Filtered list for slideshow
+            allImages: allImagesList, // Complete list for grid display
+            images: currentImagesList, // Filtered list for slideshow
             settings: slideshowSettings,
             newImageAdded: trackingKey
           });
@@ -1562,9 +1571,17 @@ io.on('connection', (socket) => {
   logger.debug('Client connected:', socket.id);
   
   // Envoyer l'état actuel au nouveau client
+  const allImagesList = getAllImagesList();
+  const currentImagesList = getCurrentImagesList();
+  
+  // Debug: Log the first image to see what's being sent on connection
+  if (allImagesList.length > 0) {
+    logger.debug('First image being sent to new client:', JSON.stringify(allImagesList[0], null, 2));
+  }
+  
   socket.emit('images-updated', {
-    allImages: getAllImagesList(),
-    images: getCurrentImagesList(),
+    allImages: allImagesList,
+    images: currentImagesList,
     settings: slideshowSettings
   });
   
