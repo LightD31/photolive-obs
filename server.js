@@ -219,32 +219,88 @@ let slideshowState = {
 // Server-side slideshow timer
 let slideshowTimer = null;
 
-// Function to extract photo date from EXIF data
-async function getPhotoDate(filePath) {
-  try {
-    const exifData = await exifr.parse(filePath, ['DateTimeOriginal', 'DateTime', 'CreateDate']);
-    
-    // Try to get the original photo date in order of preference
-    const photoDate = exifData?.DateTimeOriginal || 
-                     exifData?.DateTime || 
-                     exifData?.CreateDate;
-    
-    if (photoDate && photoDate instanceof Date && !isNaN(photoDate)) {
-      return photoDate;
+// Semaphore to limit concurrent EXIF operations and prevent file descriptor exhaustion
+class ExifSemaphore {
+  constructor(maxConcurrent = 10) {
+    this.maxConcurrent = maxConcurrent;
+    this.running = 0;
+    this.queue = [];
+  }
+
+  async acquire() {
+    return new Promise((resolve) => {
+      if (this.running < this.maxConcurrent) {
+        this.running++;
+        resolve();
+      } else {
+        this.queue.push(resolve);
+      }
+    });
+  }
+
+  release() {
+    this.running--;
+    if (this.queue.length > 0) {
+      const next = this.queue.shift();
+      this.running++;
+      next();
     }
-  } catch (error) {
-    // EXIF reading failed, will fall back to file modification time
-    logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
   }
-  
-  // Fall back to file modification time if EXIF date is not available
-  try {
-    const stats = await fs.stat(filePath);
-    return stats.mtime;
-  } catch (error) {
-    logger.warn(`Could not get file stats for ${filePath}: ${error.message}`);
-    return new Date(); // Use current time as last resort
+
+  async execute(fn) {
+    await this.acquire();
+    try {
+      return await fn();
+    } finally {
+      this.release();
+    }
   }
+}
+
+// Global semaphore to limit concurrent EXIF operations
+const exifSemaphore = new ExifSemaphore(10);
+
+// Function to extract photo date from EXIF data with proper file handle management
+async function getPhotoDate(filePath) {
+  // Use semaphore to limit concurrent EXIF operations
+  return await exifSemaphore.execute(async () => {
+    try {
+      // Configure minimal options to reduce file handle usage
+      const options = {
+        // Only read the date-related tags we need
+        pick: ['DateTimeOriginal', 'DateTime', 'CreateDate'],
+        // Skip unnecessary parsing to reduce file I/O
+        skip: ['thumbnail'],
+        // Ensure proper cleanup
+        translateValues: false,
+        reviveValues: false
+      };
+      
+      // Use the static parse method with controlled options
+      const exifData = await exifr.parse(filePath, options);
+      
+      // Try to get the original photo date in order of preference
+      const photoDate = exifData?.DateTimeOriginal || 
+                       exifData?.DateTime || 
+                       exifData?.CreateDate;
+      
+      if (photoDate && photoDate instanceof Date && !isNaN(photoDate)) {
+        return photoDate;
+      }
+    } catch (error) {
+      // EXIF reading failed, will fall back to file modification time
+      logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
+    }
+    
+    // Fall back to file modification time if EXIF date is not available
+    try {
+      const stats = await fs.stat(filePath);
+      return stats.mtime;
+    } catch (error) {
+      logger.warn(`Could not get file stats for ${filePath}: ${error.message}`);
+      return new Date(); // Use current time as last resort
+    }
+  });
 }
 
 // Fonction pour mélanger un tableau (Fisher-Yates shuffle)
