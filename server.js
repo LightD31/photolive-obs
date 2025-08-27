@@ -221,7 +221,7 @@ let slideshowTimer = null;
 
 // Semaphore to limit concurrent EXIF operations and prevent file descriptor exhaustion
 class ExifSemaphore {
-  constructor(maxConcurrent = 10) {
+  constructor(maxConcurrent = 3) { // Reduced from 10 to 3 for more conservative approach
     this.maxConcurrent = maxConcurrent;
     this.running = 0;
     this.queue = [];
@@ -257,23 +257,32 @@ class ExifSemaphore {
   }
 }
 
-// Global semaphore to limit concurrent EXIF operations
-const exifSemaphore = new ExifSemaphore(10);
+// Global semaphore to limit concurrent EXIF operations - using very conservative limit
+const exifSemaphore = new ExifSemaphore(3);
 
 // Function to extract photo date from EXIF data with proper file handle management
 async function getPhotoDate(filePath) {
   // Use semaphore to limit concurrent EXIF operations
   return await exifSemaphore.execute(async () => {
     try {
-      // Configure minimal options to reduce file handle usage
+      // Configure minimal options to reduce file handle usage and memory footprint
       const options = {
         // Only read the date-related tags we need
         pick: ['DateTimeOriginal', 'DateTime', 'CreateDate'],
         // Skip unnecessary parsing to reduce file I/O
-        skip: ['thumbnail'],
-        // Ensure proper cleanup
+        skip: ['thumbnail', 'ifd1', 'interop'],
+        // Ensure minimal memory usage and proper cleanup
         translateValues: false,
-        reviveValues: false
+        reviveValues: false,
+        translateKeys: false,
+        mergeOutput: false,
+        sanitize: false,
+        // Disable chunked reading to reduce file handle complexity
+        chunked: false,
+        // Use the most efficient parsing approach
+        tiff: {
+          skip: ['thumbnail', 'ifd1']
+        }
       };
       
       // Use the static parse method with controlled options
@@ -362,39 +371,78 @@ function updateShuffledImagesList(newImageAdded = null) {
   }
 }
 
-// Function to recursively scan for image files
+// Function to recursively scan for image files with batched processing
 async function scanImagesRecursive(dirPath, relativePath = '') {
   const images = [];
   
   try {
     const items = await fs.readdir(dirPath, { withFileTypes: true });
     
+    // First, collect all image files without processing EXIF
+    const imageFiles = [];
+    const subdirectories = [];
+    
     for (const item of items) {
       const fullPath = path.join(dirPath, item.name);
       const itemRelativePath = relativePath ? path.join(relativePath, item.name) : item.name;
       
       if (item.isDirectory()) {
-        // Recursively scan subdirectory
-        const subImages = await scanImagesRecursive(fullPath, itemRelativePath);
-        images.push(...subImages);
+        subdirectories.push({ fullPath, itemRelativePath });
       } else if (item.isFile()) {
         const ext = path.extname(item.name).toLowerCase();
         if (config.supportedFormats.includes(ext)) {
-          const stats = await fs.stat(fullPath);
-          const photoDate = await getPhotoDate(fullPath);
-          
-          images.push({
-            filename: itemRelativePath,
-            path: `/photos/${itemRelativePath.replace(/\\/g, '/')}`, // Ensure forward slashes for web
-            size: stats.size,
-            created: stats.birthtime,
-            modified: stats.mtime,
-            photoDate: photoDate,
-            isNew: newlyAddedImages.has(itemRelativePath) // Use relative path for tracking
-          });
+          imageFiles.push({ fullPath, itemRelativePath });
         }
       }
     }
+    
+    // Process image files in small batches to avoid overwhelming the system
+    const BATCH_SIZE = 5; // Process only 5 images at a time
+    for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
+      const batch = imageFiles.slice(i, i + BATCH_SIZE);
+      
+      // Process batch with Promise.all for controlled concurrency
+      const batchResults = await Promise.all(
+        batch.map(async ({ fullPath, itemRelativePath }) => {
+          try {
+            const stats = await fs.stat(fullPath);
+            const photoDate = await getPhotoDate(fullPath);
+            
+            return {
+              filename: itemRelativePath,
+              path: `/photos/${itemRelativePath.replace(/\\/g, '/')}`, // Ensure forward slashes for web
+              size: stats.size,
+              created: stats.birthtime,
+              modified: stats.mtime,
+              photoDate: photoDate,
+              isNew: newlyAddedImages.has(itemRelativePath) // Use relative path for tracking
+            };
+          } catch (error) {
+            logger.warn(`Error processing image ${itemRelativePath}: ${error.message}`);
+            return null;
+          }
+        })
+      );
+      
+      // Add successful results to images array
+      images.push(...batchResults.filter(result => result !== null));
+      
+      // Small delay between batches to prevent overwhelming the system
+      if (i + BATCH_SIZE < imageFiles.length) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+    
+    // Recursively process subdirectories
+    for (const { fullPath, itemRelativePath } of subdirectories) {
+      try {
+        const subImages = await scanImagesRecursive(fullPath, itemRelativePath);
+        images.push(...subImages);
+      } catch (error) {
+        logger.warn(`Error scanning subdirectory ${itemRelativePath}: ${error.message}`);
+      }
+    }
+    
   } catch (error) {
     logger.error(`Error scanning directory ${dirPath}:`, error);
   }
@@ -408,33 +456,55 @@ async function scanImages(newImageFilename = null) {
     let images = [];
     
     if (slideshowSettings.recursiveSearch) {
-      // Recursive scanning
+      // Recursive scanning with batching
       images = await scanImagesRecursive(currentPhotosPath);
       logger.debug(`Recursive scan found ${images.length} images`);
     } else {
-      // Original non-recursive scanning
+      // Original non-recursive scanning with batching
       const files = await fs.readdir(currentPhotosPath);
       const imageFiles = files.filter(file => {
         const ext = path.extname(file).toLowerCase();
         return config.supportedFormats.includes(ext);
       });
 
-      for (const file of imageFiles) {
-        const filePath = path.join(currentPhotosPath, file);
-        const stats = await fs.stat(filePath);
+      // Process images in small batches to avoid overwhelming the system
+      const BATCH_SIZE = 5; // Process only 5 images at a time
+      for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
+        const batch = imageFiles.slice(i, i + BATCH_SIZE);
         
-        // Get the actual photo date from EXIF data, falling back to modification time
-        const photoDate = await getPhotoDate(filePath);
+        // Process batch with Promise.all for controlled concurrency
+        const batchResults = await Promise.all(
+          batch.map(async (file) => {
+            try {
+              const filePath = path.join(currentPhotosPath, file);
+              const stats = await fs.stat(filePath);
+              
+              // Get the actual photo date from EXIF data, falling back to modification time
+              const photoDate = await getPhotoDate(filePath);
+              
+              return {
+                filename: file,
+                path: `/photos/${file}`,
+                size: stats.size,
+                created: stats.birthtime,
+                modified: stats.mtime,
+                photoDate: photoDate, // Actual photo date from EXIF or file modification time
+                isNew: newlyAddedImages.has(file) // Mark new images
+              };
+            } catch (error) {
+              logger.warn(`Error processing image ${file}: ${error.message}`);
+              return null;
+            }
+          })
+        );
         
-        images.push({
-          filename: file,
-          path: `/photos/${file}`,
-          size: stats.size,
-          created: stats.birthtime,
-          modified: stats.mtime,
-          photoDate: photoDate, // Actual photo date from EXIF or file modification time
-          isNew: newlyAddedImages.has(file) // Mark new images
-        });
+        // Add successful results to images array
+        images.push(...batchResults.filter(result => result !== null));
+        
+        // Small delay between batches to prevent overwhelming the system
+        if (i + BATCH_SIZE < imageFiles.length) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
       }
     }
 
