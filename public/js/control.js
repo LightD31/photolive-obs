@@ -634,7 +634,7 @@ class PhotoLiveControl {
         this.shuffleImages.checked = this.settings.shuffleImages;
         this.transparentBackground.checked = this.settings.transparentBackground;
         this.recursiveSearch.checked = this.settings.recursiveSearch;
-        this.dateSourceSelect.value = this.settings.dateSource || 'filesystem';
+        this.dateSourceSelect.value = this.settings.dateSource || 'exif';
         
         // Update photos path
         if (this.settings.photosPath) {

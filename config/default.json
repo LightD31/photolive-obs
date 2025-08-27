@@ -69,6 +69,6 @@
     "recursiveSearch": false,
     "gridSortOrder": "asc",
     "gridZoomLevel": 2,
-    "dateSource": "filesystem"
+    "dateSource": "exif"
   }
 }
