@@ -1025,12 +1025,7 @@ class PhotoLiveControl {
     }
 
     formatDate(dateString) {
-        // Debug: Log the input to see what we're receiving
-        console.log('formatDate called with:', dateString, 'type:', typeof dateString);
-        
         const date = new Date(dateString);
-        console.log('Parsed date:', date, 'isValid:', !isNaN(date));
-        
         if (isNaN(date)) {
             return 'Invalid Date';
         }

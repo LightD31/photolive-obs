@@ -1069,17 +1069,9 @@ function setupFileWatcher() {
           await scanImagesForQueue(trackingKey);
           
           // Emit updated images to UI so control interface shows new images immediately
-          const allImagesList = getAllImagesList();
-          const currentImagesList = getCurrentImagesList();
-          
-          // Debug: Log the first image to see what's being sent
-          if (allImagesList.length > 0) {
-            logger.debug('First image being sent to client:', JSON.stringify(allImagesList[0], null, 2));
-          }
-          
           io.emit('images-updated', {
-            allImages: allImagesList, // Complete list for grid display
-            images: currentImagesList, // Filtered list for slideshow
+            allImages: getAllImagesList(), // Complete list for grid display
+            images: getCurrentImagesList(), // Filtered list for slideshow
             settings: slideshowSettings,
             newImageAdded: trackingKey
           });
@@ -1571,17 +1563,9 @@ io.on('connection', (socket) => {
   logger.debug('Client connected:', socket.id);
   
   // Envoyer l'état actuel au nouveau client
-  const allImagesList = getAllImagesList();
-  const currentImagesList = getCurrentImagesList();
-  
-  // Debug: Log the first image to see what's being sent on connection
-  if (allImagesList.length > 0) {
-    logger.debug('First image being sent to new client:', JSON.stringify(allImagesList[0], null, 2));
-  }
-  
   socket.emit('images-updated', {
-    allImages: allImagesList,
-    images: currentImagesList,
+    allImages: getAllImagesList(),
+    images: getCurrentImagesList(),
     settings: slideshowSettings
   });
   
