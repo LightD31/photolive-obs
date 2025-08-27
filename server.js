@@ -479,10 +479,9 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
       }
     }
     
-    // Process image files with appropriate batching based on date source
-    const isExifMode = slideshowSettings.dateSource === 'exif';
-    const BATCH_SIZE = isExifMode ? 5 : 20; // Use larger batches for filesystem dates, smaller for EXIF
-    const BATCH_DELAY = isExifMode ? 10 : 0; // Only add delay for EXIF processing
+    // Process image files with appropriate batching for EXIF processing
+    const BATCH_SIZE = 5; // Use smaller batches for EXIF processing
+    const BATCH_DELAY = 10; // Add delay for EXIF processing
     
     for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
       const batch = imageFiles.slice(i, i + BATCH_SIZE);
@@ -564,10 +563,9 @@ async function scanImages(newImageFilename = null) {
         return config.supportedFormats.includes(ext);
       });
 
-      // Process images with appropriate batching based on date source
-      const isExifMode = slideshowSettings.dateSource === 'exif';
-      const BATCH_SIZE = isExifMode ? 5 : 20; // Use larger batches for filesystem dates, smaller for EXIF
-      const BATCH_DELAY = isExifMode ? 10 : 0; // Only add delay for EXIF processing
+      // Process images with appropriate batching for EXIF processing
+      const BATCH_SIZE = 5; // Use smaller batches for EXIF processing
+      const BATCH_DELAY = 10; // Add delay for EXIF processing
 
       for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
         const batch = imageFiles.slice(i, i + BATCH_SIZE);
@@ -641,8 +639,7 @@ async function scanImages(newImageFilename = null) {
     // Restart slideshow timer if necessary
     restartSlideshowTimer();
 
-    const dateSourceInfo = slideshowSettings.dateSource === 'exif' ? ' (using EXIF dates)' : ' (using filesystem dates)';
-    logger.info(`${images.length} images found in ${currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}${dateSourceInfo}`);
+    logger.info(`${images.length} images found in ${currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}`);
     return images;
   } catch (error) {
     logger.error('Error scanning images:', error);
@@ -901,7 +898,7 @@ app.post('/api/settings', (req, res) => {
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
       'transparentBackground', 'photosPath', 'excludedImages', 'language',
-      'recursiveSearch', 'dateSource'
+      'recursiveSearch'
     ];
     
     const newSettings = {};
@@ -945,11 +942,6 @@ app.post('/api/settings', (req, res) => {
             break;
           case 'language':
             if (typeof value === 'string' && ['en', 'fr'].includes(value)) {
-              newSettings[key] = value;
-            }
-            break;
-          case 'dateSource':
-            if (typeof value === 'string' && ['filesystem', 'exif', 'created', 'modified'].includes(value)) {
               newSettings[key] = value;
             }
             break;
@@ -1015,13 +1007,6 @@ app.post('/api/settings', (req, res) => {
       logger.debug(`🔄 Recursive search mode changed to: ${newSettings.recursiveSearch}`);
       setupFileWatcher();
       // Rescan images with new recursive setting
-      scanImages();
-    }
-    
-    // If date source setting changed, rescan all images to apply new date extraction method
-    if (newSettings.dateSource !== undefined) {
-      logger.debug(`🔄 Date source changed to: ${newSettings.dateSource}`);
-      // Rescan images with new date source
       scanImages();
     }
     

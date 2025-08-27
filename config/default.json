@@ -68,7 +68,6 @@
     "language": "en",
     "recursiveSearch": false,
     "gridSortOrder": "asc",
-    "gridZoomLevel": 2,
-    "dateSource": "exif"
+    "gridZoomLevel": 2
   }
 }
