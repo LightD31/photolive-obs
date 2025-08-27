@@ -10,6 +10,11 @@
     "images_count": "{{count}} images",
     "images_count_singular": "{{count}} image"
   },
+  "scan": {
+    "scanning": "Scanning images...",
+    "completed": "Scan completed",
+    "error": "Scan error"
+  },
   "sections": {
     "image_previews": "Image Previews",
     "controls": "Controls",
@@ -39,6 +44,7 @@
     "transparent_bg": "Transparent BG",
     "photos_folder": "Photos Folder",
     "change_folder": "Change folder",
+    "rescan_folder": "Rescan folder",
     "enable": "Enable",
     "text": "Text",
     "image": "Image",

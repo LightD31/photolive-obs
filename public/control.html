@@ -10,6 +10,23 @@
     <div class="container">
         <header>
             <h1 data-i18n="app.control_title">📸 PhotoLive OBS - Control</h1>
+            
+            <!-- Scan Progress Bar (compact in header) -->
+            <div id="scan-progress-container" class="scan-progress-header-container" style="display: none;">
+                <div class="scan-progress-compact">
+                    <span class="scan-progress-icon">🔍</span>
+                    <span class="scan-progress-title" data-i18n="scan.scanning">Scanning images...</span>
+                    <div class="scan-progress-bar-compact">
+                        <div id="scan-progress-fill" class="scan-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <span id="scan-progress-percentage" class="scan-progress-percentage">0%</span>
+                    <span class="scan-progress-count">
+                        <span id="scan-current">0</span>/<span id="scan-total">0</span>
+                    </span>
+                </div>
+                <div id="scan-progress-file" class="scan-progress-file-compact"></div>
+            </div>
+            
             <div class="status">
                 <span id="connection-status" class="status-disconnected" data-i18n="status.disconnected">Disconnected</span>
                 <span id="images-count" data-i18n="status.images_count">0 images</span>
@@ -138,6 +155,7 @@
                             <div class="path-input-container">
                                 <input type="text" id="photos-path" placeholder="Enter photos folder path...">
                                 <button id="change-folder-btn" class="btn btn-primary compact" data-i18n="settings.change_folder">Change</button>
+                                <button id="rescan-folder-btn" class="btn btn-secondary compact" data-i18n="settings.rescan_folder" title="Rescan folder for images">🔄 Refresh</button>
                             </div>
                             <div class="folder-options">
                                 <label class="checkbox-label compact">

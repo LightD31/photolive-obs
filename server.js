@@ -463,7 +463,7 @@ function updateShuffledImagesList(newImageAdded = null) {
 }
 
 // Function to recursively scan for image files with optimized processing
-async function scanImagesRecursive(dirPath, relativePath = '') {
+async function scanImagesRecursive(dirPath, relativePath = '', progressCallback = null) {
   const images = [];
   
   try {
@@ -491,6 +491,9 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
     const BATCH_SIZE = 5; // Small batches for EXIF processing
     const BATCH_DELAY = 10; // Small delay between batches to prevent overload
     
+    const totalFiles = imageFiles.length;
+    let processedFiles = 0;
+    
     for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
       const batch = imageFiles.slice(i, i + BATCH_SIZE);
       
@@ -509,6 +512,18 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
               });
             } catch (error) {
               logger.debug(`Thumbnail extraction failed for ${itemRelativePath}: ${error.message}`);
+            }
+            
+            processedFiles++;
+            
+            // Emit progress if callback provided
+            if (progressCallback) {
+              progressCallback({
+                current: processedFiles,
+                total: totalFiles,
+                currentFile: itemRelativePath,
+                isRecursive: true
+              });
             }
             
             return {
@@ -540,7 +555,7 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
     // Recursively process subdirectories
     for (const { fullPath, itemRelativePath } of subdirectories) {
       try {
-        const subImages = await scanImagesRecursive(fullPath, itemRelativePath);
+        const subImages = await scanImagesRecursive(fullPath, itemRelativePath, progressCallback);
         images.push(...subImages);
       } catch (error) {
         logger.warn(`Error scanning subdirectory ${itemRelativePath}: ${error.message}`);
@@ -559,9 +574,24 @@ async function scanImages(newImageFilename = null) {
   try {
     let images = [];
     
+    // Emit scan start event
+    io.emit('scan-progress', {
+      status: 'started',
+      message: 'Starting image scan...'
+    });
+    
     if (slideshowSettings.recursiveSearch) {
       // Recursive scanning with optimized processing
-      images = await scanImagesRecursive(currentPhotosPath);
+      images = await scanImagesRecursive(currentPhotosPath, '', (progress) => {
+        // Emit progress updates
+        io.emit('scan-progress', {
+          status: 'scanning',
+          current: progress.current,
+          total: progress.total,
+          currentFile: progress.currentFile,
+          percentage: Math.round((progress.current / progress.total) * 100)
+        });
+      });
       logger.debug(`Recursive scan found ${images.length} images`);
     } else {
       // Original non-recursive scanning with optimized processing
@@ -574,6 +604,9 @@ async function scanImages(newImageFilename = null) {
       // Process images with consistent batching for EXIF processing
       const BATCH_SIZE = 5; // Small batches for EXIF processing
       const BATCH_DELAY = 10; // Small delay between batches to prevent overload
+      
+      const totalFiles = imageFiles.length;
+      let processedFiles = 0;
 
       for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
         const batch = imageFiles.slice(i, i + BATCH_SIZE);
@@ -597,6 +630,17 @@ async function scanImages(newImageFilename = null) {
               } catch (error) {
                 logger.debug(`Thumbnail extraction failed for ${file}: ${error.message}`);
               }
+              
+              processedFiles++;
+              
+              // Emit progress update
+              io.emit('scan-progress', {
+                status: 'scanning',
+                current: processedFiles,
+                total: totalFiles,
+                currentFile: file,
+                percentage: Math.round((processedFiles / totalFiles) * 100)
+              });
               
               return {
                 filename: file,
@@ -636,6 +680,13 @@ async function scanImages(newImageFilename = null) {
     // Update slideshow state
     updateSlideshowState();
     
+    // Emit scan complete event
+    io.emit('scan-progress', {
+      status: 'completed',
+      totalImages: images.length,
+      message: `Scan completed: ${images.length} images found`
+    });
+    
     // Emit updated list to clients with appropriate list
     io.emit('images-updated', {
       allImages: getAllImagesList(), // Complete list for grid display
@@ -651,6 +702,13 @@ async function scanImages(newImageFilename = null) {
     return images;
   } catch (error) {
     logger.error('Error scanning images:', error);
+    
+    // Emit error event
+    io.emit('scan-progress', {
+      status: 'error',
+      message: 'Error scanning images: ' + error.message
+    });
+    
     return [];
   }
 }
@@ -1475,6 +1533,12 @@ io.on('connection', (socket) => {
       totalImages: imagesList.length,
       totalOriginalImages: currentImages.length
     });
+  });
+
+  // Handle manual rescan request
+  socket.on('rescan-images', () => {
+    logger.info('Manual rescan requested by client');
+    scanImages();
   });
 
   socket.on('toggle-image-exclusion', (filename) => {

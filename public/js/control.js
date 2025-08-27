@@ -280,6 +280,7 @@ class PhotoLiveControl {
         // Folder selection elements
         this.photosPath = document.getElementById('photos-path');
         this.changeFolderBtn = document.getElementById('change-folder-btn');
+        this.rescanFolderBtn = document.getElementById('rescan-folder-btn');
         
         // Images preview
         this.imagesPreview = document.getElementById('images-preview');
@@ -338,6 +339,80 @@ class PhotoLiveControl {
             this.isPlaying = data.isPlaying;
             this.updatePlayPauseButton();
         });
+
+        // Handle scan progress updates
+        this.socket.on('scan-progress', (data) => {
+            this.handleScanProgress(data);
+        });
+    }
+
+    handleScanProgress(data) {
+        const progressContainer = document.getElementById('scan-progress-container');
+        const progressFill = document.getElementById('scan-progress-fill');
+        const progressPercentage = document.getElementById('scan-progress-percentage');
+        const progressCurrent = document.getElementById('scan-current');
+        const progressTotal = document.getElementById('scan-total');
+        const progressFile = document.getElementById('scan-progress-file');
+        const progressTitle = document.querySelector('.scan-progress-title');
+
+        if (!progressContainer) return;
+
+        switch (data.status) {
+            case 'started':
+                // Show progress bar
+                progressContainer.style.display = 'block';
+                progressContainer.className = 'scan-progress-header-container';
+                progressTitle.textContent = window.i18n.t('scan.scanning') || 'Scanning images...';
+                progressFill.style.width = '0%';
+                progressPercentage.textContent = '0%';
+                if (progressFile) progressFile.textContent = '';
+                break;
+
+            case 'scanning':
+                // Update progress
+                const percentage = data.percentage || 0;
+                progressFill.style.width = percentage + '%';
+                progressPercentage.textContent = percentage + '%';
+                progressCurrent.textContent = data.current || 0;
+                progressTotal.textContent = data.total || 0;
+                
+                if (data.currentFile && progressFile) {
+                    // Truncate long file paths for compact display
+                    const maxLength = 40;
+                    let displayPath = data.currentFile;
+                    if (displayPath.length > maxLength) {
+                        displayPath = '...' + displayPath.slice(-(maxLength - 3));
+                    }
+                    progressFile.textContent = displayPath;
+                }
+                break;
+
+            case 'completed':
+                // Show success state
+                progressContainer.className = 'scan-progress-header-container success';
+                progressFill.style.width = '100%';
+                progressPercentage.textContent = '100%';
+                progressTitle.textContent = window.i18n.t('scan.completed') || `Scan completed`;
+                if (progressFile) progressFile.textContent = `${data.totalImages} images found`;
+                
+                // Hide after 3 seconds
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 3000);
+                break;
+
+            case 'error':
+                // Show error state
+                progressContainer.className = 'scan-progress-header-container error';
+                progressTitle.textContent = window.i18n.t('scan.error') || 'Scan error';
+                if (progressFile) progressFile.textContent = data.message || 'An error occurred during scanning';
+                
+                // Hide after 4 seconds
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 4000);
+                break;
+        }
     }
 
     setupEventListeners() {
@@ -463,6 +538,11 @@ class PhotoLiveControl {
         // Folder selection
         this.changeFolderBtn.addEventListener('click', () => {
             this.changePhotosFolder();
+        });
+
+        // Rescan folder button
+        this.rescanFolderBtn.addEventListener('click', () => {
+            this.rescanFolder();
         });
 
         // Manual path input
@@ -997,6 +1077,26 @@ class PhotoLiveControl {
         } finally {
             this.changeFolderBtn.disabled = false;
             this.changeFolderBtn.textContent = '✅ Change';
+        }
+    }
+
+    async rescanFolder() {
+        try {
+            this.rescanFolderBtn.disabled = true;
+            this.rescanFolderBtn.innerHTML = '🔄 Scanning...';
+            
+            // Emit rescan request to server
+            this.socket.emit('rescan-images');
+            
+        } catch (error) {
+            console.error('Error rescanning folder:', error);
+            this.showNotification('Error rescanning folder', 'error');
+        } finally {
+            // Re-enable button after 2 seconds to prevent spam
+            setTimeout(() => {
+                this.rescanFolderBtn.disabled = false;
+                this.rescanFolderBtn.innerHTML = '🔄 Refresh';
+            }, 2000);
         }
     }
 

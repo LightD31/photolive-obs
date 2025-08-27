@@ -10,6 +10,11 @@
     "images_count": "{{count}} images",
     "images_count_singular": "{{count}} image"
   },
+  "scan": {
+    "scanning": "Analyse des images...",
+    "completed": "Analyse terminée",
+    "error": "Erreur d'analyse"
+  },
   "sections": {
     "image_previews": "Aperçus des Images",
     "controls": "Contrôles",
@@ -39,6 +44,7 @@
     "transparent_bg": "Fond Transparent",
     "photos_folder": "Dossier Photos",
     "change_folder": "Changer le dossier",
+    "rescan_folder": "Relancer l'analyse",
     "enable": "Activer",
     "text": "Texte",
     "image": "Image",
