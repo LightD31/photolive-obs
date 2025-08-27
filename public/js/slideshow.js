@@ -143,6 +143,15 @@ class PhotoLiveSlideshow {
             this.nextSlide();
         });
 
+        // Handle window resize to recalculate wrapper dimensions
+        this.resizeHandler = () => {
+            // Recalculate corner radius sizing when window is resized
+            if (this.settings.imageCornerRadius > 0) {
+                this.updateImageCornerRadius();
+            }
+        };
+        window.addEventListener('resize', this.resizeHandler);
+
         // Raccourcis clavier pour le debug - garder une référence pour pouvoir les supprimer
         this.keydownHandler = (e) => {
             switch(e.key) {
@@ -412,6 +421,9 @@ class PhotoLiveSlideshow {
         newElement.style.transform = '';
         newElement.style.visibility = 'visible';
         
+        // Update corner radius now that the transition is complete
+        this.updateImageCornerRadius();
+        
         console.log('Transition complete, old element hidden, new element visible with proper z-index');
     }
 
@@ -442,6 +454,9 @@ class PhotoLiveSlideshow {
                 otherElement.style.visibility = 'hidden';
                 otherElement.classList.remove('z-front', 'z-back');
             }
+            
+            // Update corner radius now that image is loaded and has natural dimensions
+            this.updateImageCornerRadius();
             
             console.log('Image displayed:', imagePath);
         };
@@ -529,19 +544,85 @@ class PhotoLiveSlideshow {
     updateImageCornerRadius() {
         const radius = this.settings.imageCornerRadius || 0;
         
-        // Apply border-radius to the wrapper elements for proper corner clipping
-        // This works correctly with object-fit: contain regardless of aspect ratio differences
-        const borderRadius = radius > 0 ? `${radius}px` : '0px';
-        
-        // Apply border-radius to both wrapper elements
-        if (this.currentImageWrapper) {
-            this.currentImageWrapper.style.borderRadius = borderRadius;
-        }
-        if (this.nextImageWrapper) {
-            this.nextImageWrapper.style.borderRadius = borderRadius;
+        if (radius > 0) {
+            // Apply border-radius and size wrappers to actual image content
+            this.applyCornerRadiusToImageContent(radius);
+        } else {
+            // Reset wrappers to full size when no corner radius
+            this.resetWrapperSizing();
         }
         
-        console.log('Corner radius updated with border-radius:', borderRadius);
+        console.log('Corner radius updated:', radius > 0 ? `${radius}px` : 'none');
+    }
+
+    calculateImageDisplayDimensions(img) {
+        // Get the container dimensions (viewport)
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        
+        // Get the image natural dimensions
+        const imageAspectRatio = img.naturalWidth / img.naturalHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+        
+        let displayWidth, displayHeight;
+        
+        if (imageAspectRatio > containerAspectRatio) {
+            // Image is wider than container - fit by width
+            displayWidth = containerWidth;
+            displayHeight = containerWidth / imageAspectRatio;
+        } else {
+            // Image is taller than container - fit by height
+            displayHeight = containerHeight;
+            displayWidth = containerHeight * imageAspectRatio;
+        }
+        
+        return {
+            width: displayWidth,
+            height: displayHeight,
+            left: (containerWidth - displayWidth) / 2,
+            top: (containerHeight - displayHeight) / 2
+        };
+    }
+
+    applyWrapperSizing(wrapper, dimensions, radius) {
+        if (!wrapper) return;
+        
+        wrapper.style.width = `${dimensions.width}px`;
+        wrapper.style.height = `${dimensions.height}px`;
+        wrapper.style.left = `${dimensions.left}px`;
+        wrapper.style.top = `${dimensions.top}px`;
+        wrapper.style.borderRadius = `${radius}px`;
+        wrapper.style.overflow = 'hidden';
+    }
+
+    resetWrapperSizing() {
+        // Reset both wrappers to full viewport size
+        [this.currentImageWrapper, this.nextImageWrapper].forEach(wrapper => {
+            if (wrapper) {
+                wrapper.style.width = '100%';
+                wrapper.style.height = '100%';
+                wrapper.style.left = '0';
+                wrapper.style.top = '0';
+                wrapper.style.borderRadius = '0px';
+                wrapper.style.overflow = 'hidden';
+            }
+        });
+    }
+
+    applyCornerRadiusToImageContent(radius) {
+        // Apply sizing to both image elements based on their content
+        const currentImg = this.currentImageElement;
+        const nextImg = this.nextImageElement;
+        
+        if (currentImg && currentImg.naturalWidth && currentImg.naturalHeight && currentImg.src) {
+            const dimensions = this.calculateImageDisplayDimensions(currentImg);
+            this.applyWrapperSizing(this.currentImageWrapper, dimensions, radius);
+        }
+        
+        if (nextImg && nextImg.naturalWidth && nextImg.naturalHeight && nextImg.src) {
+            const dimensions = this.calculateImageDisplayDimensions(nextImg);
+            this.applyWrapperSizing(this.nextImageWrapper, dimensions, radius);
+        }
     }
 
     updateWatermark() {
@@ -735,6 +816,7 @@ class PhotoLiveSlideshow {
         
         // Nettoyer les event listeners
         document.removeEventListener('keydown', this.keydownHandler);
+        window.removeEventListener('resize', this.resizeHandler);
     }
 }
 
