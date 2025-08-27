@@ -260,6 +260,37 @@ class ExifSemaphore {
 // Global semaphore to limit concurrent EXIF operations - using very conservative limit
 const exifSemaphore = new ExifSemaphore(3);
 
+// Function to extract EXIF thumbnail from image file
+async function extractExifThumbnail(filePath) {
+  try {
+    // Use exifr to extract thumbnail from the image
+    const options = {
+      tiff: {
+        skip: []  // Don't skip thumbnails for this extraction
+      },
+      ifd1: true,  // Enable IFD1 parsing which contains thumbnail data
+      mergeOutput: false,
+      silentErrors: true
+    };
+    
+    // Use exifr's thumbnail extraction directly
+    const thumbnailBuffer = await exifr.thumbnail(filePath);
+    
+    if (thumbnailBuffer && thumbnailBuffer.length > 0) {
+      // Convert buffer to base64 data URL
+      const base64Thumbnail = Buffer.from(thumbnailBuffer).toString('base64');
+      const dataUrl = `data:image/jpeg;base64,${base64Thumbnail}`;
+      logger.debug(`Extracted EXIF thumbnail for ${path.basename(filePath)} (${thumbnailBuffer.length} bytes)`);
+      return dataUrl;
+    }
+    
+    return null;
+  } catch (error) {
+    logger.debug(`No EXIF thumbnail found for ${path.basename(filePath)}: ${error.message}`);
+    return null;
+  }
+}
+
 // Function to extract photo date with configurable source for optimal performance
 async function getPhotoDate(filePath) {
   try {
@@ -481,6 +512,16 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
             const stats = await fs.stat(fullPath);
             const photoDate = await getPhotoDate(fullPath);
             
+            // Extract EXIF thumbnail (try for all images, regardless of dateSource)
+            let thumbnailDataUrl = null;
+            try {
+              thumbnailDataUrl = await exifSemaphore.execute(async () => {
+                return await extractExifThumbnail(fullPath);
+              });
+            } catch (error) {
+              logger.debug(`Thumbnail extraction failed for ${itemRelativePath}: ${error.message}`);
+            }
+            
             return {
               filename: itemRelativePath,
               path: `/photos/${itemRelativePath.replace(/\\/g, '/')}`, // Ensure forward slashes for web
@@ -488,7 +529,8 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
               created: stats.birthtime,
               modified: stats.mtime,
               photoDate: photoDate,
-              isNew: newlyAddedImages.has(itemRelativePath) // Use relative path for tracking
+              isNew: newlyAddedImages.has(itemRelativePath), // Use relative path for tracking
+              thumbnail: thumbnailDataUrl // Add thumbnail data URL
             };
           } catch (error) {
             logger.warn(`Error processing image ${itemRelativePath}: ${error.message}`);
@@ -558,6 +600,16 @@ async function scanImages(newImageFilename = null) {
               // Get the date using the configured source (filesystem is much faster than EXIF)
               const photoDate = await getPhotoDate(filePath);
               
+              // Extract EXIF thumbnail (try for all images, regardless of dateSource)
+              let thumbnailDataUrl = null;
+              try {
+                thumbnailDataUrl = await exifSemaphore.execute(async () => {
+                  return await extractExifThumbnail(filePath);
+                });
+              } catch (error) {
+                logger.debug(`Thumbnail extraction failed for ${file}: ${error.message}`);
+              }
+              
               return {
                 filename: file,
                 path: `/photos/${file}`,
@@ -565,7 +617,8 @@ async function scanImages(newImageFilename = null) {
                 created: stats.birthtime,
                 modified: stats.mtime,
                 photoDate: photoDate, // Date from chosen source (filesystem by default, EXIF if configured)
-                isNew: newlyAddedImages.has(file) // Mark new images
+                isNew: newlyAddedImages.has(file), // Mark new images
+                thumbnail: thumbnailDataUrl // Add thumbnail data URL
               };
             } catch (error) {
               logger.warn(`Error processing image ${file}: ${error.message}`);
