@@ -837,8 +837,8 @@ class PhotoLiveControl {
                 ...image,
                 originalIndex
             })).sort((a, b) => {
-                const dateA = new Date(a.modified);
-                const dateB = new Date(b.modified);
+                const dateA = new Date(a.photoDate);
+                const dateB = new Date(b.photoDate);
                 return this.gridSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
             });
             this.lastImageListHash = currentHash;
@@ -903,7 +903,7 @@ class PhotoLiveControl {
         info.innerHTML = `
             <div>${this.escapeHtml(image.filename)}</div>
             <div>
-                ${this.formatFileSize(image.size)} • ${this.formatDate(image.modified)}
+                ${this.formatFileSize(image.size)} • ${this.formatDate(image.photoDate)}
             </div>
         `;
         
