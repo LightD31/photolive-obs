@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs'); // Keep sync version only for initial config load
 const chokidar = require('chokidar');
 const cors = require('cors');
 const multer = require('multer');
@@ -63,11 +64,11 @@ class Logger {
 // Initialize logger (will be updated after config loads)
 let logger = new Logger('INFO');
 
-// Configuration loading
+// Configuration loading - needs to be synchronous for initial startup
 function loadConfig() {
   try {
     const configPath = path.join(__dirname, 'config', 'default.json');
-    const configData = JSON.parse(require('fs').readFileSync(configPath, 'utf8'));
+    const configData = JSON.parse(fsSync.readFileSync(configPath, 'utf8'));
     return {
       port: process.env.PORT || configData.server.port,
       logLevel: process.env.LOG_LEVEL || configData.server.logLevel || 'INFO',
@@ -168,11 +169,15 @@ app.use('/uploads/watermarks', express.static(path.join(__dirname, 'uploads', 'w
 
 // Multer configuration for watermark uploads
 const watermarkStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, 'uploads', 'watermarks');
-    // Create folder if it doesn't exist
-    require('fs').mkdirSync(uploadDir, { recursive: true });
-    cb(null, uploadDir);
+    // Create folder if it doesn't exist - use async version
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error);
+    }
   },
   filename: (req, file, cb) => {
     // Generate unique filename with timestamp
@@ -262,19 +267,13 @@ const exifSemaphore = new ExifSemaphore(3);
 
 // Function to extract EXIF thumbnail from image file
 async function extractExifThumbnail(filePath) {
+  let buffer = null;
   try {
-    // Use exifr to extract thumbnail from the image
-    const options = {
-      tiff: {
-        skip: []  // Don't skip thumbnails for this extraction
-      },
-      ifd1: true,  // Enable IFD1 parsing which contains thumbnail data
-      mergeOutput: false,
-      silentErrors: true
-    };
+    // Read file into buffer to avoid file handle issues
+    buffer = await fs.readFile(filePath);
     
-    // Use exifr's thumbnail extraction directly
-    const thumbnailBuffer = await exifr.thumbnail(filePath);
+    // Use exifr to extract thumbnail from buffer instead of file path
+    const thumbnailBuffer = await exifr.thumbnail(buffer);
     
     if (thumbnailBuffer && thumbnailBuffer.length > 0) {
       // Convert buffer to base64 data URL
@@ -288,6 +287,9 @@ async function extractExifThumbnail(filePath) {
   } catch (error) {
     logger.debug(`No EXIF thumbnail found for ${path.basename(filePath)}: ${error.message}`);
     return null;
+  } finally {
+    // Ensure buffer is released for garbage collection
+    buffer = null;
   }
 }
 
@@ -302,7 +304,11 @@ async function getPhotoDate(filePath) {
       case 'exif':
         // Use EXIF data (slower but more accurate) - with concurrency control
         return await exifSemaphore.execute(async () => {
+          let buffer = null;
           try {
+            // Read file into buffer to avoid file handle issues
+            buffer = await fs.readFile(filePath);
+            
             // Configure options to read comprehensive date-related EXIF tags
             const options = {
               // Read all common date-related EXIF tags from different camera manufacturers
@@ -311,9 +317,9 @@ async function getPhotoDate(filePath) {
                 'ModifyDate', 'FileModifyDate', 'SubSecDateTimeOriginal',
                 'OffsetTimeOriginal', 'GPSDateTime'
               ],
-              // Skip unnecessary parsing to reduce file I/O
+              // Skip unnecessary parsing to reduce processing
               skip: ['thumbnail', 'ifd1', 'interop'],
-              // Disable chunked reading to reduce file handle complexity
+              // Disable chunked reading since we're using buffer
               chunked: false,
               // Use the most efficient parsing approach
               tiff: {
@@ -321,8 +327,8 @@ async function getPhotoDate(filePath) {
               }
             };
             
-            // Use the static parse method with controlled options
-            const exifData = await exifr.parse(filePath, options);
+            // Use the static parse method with buffer instead of file path
+            const exifData = await exifr.parse(buffer, options);
             
             // Enhanced logging to help debug EXIF issues
             logger.debug(`EXIF data for ${path.basename(filePath)}:`, exifData);
@@ -385,6 +391,9 @@ async function getPhotoDate(filePath) {
           } catch (error) {
             // EXIF reading failed
             logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
+          } finally {
+            // Ensure buffer is released for garbage collection
+            buffer = null;
           }
           
           // Fall back to default file system behavior (not just modification time)
@@ -1605,6 +1614,62 @@ async function initialize() {
 
 // Démarrage
 initialize();
+
+// Graceful shutdown handler
+async function gracefulShutdown(signal) {
+  logger.info(`\n${signal} received. Starting graceful shutdown...`);
+  
+  try {
+    // Stop file watcher
+    if (fileWatcher) {
+      await fileWatcher.close();
+      logger.info('File watcher closed');
+    }
+    
+    // Stop slideshow timer
+    if (slideshowTimer) {
+      clearInterval(slideshowTimer);
+      logger.info('Slideshow timer stopped');
+    }
+    
+    // Close socket connections
+    io.close(() => {
+      logger.info('Socket.io connections closed');
+    });
+    
+    // Close HTTP server
+    server.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
+    
+    // Force exit after 10 seconds
+    setTimeout(() => {
+      logger.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+    
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+}
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
+});
 
 // Gestion propre de l'arrêt
 process.on('SIGINT', () => {
