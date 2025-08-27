@@ -221,7 +221,7 @@ let slideshowTimer = null;
 
 // Semaphore to limit concurrent EXIF operations and prevent file descriptor exhaustion
 class ExifSemaphore {
-  constructor(maxConcurrent = 3) { // Reduced from 10 to 3 for more conservative approach
+  constructor(maxConcurrent = 2) { // Reduced from 3 to 2 for even more conservative approach
     this.maxConcurrent = maxConcurrent;
     this.running = 0;
     this.queue = [];
@@ -253,28 +253,28 @@ class ExifSemaphore {
       return await fn();
     } finally {
       this.release();
+      // Add a small delay between operations to allow file handles to close
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
 }
 
 // Global semaphore to limit concurrent EXIF operations - using very conservative limit
-const exifSemaphore = new ExifSemaphore(3);
+const exifSemaphore = new ExifSemaphore(2);
 
 // Function to extract EXIF thumbnail from image file
 async function extractExifThumbnail(filePath) {
   try {
-    // Use exifr to extract thumbnail from the image
-    const options = {
-      tiff: {
-        skip: []  // Don't skip thumbnails for this extraction
-      },
-      ifd1: true,  // Enable IFD1 parsing which contains thumbnail data
-      mergeOutput: false,
-      silentErrors: true
-    };
+    // Create a promise with timeout to prevent hanging operations
+    const thumbnailPromise = Promise.race([
+      // Use exifr's thumbnail extraction with minimal options to reduce file I/O
+      exifr.thumbnail(filePath),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Thumbnail extraction timeout')), 3000) // Reduced timeout
+      )
+    ]);
     
-    // Use exifr's thumbnail extraction directly
-    const thumbnailBuffer = await exifr.thumbnail(filePath);
+    const thumbnailBuffer = await thumbnailPromise;
     
     if (thumbnailBuffer && thumbnailBuffer.length > 0) {
       // Convert buffer to base64 data URL
@@ -288,6 +288,11 @@ async function extractExifThumbnail(filePath) {
   } catch (error) {
     logger.debug(`No EXIF thumbnail found for ${path.basename(filePath)}: ${error.message}`);
     return null;
+  } finally {
+    // Force garbage collection of any orphaned file handles after operation
+    if (global.gc && Math.random() < 0.1) { // 10% chance to trigger GC
+      setImmediate(() => global.gc());
+    }
   }
 }
 
@@ -318,11 +323,23 @@ async function getPhotoDate(filePath) {
               // Use the most efficient parsing approach
               tiff: {
                 skip: ['thumbnail', 'ifd1']
-              }
+              },
+              // Add timeout to prevent hanging file handles
+              timeout: 3000,  // 3 second timeout
+              // Additional resource management options
+              silentErrors: true
             };
             
-            // Use the static parse method with controlled options
-            const exifData = await exifr.parse(filePath, options);
+            // Create a promise with timeout to prevent hanging operations
+            const exifPromise = Promise.race([
+              exifr.parse(filePath, options),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('EXIF parsing timeout')), 3000) // Reduced timeout
+              )
+            ]);
+            
+            // Use the static parse method with controlled options and timeout
+            const exifData = await exifPromise;
             
             // Enhanced logging to help debug EXIF issues
             logger.debug(`EXIF data for ${path.basename(filePath)}:`, exifData);
@@ -385,6 +402,11 @@ async function getPhotoDate(filePath) {
           } catch (error) {
             // EXIF reading failed
             logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
+          } finally {
+            // Force garbage collection of any orphaned file handles after operation
+            if (global.gc && Math.random() < 0.1) { // 10% chance to trigger GC
+              setImmediate(() => global.gc());
+            }
           }
           
           // Fall back to default file system behavior (not just modification time)
@@ -499,8 +521,8 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
     
     // Process image files with appropriate batching based on date source
     const isExifMode = slideshowSettings.dateSource === 'exif';
-    const BATCH_SIZE = isExifMode ? 5 : 20; // Use larger batches for filesystem dates, smaller for EXIF
-    const BATCH_DELAY = isExifMode ? 10 : 0; // Only add delay for EXIF processing
+    const BATCH_SIZE = isExifMode ? 3 : 15; // Use smaller batches to reduce file descriptor pressure
+    const BATCH_DELAY = isExifMode ? 50 : 0; // Increased delay for EXIF processing to allow file handle cleanup
     
     for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
       const batch = imageFiles.slice(i, i + BATCH_SIZE);
@@ -512,8 +534,10 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
             const stats = await fs.stat(fullPath);
             const photoDate = await getPhotoDate(fullPath);
             
-            // Extract EXIF thumbnail (try for all images, regardless of dateSource)
+            // Extract EXIF thumbnail only if specifically needed (not during initial scan to avoid FD exhaustion)
+            // Skip thumbnail extraction during bulk operations to prevent file descriptor warnings
             let thumbnailDataUrl = null;
+            /* Thumbnail extraction disabled during scan to prevent file descriptor warnings
             try {
               thumbnailDataUrl = await exifSemaphore.execute(async () => {
                 return await extractExifThumbnail(fullPath);
@@ -521,6 +545,7 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
             } catch (error) {
               logger.debug(`Thumbnail extraction failed for ${itemRelativePath}: ${error.message}`);
             }
+            */
             
             return {
               filename: itemRelativePath,
@@ -542,9 +567,13 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
       // Add successful results to images array
       images.push(...batchResults.filter(result => result !== null));
       
-      // Add delay between batches only for EXIF mode to prevent overwhelming the system
+      // Add delay between batches for EXIF mode and force cleanup
       if (BATCH_DELAY > 0 && i + BATCH_SIZE < imageFiles.length) {
         await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        // Trigger garbage collection after each batch when processing EXIF
+        if (global.gc && isExifMode) {
+          global.gc();
+        }
       }
     }
     
@@ -584,8 +613,8 @@ async function scanImages(newImageFilename = null) {
 
       // Process images with appropriate batching based on date source
       const isExifMode = slideshowSettings.dateSource === 'exif';
-      const BATCH_SIZE = isExifMode ? 5 : 20; // Use larger batches for filesystem dates, smaller for EXIF
-      const BATCH_DELAY = isExifMode ? 10 : 0; // Only add delay for EXIF processing
+      const BATCH_SIZE = isExifMode ? 3 : 15; // Use smaller batches to reduce file descriptor pressure
+      const BATCH_DELAY = isExifMode ? 50 : 0; // Increased delay for EXIF processing to allow file handle cleanup
 
       for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
         const batch = imageFiles.slice(i, i + BATCH_SIZE);
@@ -600,8 +629,10 @@ async function scanImages(newImageFilename = null) {
               // Get the date using the configured source (filesystem is much faster than EXIF)
               const photoDate = await getPhotoDate(filePath);
               
-              // Extract EXIF thumbnail (try for all images, regardless of dateSource)
+              // Extract EXIF thumbnail only if specifically needed (not during initial scan to avoid FD exhaustion)
+              // Skip thumbnail extraction during bulk operations to prevent file descriptor warnings
               let thumbnailDataUrl = null;
+              /* Thumbnail extraction disabled during scan to prevent file descriptor warnings
               try {
                 thumbnailDataUrl = await exifSemaphore.execute(async () => {
                   return await extractExifThumbnail(filePath);
@@ -609,6 +640,7 @@ async function scanImages(newImageFilename = null) {
               } catch (error) {
                 logger.debug(`Thumbnail extraction failed for ${file}: ${error.message}`);
               }
+              */
               
               return {
                 filename: file,
@@ -630,9 +662,13 @@ async function scanImages(newImageFilename = null) {
         // Add successful results to images array
         images.push(...batchResults.filter(result => result !== null));
         
-        // Add delay between batches only for EXIF mode to prevent overwhelming the system
+        // Add delay between batches for EXIF mode and force cleanup
         if (BATCH_DELAY > 0 && i + BATCH_SIZE < imageFiles.length) {
           await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+          // Trigger garbage collection after each batch when processing EXIF
+          if (global.gc && isExifMode) {
+            global.gc();
+          }
         }
       }
     }
@@ -1096,6 +1132,41 @@ app.post('/api/watermark-upload', uploadWatermark.single('watermark'), (req, res
   } catch (error) {
     logger.error('Error uploading watermark:', error);
     res.status(500).json({ error: 'Upload error' });
+  }
+});
+
+// Route for on-demand thumbnail extraction
+app.get('/api/thumbnail/:filename', async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    
+    // Security check: prevent path traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    
+    // Check if file exists in current photos path
+    const filePath = path.join(currentPhotosPath, filename);
+    
+    try {
+      await fs.access(filePath);
+    } catch {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    // Extract thumbnail using semaphore to limit concurrency
+    const thumbnailDataUrl = await exifSemaphore.execute(async () => {
+      return await extractExifThumbnail(filePath);
+    });
+    
+    if (thumbnailDataUrl) {
+      res.json({ thumbnail: thumbnailDataUrl });
+    } else {
+      res.status(404).json({ error: 'No thumbnail available' });
+    }
+  } catch (error) {
+    logger.error('Error extracting thumbnail:', error);
+    res.status(500).json({ error: 'Thumbnail extraction failed' });
   }
 });
 
