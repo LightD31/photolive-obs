@@ -1,6 +1,20 @@
 # PhotoLive OBS
 
-A Node.js application that monitors a photo folder and displays images in a slideshow for OBS Studio browser sources. The application provides real-time file monitoring and a web-based control interface.
+A real-time photo slideshow solution for OBS Studio with automatic folder monitoring and web-based control interface. Available as both a standalone web application and a native OBS Studio plugin.
+
+## 🎯 Choose Your Integration Method
+
+### Option 1: **OBS Plugin** (Recommended)
+- **Native OBS integration** - No manual browser source setup required
+- **Automatic server management** - Plugin handles web server lifecycle
+- **Streamlined workflow** - One-click installation and configuration
+- **📖 [Plugin Installation Guide](PLUGIN_INSTALL.md)**
+
+### Option 2: **Standalone Web Application**
+- **Manual browser source setup** - Add `http://localhost:3001` as browser source
+- **Separate server process** - Run Node.js server independently
+- **More control** - Direct access to web application files
+- **📖 [Web Application Setup](#installation)** (below)
 
 > ⚠️ **Security Warning**: This application is intended for local development and testing purposes only. Do not expose this application to the internet or use it in production environments without proper security review and hardening.
 
@@ -8,6 +22,7 @@ A Node.js application that monitors a photo folder and displays images in a slid
 
 ## Features
 
+- **Dual Integration Options**: Native OBS plugin or standalone web application
 - Real-time file monitoring with automatic image detection
 - Web interface for OBS Studio browser sources
 - Control interface with image preview grid
@@ -20,6 +35,12 @@ A Node.js application that monitors a photo folder and displays images in a slid
 - WebSocket real-time synchronization
 
 ## Installation
+
+### OBS Plugin Installation
+
+For the native OBS plugin experience, see the **[Plugin Installation Guide](PLUGIN_INSTALL.md)**.
+
+### Standalone Web Application Setup
 
 ### Prerequisites
 
@@ -48,7 +69,19 @@ The application runs at `http://localhost:3001`
 
 ## Usage
 
-### OBS Studio Setup
+### OBS Plugin Usage
+
+If you installed the native plugin:
+1. Add **"PhotoLive Slideshow"** source to your OBS scene
+2. Configure photos folder and dimensions in source properties
+3. Use **"Open Control Interface"** button to access advanced controls
+4. Photos are automatically detected and displayed
+
+For detailed plugin usage, see the **[Plugin Installation Guide](PLUGIN_INSTALL.md)**.
+
+### Standalone Web Application Usage
+
+#### OBS Studio Setup
 
 1. Add a "Browser" source to your OBS scene
 2. Set URL to: `http://localhost:3001`

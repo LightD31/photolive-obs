@@ -1,0 +1,278 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+body.transparent {
+    background: transparent;
+}
+
+#slideshow-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+}
+
+#slideshow-container.transparent {
+    background: transparent;
+}
+
+#image-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.slide-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    z-index: 1;
+    will-change: opacity, transform;
+}
+
+/* Z-index management for transitions */
+.slide-image.z-front {
+    z-index: 2;
+}
+
+.slide-image.z-back {
+    z-index: 1;
+}
+
+.slide-image.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.slide-image.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Transition effects */
+.slide-image.transition-fade {
+    transition: opacity 1s ease-in-out;
+}
+
+.slide-image.transition-slide {
+    transition: transform 1s ease-in-out;
+}
+
+.slide-image.transition-zoom-out {
+    transition: transform 0.75s ease-in-out, opacity 0.75s ease-in-out;
+}
+
+.slide-image.transition-zoom-in {
+    transition: transform 0.75s ease-in-out, opacity 0.75s ease-in-out;
+}
+
+.slide-image.transition-zoom-visible {
+    transition: transform 0.75s ease-in-out, opacity 0.75s ease-in-out;
+}
+
+/* Filtres */
+.filter-none {
+    filter: none;
+}
+
+.filter-sepia {
+    filter: sepia(100%);
+}
+
+.filter-grayscale {
+    filter: grayscale(100%);
+}
+
+.filter-blur {
+    filter: blur(2px);
+}
+
+.filter-brightness {
+    filter: brightness(1.2);
+}
+
+.filter-contrast {
+    filter: contrast(1.3);
+}
+
+.filter-vintage {
+    filter: sepia(50%) contrast(1.2) brightness(1.1) hue-rotate(15deg);
+}
+
+.filter-cool {
+    filter: hue-rotate(180deg) saturate(1.2);
+}
+
+.filter-warm {
+    filter: hue-rotate(30deg) saturate(1.1) brightness(1.05);
+}
+
+/* Filigrane */
+.watermark {
+    position: absolute;
+    z-index: 10;
+    padding: 10px 15px;
+    border-radius: 5px;
+    backdrop-filter: blur(5px);
+    transition: opacity 0.3s ease;
+}
+
+/* Filigrane texte */
+.watermark.watermark-text {
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    font-size: 24px;
+    font-weight: bold;
+    background: rgba(0,0,0,0.3);
+}
+
+/* Filigrane image */
+.watermark.watermark-image {
+    background: transparent;
+    padding: 10px;
+}
+
+.watermark.watermark-image img {
+    display: block;
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: contain;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+}
+
+.watermark.position-top-left {
+    top: 20px;
+    left: 20px;
+}
+
+.watermark.position-top-right {
+    top: 20px;
+    right: 20px;
+}
+
+.watermark.position-bottom-left {
+    bottom: 20px;
+    left: 20px;
+}
+
+.watermark.position-bottom-right {
+    bottom: 20px;
+    right: 20px;
+}
+
+.watermark.position-center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Overlay pour des effets supplémentaires */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.overlay.vignette {
+    background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.3) 100%);
+}
+
+/* Loading */
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: white;
+    z-index: 100;
+}
+
+.spinner {
+    border: 4px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top: 4px solid white;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* No images */
+.no-images {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: white;
+    z-index: 100;
+}
+
+.no-images h2 {
+    margin-bottom: 20px;
+    font-size: 2rem;
+}
+
+.no-images p {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
+}
+
+/* Responsive pour différentes résolutions */
+@media (max-width: 1920px) {
+    .watermark {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 1280px) {
+    .watermark {
+        font-size: 18px;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 720px) {
+    .watermark {
+        font-size: 16px;
+        padding: 6px 10px;
+    }
+}
+
+

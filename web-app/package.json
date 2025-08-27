@@ -8,10 +8,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "clean": "rimraf dist node_modules package-lock.json",
-    "reinstall": "npm run clean && npm install",
-    "build-plugin": "./build.sh",
-    "build-plugin-win": "./build.bat",
-    "test-plugin": "cd web-app && npm install && PORT=3002 node server.js"
+    "reinstall": "npm run clean && npm install"
   },
   "keywords": [
     "slideshow",

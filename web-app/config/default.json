@@ -1,0 +1,73 @@
+{
+  "server": {
+    "port": 3001,
+    "photosPath": "./photos",
+    "allowedOrigins": ["*"],
+    "logLevel": "INFO"
+  },
+  "slideshow": {
+    "interval": 5000,
+    "minInterval": 1000,
+    "maxInterval": 30000,
+    "supportedFormats": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+    "maxImageSize": "10MB",
+    "thumbnailSize": 200
+  },
+  "features": {
+    "transitions": [
+      { "id": "none", "name": "None", "duration": 0 },
+      { "id": "fade", "name": "Fade", "duration": 1000 },
+      { "id": "slide", "name": "Slide", "duration": 1000 },
+      { "id": "zoom", "name": "Zoom", "duration": 1500 }
+    ],
+    "filters": [
+      { "id": "none", "name": "None" },
+      { "id": "sepia", "name": "Sepia" },
+      { "id": "grayscale", "name": "Black & White" },
+      { "id": "blur", "name": "Blur" },
+      { "id": "brightness", "name": "Brightness" },
+      { "id": "contrast", "name": "Contrast" },
+      { "id": "vintage", "name": "Vintage" },
+      { "id": "cool", "name": "Cool" },
+      { "id": "warm", "name": "Warm" }
+    ],
+    "watermarkPositions": [
+      { "id": "top-left", "name": "Top Left" },
+      { "id": "top-right", "name": "Top Right" },
+      { "id": "bottom-left", "name": "Bottom Left" },
+      { "id": "bottom-right", "name": "Bottom Right" },
+      { "id": "center", "name": "Center" }
+    ],
+    "watermarkTypes": [
+      { "id": "text", "name": "Text" },
+      { "id": "image", "name": "PNG Image" }
+    ],
+    "watermarkSizes": [
+      { "id": "small", "name": "Small", "scale": 0.5 },
+      { "id": "medium", "name": "Medium", "scale": 1.0 },
+      { "id": "large", "name": "Large", "scale": 1.5 },
+      { "id": "xlarge", "name": "Extra Large", "scale": 2.0 }
+    ]
+  },
+  "defaults": {
+    "interval": 5000,
+    "transition": "none",
+    "filter": "none",
+    "showWatermark": false,
+    "watermarkText": "PhotoLive OBS",
+    "watermarkType": "text",
+    "watermarkImage": "",
+    "watermarkPosition": "bottom-right",
+    "watermarkSize": "medium",
+    "watermarkOpacity": 80,
+    "shuffleImages": true,
+    "repeatLatest": false,
+    "latestCount": 5,
+    "transparentBackground": true,
+    "excludedImages": [],
+    "language": "en",
+    "recursiveSearch": false,
+    "gridSortOrder": "asc",
+    "gridZoomLevel": 2
+  }
+}
