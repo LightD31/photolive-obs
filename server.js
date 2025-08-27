@@ -272,13 +272,17 @@ async function getPhotoDate(filePath) {
         // Use EXIF data (slower but more accurate) - with concurrency control
         return await exifSemaphore.execute(async () => {
           try {
-            // Configure minimal options to reduce file handle usage and memory footprint
+            // Configure options to read comprehensive date-related EXIF tags
             const options = {
-              // Only read the date-related tags we need
-              pick: ['DateTimeOriginal', 'DateTime', 'CreateDate'],
+              // Read all common date-related EXIF tags from different camera manufacturers
+              pick: [
+                'DateTimeOriginal', 'DateTime', 'CreateDate', 'DateTimeDigitized',
+                'ModifyDate', 'FileModifyDate', 'SubSecDateTimeOriginal',
+                'OffsetTimeOriginal', 'GPSDateTime'
+              ],
               // Skip unnecessary parsing to reduce file I/O
               skip: ['thumbnail', 'ifd1', 'interop'],
-              // Ensure minimal memory usage and proper cleanup
+              // Ensure proper date parsing
               translateValues: true,  // Enable value translation to get Date objects
               reviveValues: true,     // Enable value revival for proper date parsing
               translateKeys: true,    // Enable key translation to get readable field names
@@ -294,22 +298,74 @@ async function getPhotoDate(filePath) {
             
             // Use the static parse method with controlled options
             const exifData = await exifr.parse(filePath, options);
-            console.log("EXIF data:", exifData);
-            // Try to get the original photo date in order of preference
-            const photoDate = exifData?.DateTimeOriginal || 
-                             exifData?.DateTime || 
-                             exifData?.CreateDate;
             
-            if (photoDate && photoDate instanceof Date && !isNaN(photoDate)) {
-              return photoDate;
+            // Enhanced logging to help debug EXIF issues
+            logger.debug(`EXIF data for ${path.basename(filePath)}:`, exifData);
+            
+            // Helper function to convert EXIF date strings to Date objects
+            const parseExifDate = (dateValue) => {
+              if (!dateValue) return null;
+              
+              // If it's already a Date object and valid, return it
+              if (dateValue instanceof Date && !isNaN(dateValue)) {
+                return dateValue;
+              }
+              
+              // If it's a string, try to parse it
+              if (typeof dateValue === 'string') {
+                // EXIF dates are typically in format "YYYY:MM:DD HH:MM:SS"
+                const exifDateRegex = /^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/;
+                const match = dateValue.match(exifDateRegex);
+                if (match) {
+                  const [, year, month, day, hour, minute, second] = match;
+                  const parsedDate = new Date(
+                    parseInt(year),
+                    parseInt(month) - 1, // Month is 0-indexed in JS
+                    parseInt(day),
+                    parseInt(hour),
+                    parseInt(minute),
+                    parseInt(second)
+                  );
+                  return !isNaN(parsedDate) ? parsedDate : null;
+                }
+                
+                // Try standard Date parsing as fallback
+                const fallbackDate = new Date(dateValue);
+                return !isNaN(fallbackDate) ? fallbackDate : null;
+              }
+              
+              return null;
+            };
+            
+            // Try to get the original photo date in order of preference
+            const dateCandidates = [
+              exifData?.DateTimeOriginal,    // Camera capture time (preferred)
+              exifData?.CreateDate,          // File creation in camera
+              exifData?.DateTimeDigitized,   // Digital conversion time
+              exifData?.DateTime,            // General date/time (often modification)
+              exifData?.SubSecDateTimeOriginal, // High precision capture time
+              exifData?.ModifyDate           // Last modification
+            ];
+            
+            for (const candidate of dateCandidates) {
+              const parsedDate = parseExifDate(candidate);
+              if (parsedDate) {
+                logger.debug(`Found EXIF date for ${path.basename(filePath)}: ${parsedDate} (from field containing: ${candidate})`);
+                return parsedDate;
+              }
             }
+            
+            logger.debug(`No valid EXIF date found for ${path.basename(filePath)}, available fields:`, Object.keys(exifData || {}));
+            
           } catch (error) {
-            // EXIF reading failed, will fall back to file modification time
+            // EXIF reading failed
             logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
           }
           
-          // Fall back to file modification time if EXIF date is not available
-          return stats.mtime;
+          // Fall back to default file system behavior (not just modification time)
+          // This respects the user's preference for how to handle missing EXIF data
+          logger.debug(`No EXIF date available for ${path.basename(filePath)}, falling back to file system date`);
+          return stats.birthtime || stats.mtime;
         });
         
       case 'created':
