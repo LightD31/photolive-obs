@@ -9,8 +9,12 @@
 <body data-i18n-title="app.slideshow_title">
     <div id="slideshow-container">
         <div id="image-container">
-            <img id="current-image" class="slide-image" data-i18n-alt="slideshow.alt_current" alt="Current photo">
-            <img id="next-image" class="slide-image hidden" data-i18n-alt="slideshow.alt_next" alt="Next photo">
+            <div id="current-image-wrapper" class="image-wrapper">
+                <img id="current-image" class="slide-image" data-i18n-alt="slideshow.alt_current" alt="Current photo">
+            </div>
+            <div id="next-image-wrapper" class="image-wrapper">
+                <img id="next-image" class="slide-image hidden" data-i18n-alt="slideshow.alt_next" alt="Next photo">
+            </div>
         </div>
         
         <!-- Watermark -->

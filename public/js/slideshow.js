@@ -51,6 +51,8 @@ class PhotoLiveSlideshow {
     setupElements() {
         this.currentImageElement = document.getElementById('current-image');
         this.nextImageElement = document.getElementById('next-image');
+        this.currentImageWrapper = document.getElementById('current-image-wrapper');
+        this.nextImageWrapper = document.getElementById('next-image-wrapper');
         this.watermark = document.getElementById('watermark');
         this.overlay = document.getElementById('overlay');
         this.loading = document.getElementById('loading');
@@ -120,6 +122,18 @@ class PhotoLiveSlideshow {
         // Return the image element that is currently hidden
         const visible = this.getVisibleImageElement();
         return visible === this.currentImageElement ? this.nextImageElement : this.currentImageElement;
+    }
+
+    getVisibleImageWrapper() {
+        // Return the wrapper of the currently visible image element
+        const visibleImage = this.getVisibleImageElement();
+        return visibleImage === this.currentImageElement ? this.currentImageWrapper : this.nextImageWrapper;
+    }
+
+    getHiddenImageWrapper() {
+        // Return the wrapper of the currently hidden image element
+        const hiddenImage = this.getHiddenImageElement();
+        return hiddenImage === this.currentImageElement ? this.currentImageWrapper : this.nextImageWrapper;
     }
 
     setupEventListeners() {
@@ -515,19 +529,19 @@ class PhotoLiveSlideshow {
     updateImageCornerRadius() {
         const radius = this.settings.imageCornerRadius || 0;
         
-        // Use clip-path for proper corner radius with object-fit: contain
-        // This ensures the corners are rounded regardless of aspect ratio differences
-        const clipPath = radius > 0 ? `inset(0 round ${radius}px)` : 'none';
+        // Apply border-radius to the wrapper elements for proper corner clipping
+        // This works correctly with object-fit: contain regardless of aspect ratio differences
+        const borderRadius = radius > 0 ? `${radius}px` : '0px';
         
-        // Apply clip-path to both image elements
-        if (this.currentImageElement) {
-            this.currentImageElement.style.clipPath = clipPath;
+        // Apply border-radius to both wrapper elements
+        if (this.currentImageWrapper) {
+            this.currentImageWrapper.style.borderRadius = borderRadius;
         }
-        if (this.nextImageElement) {
-            this.nextImageElement.style.clipPath = clipPath;
+        if (this.nextImageWrapper) {
+            this.nextImageWrapper.style.borderRadius = borderRadius;
         }
         
-        console.log('Corner radius updated with clip-path:', clipPath);
+        console.log('Corner radius updated with border-radius:', borderRadius);
     }
 
     updateWatermark() {
