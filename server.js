@@ -260,56 +260,76 @@ class ExifSemaphore {
 // Global semaphore to limit concurrent EXIF operations - using very conservative limit
 const exifSemaphore = new ExifSemaphore(3);
 
-// Function to extract photo date from EXIF data with proper file handle management
+// Function to extract photo date with configurable source for optimal performance
 async function getPhotoDate(filePath) {
-  // Use semaphore to limit concurrent EXIF operations
-  return await exifSemaphore.execute(async () => {
-    try {
-      // Configure minimal options to reduce file handle usage and memory footprint
-      const options = {
-        // Only read the date-related tags we need
-        pick: ['DateTimeOriginal', 'DateTime', 'CreateDate'],
-        // Skip unnecessary parsing to reduce file I/O
-        skip: ['thumbnail', 'ifd1', 'interop'],
-        // Ensure minimal memory usage and proper cleanup
-        translateValues: false,
-        reviveValues: false,
-        translateKeys: false,
-        mergeOutput: false,
-        sanitize: false,
-        // Disable chunked reading to reduce file handle complexity
-        chunked: false,
-        // Use the most efficient parsing approach
-        tiff: {
-          skip: ['thumbnail', 'ifd1']
-        }
-      };
-      
-      // Use the static parse method with controlled options
-      const exifData = await exifr.parse(filePath, options);
-      
-      // Try to get the original photo date in order of preference
-      const photoDate = exifData?.DateTimeOriginal || 
-                       exifData?.DateTime || 
-                       exifData?.CreateDate;
-      
-      if (photoDate && photoDate instanceof Date && !isNaN(photoDate)) {
-        return photoDate;
-      }
-    } catch (error) {
-      // EXIF reading failed, will fall back to file modification time
-      logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
-    }
+  try {
+    // Get file stats first (always needed for fallback)
+    const stats = await fs.stat(filePath);
     
-    // Fall back to file modification time if EXIF date is not available
-    try {
-      const stats = await fs.stat(filePath);
-      return stats.mtime;
-    } catch (error) {
-      logger.warn(`Could not get file stats for ${filePath}: ${error.message}`);
-      return new Date(); // Use current time as last resort
+    // Choose date source based on settings
+    switch (slideshowSettings.dateSource) {
+      case 'exif':
+        // Use EXIF data (slower but more accurate) - with concurrency control
+        return await exifSemaphore.execute(async () => {
+          try {
+            // Configure minimal options to reduce file handle usage and memory footprint
+            const options = {
+              // Only read the date-related tags we need
+              pick: ['DateTimeOriginal', 'DateTime', 'CreateDate'],
+              // Skip unnecessary parsing to reduce file I/O
+              skip: ['thumbnail', 'ifd1', 'interop'],
+              // Ensure minimal memory usage and proper cleanup
+              translateValues: false,
+              reviveValues: false,
+              translateKeys: false,
+              mergeOutput: false,
+              sanitize: false,
+              // Disable chunked reading to reduce file handle complexity
+              chunked: false,
+              // Use the most efficient parsing approach
+              tiff: {
+                skip: ['thumbnail', 'ifd1']
+              }
+            };
+            
+            // Use the static parse method with controlled options
+            const exifData = await exifr.parse(filePath, options);
+            
+            // Try to get the original photo date in order of preference
+            const photoDate = exifData?.DateTimeOriginal || 
+                             exifData?.DateTime || 
+                             exifData?.CreateDate;
+            
+            if (photoDate && photoDate instanceof Date && !isNaN(photoDate)) {
+              return photoDate;
+            }
+          } catch (error) {
+            // EXIF reading failed, will fall back to file modification time
+            logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
+          }
+          
+          // Fall back to file modification time if EXIF date is not available
+          return stats.mtime;
+        });
+        
+      case 'created':
+        // Use file creation time (fast)
+        return stats.birthtime;
+        
+      case 'modified':
+        // Use file modification time (fast)
+        return stats.mtime;
+        
+      case 'filesystem':
+      default:
+        // Use the most reliable file system date (creation time with modification fallback)
+        // This is the fastest option and works well for most use cases
+        return stats.birthtime || stats.mtime;
     }
-  });
+  } catch (error) {
+    logger.warn(`Could not get date for ${path.basename(filePath)}: ${error.message}`);
+    return new Date(); // Use current time as last resort
+  }
 }
 
 // Fonction pour mélanger un tableau (Fisher-Yates shuffle)
@@ -371,14 +391,14 @@ function updateShuffledImagesList(newImageAdded = null) {
   }
 }
 
-// Function to recursively scan for image files with batched processing
+// Function to recursively scan for image files with optimized processing
 async function scanImagesRecursive(dirPath, relativePath = '') {
   const images = [];
   
   try {
     const items = await fs.readdir(dirPath, { withFileTypes: true });
     
-    // First, collect all image files without processing EXIF
+    // First, collect all image files and subdirectories
     const imageFiles = [];
     const subdirectories = [];
     
@@ -396,8 +416,11 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
       }
     }
     
-    // Process image files in small batches to avoid overwhelming the system
-    const BATCH_SIZE = 5; // Process only 5 images at a time
+    // Process image files with appropriate batching based on date source
+    const isExifMode = slideshowSettings.dateSource === 'exif';
+    const BATCH_SIZE = isExifMode ? 5 : 20; // Use larger batches for filesystem dates, smaller for EXIF
+    const BATCH_DELAY = isExifMode ? 10 : 0; // Only add delay for EXIF processing
+    
     for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
       const batch = imageFiles.slice(i, i + BATCH_SIZE);
       
@@ -427,9 +450,9 @@ async function scanImagesRecursive(dirPath, relativePath = '') {
       // Add successful results to images array
       images.push(...batchResults.filter(result => result !== null));
       
-      // Small delay between batches to prevent overwhelming the system
-      if (i + BATCH_SIZE < imageFiles.length) {
-        await new Promise(resolve => setTimeout(resolve, 10));
+      // Add delay between batches only for EXIF mode to prevent overwhelming the system
+      if (BATCH_DELAY > 0 && i + BATCH_SIZE < imageFiles.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
       }
     }
     
@@ -456,19 +479,22 @@ async function scanImages(newImageFilename = null) {
     let images = [];
     
     if (slideshowSettings.recursiveSearch) {
-      // Recursive scanning with batching
+      // Recursive scanning with optimized processing
       images = await scanImagesRecursive(currentPhotosPath);
       logger.debug(`Recursive scan found ${images.length} images`);
     } else {
-      // Original non-recursive scanning with batching
+      // Original non-recursive scanning with optimized processing
       const files = await fs.readdir(currentPhotosPath);
       const imageFiles = files.filter(file => {
         const ext = path.extname(file).toLowerCase();
         return config.supportedFormats.includes(ext);
       });
 
-      // Process images in small batches to avoid overwhelming the system
-      const BATCH_SIZE = 5; // Process only 5 images at a time
+      // Process images with appropriate batching based on date source
+      const isExifMode = slideshowSettings.dateSource === 'exif';
+      const BATCH_SIZE = isExifMode ? 5 : 20; // Use larger batches for filesystem dates, smaller for EXIF
+      const BATCH_DELAY = isExifMode ? 10 : 0; // Only add delay for EXIF processing
+
       for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
         const batch = imageFiles.slice(i, i + BATCH_SIZE);
         
@@ -479,7 +505,7 @@ async function scanImages(newImageFilename = null) {
               const filePath = path.join(currentPhotosPath, file);
               const stats = await fs.stat(filePath);
               
-              // Get the actual photo date from EXIF data, falling back to modification time
+              // Get the date using the configured source (filesystem is much faster than EXIF)
               const photoDate = await getPhotoDate(filePath);
               
               return {
@@ -488,7 +514,7 @@ async function scanImages(newImageFilename = null) {
                 size: stats.size,
                 created: stats.birthtime,
                 modified: stats.mtime,
-                photoDate: photoDate, // Actual photo date from EXIF or file modification time
+                photoDate: photoDate, // Date from chosen source (filesystem by default, EXIF if configured)
                 isNew: newlyAddedImages.has(file) // Mark new images
               };
             } catch (error) {
@@ -501,9 +527,9 @@ async function scanImages(newImageFilename = null) {
         // Add successful results to images array
         images.push(...batchResults.filter(result => result !== null));
         
-        // Small delay between batches to prevent overwhelming the system
-        if (i + BATCH_SIZE < imageFiles.length) {
-          await new Promise(resolve => setTimeout(resolve, 10));
+        // Add delay between batches only for EXIF mode to prevent overwhelming the system
+        if (BATCH_DELAY > 0 && i + BATCH_SIZE < imageFiles.length) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
         }
       }
     }
@@ -530,7 +556,8 @@ async function scanImages(newImageFilename = null) {
     // Restart slideshow timer if necessary
     restartSlideshowTimer();
 
-    logger.info(`${images.length} images found in ${currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}`);
+    const dateSourceInfo = slideshowSettings.dateSource === 'exif' ? ' (using EXIF dates)' : ' (using filesystem dates)';
+    logger.info(`${images.length} images found in ${currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}${dateSourceInfo}`);
     return images;
   } catch (error) {
     logger.error('Error scanning images:', error);
@@ -789,7 +816,7 @@ app.post('/api/settings', (req, res) => {
       'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
       'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
       'transparentBackground', 'photosPath', 'excludedImages', 'language',
-      'recursiveSearch'
+      'recursiveSearch', 'dateSource'
     ];
     
     const newSettings = {};
@@ -833,6 +860,11 @@ app.post('/api/settings', (req, res) => {
             break;
           case 'language':
             if (typeof value === 'string' && ['en', 'fr'].includes(value)) {
+              newSettings[key] = value;
+            }
+            break;
+          case 'dateSource':
+            if (typeof value === 'string' && ['filesystem', 'exif', 'created', 'modified'].includes(value)) {
               newSettings[key] = value;
             }
             break;
@@ -898,6 +930,13 @@ app.post('/api/settings', (req, res) => {
       logger.debug(`🔄 Recursive search mode changed to: ${newSettings.recursiveSearch}`);
       setupFileWatcher();
       // Rescan images with new recursive setting
+      scanImages();
+    }
+    
+    // If date source setting changed, rescan all images to apply new date extraction method
+    if (newSettings.dateSource !== undefined) {
+      logger.debug(`🔄 Date source changed to: ${newSettings.dateSource}`);
+      // Rescan images with new date source
       scanImages();
     }
     
