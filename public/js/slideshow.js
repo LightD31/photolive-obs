@@ -313,27 +313,29 @@ class PhotoLiveSlideshow {
         // Preload the new image
         const img = new Image();
         img.onload = () => {
-            // Set up proper z-index: current element on top during slide
+            // Set up proper z-index: both elements visible during slide
             currentElement.classList.add('z-front');
             nextElement.classList.remove('z-front');
             nextElement.classList.add('z-back');
             
-            // Set up the next image completely hidden first to prevent flash
+            // Set up the next image positioned off-screen
             nextElement.src = imagePath;
             nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
-            nextElement.style.opacity = '0'; // Start hidden to prevent flash
+            nextElement.style.opacity = '1';
             nextElement.style.visibility = 'visible';
-            nextElement.style.transform = direction > 0 ? 'translateX(120%)' : 'translateX(-120%)';
+            nextElement.style.transform = direction > 0 ? 'translateX(100%)' : 'translateX(-100%)';
             
             // Add transition classes to both images
             currentElement.className = `slide-image filter-${this.settings.filter} transition-slide z-front`;
             nextElement.className = `slide-image filter-${this.settings.filter} transition-slide z-back`;
             
-            // Start the slide animation
+            // Start the slide animation after a brief delay to ensure styles are applied
             requestAnimationFrame(() => {
-                nextElement.style.opacity = '1'; // Make visible now that it's positioned off-screen
-                currentElement.style.transform = direction > 0 ? 'translateX(-120%)' : 'translateX(120%)';
-                nextElement.style.transform = 'translateX(0)';
+                requestAnimationFrame(() => {
+                    // Slide out current image and slide in next image simultaneously
+                    currentElement.style.transform = direction > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+                    nextElement.style.transform = 'translateX(0)';
+                });
             });
             
             // After transition completes, finalize the switch
