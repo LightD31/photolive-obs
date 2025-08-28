@@ -57,10 +57,15 @@ class PhotoLiveSlideshow {
     }
 
     setupSocket() {
-        this.socket = io();
+        this.socket = io({
+            transports: ['websocket'],
+            timeout: 5000,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
         
         this.socket.on('connect', () => {
-            console.log('Connecté au serveur');
+            console.log('Slideshow connected to server');
             this.hideLoading();
         });
 
@@ -76,7 +81,6 @@ class PhotoLiveSlideshow {
         });
 
         this.socket.on('settings-updated', (settings) => {
-            console.log('Paramètres mis à jour:', settings);
             this.updateSettings(settings);
         });
 
@@ -491,21 +495,18 @@ class PhotoLiveSlideshow {
     }
 
     updateSettings(settings) {
+        const previousFilter = this.settings.filter;
+        
         this.settings = { ...this.settings, ...settings };
         
-        // Note: Shuffle logic is now handled server-side, no need to recreate lists
-        
-        // Mettre à jour l'arrière-plan transparent
         this.updateBackground();
-        
-        // Mettre à jour le filigrane
         this.updateWatermark();
-        
-        // Mettre à jour l'overlay
         this.updateOverlay();
         
-        // Le timer est maintenant géré côté serveur
-        console.log('Paramètres mis à jour, shuffle géré par le serveur');
+        // Apply filter changes to currently displayed image immediately
+        if (settings.filter !== undefined && settings.filter !== previousFilter) {
+            this.updateCurrentImageFilter();
+        }
     }
 
     updateWatermark() {
@@ -689,6 +690,15 @@ class PhotoLiveSlideshow {
 
     hideNoImages() {
         this.noImages.classList.add('hidden');
+    }
+
+    updateCurrentImageFilter() {
+        const visibleElement = this.getVisibleImageElement();
+        if (visibleElement && visibleElement.src) {
+            const currentClasses = visibleElement.className.split(' ');
+            const filteredClasses = currentClasses.filter(cls => !cls.startsWith('filter-'));
+            visibleElement.className = [...filteredClasses, `filter-${this.settings.filter}`].join(' ');
+        }
     }
 
     destroy() {
