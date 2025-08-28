@@ -70,8 +70,7 @@
   "transitions": {
     "none": "None",
     "fade": "Fade",
-    "slide": "Slide",
-    "zoom": "Zoom"
+    "slide": "Slide"
   },
   "watermark": {
     "types": {

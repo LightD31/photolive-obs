@@ -75,18 +75,6 @@ body.transparent {
     transition: transform 1s ease-in-out, opacity 0.1s ease-in-out;
 }
 
-.slide-image.transition-zoom-out {
-    transition: transform 0.75s ease-in-out, opacity 0.75s ease-in-out;
-}
-
-.slide-image.transition-zoom-in {
-    transition: transform 0.75s ease-in-out, opacity 0.75s ease-in-out;
-}
-
-.slide-image.transition-zoom-visible {
-    transition: transform 0.75s ease-in-out, opacity 0.75s ease-in-out;
-}
-
 /* Filtres */
 .filter-none {
     filter: none;

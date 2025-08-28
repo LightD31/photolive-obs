@@ -17,8 +17,7 @@
     "transitions": [
       { "id": "none", "name": "None", "duration": 0 },
       { "id": "fade", "name": "Fade", "duration": 1000 },
-      { "id": "slide", "name": "Slide", "duration": 1000 },
-      { "id": "zoom", "name": "Zoom", "duration": 1500 }
+      { "id": "slide", "name": "Slide", "duration": 1000 }
     ],
     "filters": [
       { "id": "none", "name": "None" },

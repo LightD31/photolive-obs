@@ -255,9 +255,6 @@ class PhotoLiveSlideshow {
             case 'slide':
                 this.slideTransition(imagePath, direction);
                 break;
-            case 'zoom':
-                this.zoomTransition(imagePath);
-                break;
             default:
                 this.displayImageDirectly(imagePath);
         }
@@ -345,45 +342,6 @@ class PhotoLiveSlideshow {
         };
         img.onerror = () => {
             console.error('Error loading image for slide transition:', imagePath);
-            this.displayImageDirectly(imagePath);
-        };
-        img.src = imagePath;
-    }
-
-    zoomTransition(imagePath) {
-        // Get the currently visible and hidden elements
-        const currentElement = this.getVisibleImageElement();
-        const nextElement = this.getHiddenImageElement();
-        
-        // Preload the new image
-        const img = new Image();
-        img.onload = () => {
-            // Set up proper z-index: next element on top (will zoom in over current)
-            nextElement.classList.add('z-front');
-            currentElement.classList.remove('z-front');
-            currentElement.classList.add('z-back');
-            
-            // Set up the next image for zoom in (start small and hidden)
-            nextElement.src = imagePath;
-            nextElement.className = `slide-image filter-${this.settings.filter} z-front`;
-            nextElement.style.transform = 'scale(0.1)';
-            nextElement.style.opacity = '0';
-            nextElement.style.visibility = 'visible';
-            
-            // Start zoom in animation for next image
-            requestAnimationFrame(() => {
-                nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom-in z-front`;
-                nextElement.style.transform = 'scale(1)';
-                nextElement.style.opacity = '1';
-            });
-            
-            // After zoom in completes, remove the current image
-            setTimeout(() => {
-                this.completeTransition(currentElement, nextElement);
-            }, 1500); // Full duration for zoom in animation
-        };
-        img.onerror = () => {
-            console.error('Error loading image for zoom transition:', imagePath);
             this.displayImageDirectly(imagePath);
         };
         img.src = imagePath;
