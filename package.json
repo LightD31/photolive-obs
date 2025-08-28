@@ -6,7 +6,11 @@
   "homepage": ".",
   "scripts": {
     "start": "node server.js",
+    "start:new": "node server-new.js",
     "dev": "node server.js",
+    "dev:new": "node server-new.js",
+    "test:refactor": "node test-refactor.js",
+    "migrate": "node migrate.js",
     "clean": "rimraf dist node_modules package-lock.json",
     "reinstall": "npm run clean && npm install"
   },

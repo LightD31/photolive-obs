@@ -2,11 +2,31 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Start PhotoLive OBS Server",
+			"label": "Start PhotoLive OBS Server (Original)",
 			"type": "shell",
 			"command": "node",
 			"args": [
 				"server.js"
+			],
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new"
+			},
+			"options": {
+				"cwd": "${workspaceFolder}"
+			}
+		},
+		{
+			"label": "Start PhotoLive OBS Server (Refactored)",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"server-new.js"
 			],
 			"group": "build",
 			"isBackground": true,
