@@ -1,7 +1,7 @@
 {
   "name": "photolive-obs",
   "version": "1.0.0",
-  "description": "Real-time photo slideshow application for OBS Studio with automatic folder monitoring and web interface",
+  "description": "Real-time photo slideshow application for OBS Studio with automatic folder monitoring and web interface (refactored modular architecture)",
   "main": "server.js",
   "homepage": ".",
   "scripts": {
@@ -12,7 +12,8 @@
     "test:refactor": "node test-refactor.js",
     "migrate": "node migrate.js",
     "clean": "rimraf dist node_modules package-lock.json",
-    "reinstall": "npm run clean && npm install"
+    "reinstall": "npm run clean && npm install",
+    "start:original": "node server.js.backup"
   },
   "keywords": [
     "slideshow",

@@ -22,11 +22,11 @@
 			}
 		},
 		{
-			"label": "Start PhotoLive OBS Server (Refactored)",
+			"label": "Start PhotoLive OBS Server",
 			"type": "shell",
 			"command": "node",
 			"args": [
-				"server-new.js"
+				"server.js"
 			],
 			"group": "build",
 			"isBackground": true,

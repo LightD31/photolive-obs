@@ -40,22 +40,26 @@ class PhotoLiveControl {
     }
 
     async init() {
-        // Initialize i18n first
-        await this.initializeI18n();
-        
-        this.setupElements();
-        this.setupSocket();
-        this.setupEventListeners();
-        this.setupCollapsibleSections();
-        this.loadInitialData();
-        this.updateSlideshowUrl();
-        this.initializeGridZoom();
-        this.initializeGridSort();
-        this.setupGridEventDelegation();
-        
-        // Request current slideshow state
-        if (this.socket) {
-            this.socket.emit('get-slideshow-state');
+        try {
+            // Initialize i18n first
+            await this.initializeI18n();
+            
+            this.setupElements();
+            this.setupSocket();
+            this.setupEventListeners();
+            this.setupCollapsibleSections();
+            this.updateSlideshowUrl();
+            this.initializeGridZoom();
+            this.initializeGridSort();
+            this.setupGridEventDelegation();
+            
+            // Load initial data
+            await this.loadInitialData();
+            
+            console.log('PhotoLive Control initialized successfully');
+        } catch (error) {
+            console.error('Error during initialization:', error);
+            this.showNotification('Failed to initialize control interface', 'error');
         }
     }
 
@@ -63,21 +67,27 @@ class PhotoLiveControl {
         try {
             // Get saved language preference from settings or localStorage
             const savedLanguage = this.settings.language || localStorage.getItem('photolive-language');
-            await window.i18n.init(savedLanguage);
             
-            // Update language selector
-            const languageSelect = document.getElementById('language-select');
-            if (languageSelect) {
-                languageSelect.value = window.i18n.getCurrentLanguage();
+            if (window.i18n) {
+                await window.i18n.init(savedLanguage);
+                
+                // Update language selector
+                const languageSelect = document.getElementById('language-select');
+                if (languageSelect) {
+                    languageSelect.value = window.i18n.getCurrentLanguage();
+                }
+                
+                // Listen for language changes
+                document.addEventListener('languageChanged', (event) => {
+                    this.onLanguageChanged(event.detail.language);
+                });
+            } else {
+                console.warn('i18n not available, skipping internationalization');
             }
-            
-            // Listen for language changes
-            document.addEventListener('languageChanged', (event) => {
-                this.onLanguageChanged(event.detail.language);
-            });
             
         } catch (error) {
             console.error('Failed to initialize i18n:', error);
+            // Continue without i18n if it fails
         }
     }
 
@@ -214,10 +224,25 @@ class PhotoLiveControl {
     }
 
     setupElements() {
+        console.log('Setting up DOM elements...');
+        
         // Status elements
         this.connectionStatus = document.getElementById('connection-status');
         this.imagesCount = document.getElementById('images-count');
         this.imagesGridCount = document.getElementById('images-grid-count');
+        
+        // Check for missing critical elements
+        const criticalElements = {
+            'connection-status': this.connectionStatus,
+            'images-count': this.imagesCount,
+            'images-preview': document.getElementById('images-preview')
+        };
+        
+        for (const [id, element] of Object.entries(criticalElements)) {
+            if (!element) {
+                console.error(`Critical element missing: ${id}`);
+            }
+        }
         
         // Preview elements
         this.currentPreviewContainer = document.getElementById('current-preview-container');
@@ -291,14 +316,17 @@ class PhotoLiveControl {
         // Current image tracking
         this.currentImageIndex = 0;
         this.currentImageData = null;
+        
+        console.log('DOM elements setup complete');
     }
 
     setupSocket() {
         this.socket = io({
-            transports: ['websocket'], // Force WebSocket transport
+            transports: ['websocket', 'polling'], // Allow fallback to polling
             timeout: 5000,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000
         });
         
         this.socket.on('connect', () => {
@@ -307,8 +335,8 @@ class PhotoLiveControl {
             this.requestInitialData();
         });
 
-        this.socket.on('disconnect', () => {
-            console.log('Disconnected from server');
+        this.socket.on('disconnect', (reason) => {
+            console.log('Disconnected from server:', reason);
             this.updateConnectionStatus(false);
         });
 
@@ -317,10 +345,32 @@ class PhotoLiveControl {
             this.updateConnectionStatus(false);
         });
 
+        this.socket.on('reconnect', (attemptNumber) => {
+            console.log('Reconnected to server after', attemptNumber, 'attempts');
+            this.updateConnectionStatus(true);
+            this.requestInitialData();
+        });
+
+        this.socket.on('reconnect_error', (error) => {
+            console.error('Reconnection error:', error);
+        });
+
+        this.socket.on('reconnect_failed', () => {
+            console.error('Failed to reconnect to server');
+            this.showNotification('Unable to connect to server. Please refresh the page.', 'error');
+        });
+
         this.socket.on('images-updated', (data) => {
-            console.log('Images updated:', data.allImages ? data.allImages.length : data.images.length);
-            // Use allImages for grid display, images for slideshow count
-            this.handleImagesUpdate(data.allImages || data.images, data.settings);
+            console.log('Images updated:', data.allImages ? data.allImages.length : data.images ? data.images.length : 0);
+            try {
+                // Use allImages for grid display, images for slideshow count
+                this.updateImages(data.allImages || data.images || []);
+                if (data.settings) {
+                    this.updateSettings(data.settings);
+                }
+            } catch (error) {
+                console.error('Error handling images update:', error);
+            }
         });
 
         this.socket.on('settings-updated', (settings) => {
@@ -595,10 +645,22 @@ class PhotoLiveControl {
             
             const data = await response.json();
             
-            this.handleImagesUpdate(data.allImages || data.images, data.settings);
+            // Use allImages for grid display, images for slideshow functionality
+            this.updateImages(data.allImages || data.images);
+            if (data.settings) {
+                this.updateSettings(data.settings);
+            }
         } catch (error) {
             console.error('Error during initial loading:', error);
-            this.showNotification('Failed to load data from server', 'error');
+            
+            // Show different messages based on error type
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                this.showNotification('Cannot connect to server. Please check if the server is running.', 'error');
+            } else if (error.message.includes('404')) {
+                this.showNotification('API endpoint not found. Please check server version.', 'error');
+            } else {
+                this.showNotification('Failed to load data from server: ' + error.message, 'error');
+            }
         } finally {
             this.loadingData = false;
         }
@@ -610,47 +672,52 @@ class PhotoLiveControl {
             this.socket.emit('get-slideshow-state');
             // Only load if not already loaded or if connection was lost
             if (!this.dataLoaded) {
-                this.loadInitialData();
-                this.dataLoaded = true;
+                this.loadInitialData().then(() => {
+                    this.dataLoaded = true;
+                }).catch(error => {
+                    console.error('Failed to load initial data:', error);
+                });
             }
         }
     }
 
-    // Optimized method to handle images update with debouncing
-    handleImagesUpdate(images, settings) {
-        clearTimeout(this.updateTimeout);
-        this.updateTimeout = setTimeout(() => {
-            this.updateImages(images);
-            if (settings) {
-                this.updateSettings(settings);
-            }
-        }, 100); // Debounce updates
-    }
+
 
     updateConnectionStatus(connected) {
         if (connected) {
-            this.connectionStatus.textContent = 'Connected';
+            this.connectionStatus.textContent = window.i18n ? window.i18n.t('status.connected') || 'Connected' : 'Connected';
             this.connectionStatus.className = 'status-connected';
         } else {
-            this.connectionStatus.textContent = 'Disconnected';
+            this.connectionStatus.textContent = window.i18n ? window.i18n.t('status.disconnected') || 'Disconnected' : 'Disconnected';
             this.connectionStatus.className = 'status-disconnected';
         }
     }
 
     updateImages(images) {
-        this.images = images;
+        this.images = Array.isArray(images) ? images : [];
         this.updateImagesCount();
         this.renderImagesPreview();
         
         // Ensure sort button states are updated after images are loaded
         this.updateSortButtonStates();
+        
+        console.log('Images updated in control UI:', this.images.length, 'images');
     }
 
     updateImagesCount() {
-        const count = this.images.length;
-        const key = count === 1 ? 'status.images_count_singular' : 'status.images_count';
-        const countText = window.i18n.t(key, { count: count });
-        this.imagesCount.textContent = countText;
+        const count = this.images ? this.images.length : 0;
+        let countText;
+        
+        if (window.i18n && window.i18n.t) {
+            const key = count === 1 ? 'status.images_count_singular' : 'status.images_count';
+            countText = window.i18n.t(key, { count: count });
+        } else {
+            countText = count === 1 ? '1 image' : `${count} images`;
+        }
+        
+        if (this.imagesCount) {
+            this.imagesCount.textContent = countText;
+        }
         if (this.imagesGridCount) {
             this.imagesGridCount.textContent = countText;
         }
@@ -724,7 +791,8 @@ class PhotoLiveControl {
         }
         this.settingUpdateInProgress = true;
 
-        const newSettings = { ...this.settings, [key]: value };
+        // Update local settings immediately for better UX
+        this.settings = { ...this.settings, [key]: value };
         
         // Send to server with timeout
         const controller = new AbortController();
@@ -741,20 +809,24 @@ class PhotoLiveControl {
         .then(response => {
             clearTimeout(timeoutId);
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log('Setting updated:', key, value);
+            console.log('Setting updated successfully:', key, value);
+            // Update settings with server response to ensure consistency
+            if (data) {
+                this.settings = { ...this.settings, ...data };
+            }
         })
         .catch(error => {
             if (error.name === 'AbortError') {
                 console.error('Setting update timeout:', key);
                 this.showNotification('Setting update timeout', 'error');
             } else {
-                console.error('Error during update:', error);
-                this.showNotification('Failed to update setting', 'error');
+                console.error('Error updating setting:', error);
+                this.showNotification('Failed to update setting: ' + error.message, 'error');
             }
         })
         .finally(() => {
@@ -885,11 +957,14 @@ class PhotoLiveControl {
     }
 
     performGridRender() {
-        if (this.images.length === 0) {
+        if (!this.images || this.images.length === 0) {
+            const emptyMessage = window.i18n ? window.i18n.t('grid.no_images') || 'No images found' : 'No images found';
+            const emptyDescription = window.i18n ? window.i18n.t('grid.add_images_help') || 'Add images to the photos folder to get started.' : 'Add images (JPG, PNG, GIF, BMP, TIFF) to the "photos" folder to get started.';
+            
             this.imagesPreview.innerHTML = `
                 <div class="empty-state">
-                    <h3>No images found</h3>
-                    <p>Add images (JPG, PNG, GIF, BMP, TIFF) to the "photos" folder to get started.</p>
+                    <h3>${emptyMessage}</h3>
+                    <p>${emptyDescription}</p>
                 </div>
             `;
             this.lastImageListHash = null;
@@ -1010,9 +1085,16 @@ class PhotoLiveControl {
     toggleImageExclusion(filename) {
         if (!this.socket) {
             console.error('Socket not connected');
+            this.showNotification('Not connected to server', 'error');
             return;
         }
         
+        if (!filename) {
+            console.error('No filename provided for exclusion toggle');
+            return;
+        }
+        
+        console.log('Toggling exclusion for:', filename);
         this.socket.emit('toggle-image-exclusion', filename);
     }
 
@@ -1071,16 +1153,18 @@ class PhotoLiveControl {
 
             if (response.ok) {
                 this.showNotification(`Folder changed to: ${data.photosPath}`, 'success');
+                // Update the input field with the resolved path
+                this.photosPath.value = data.photosPath;
                 // Images will be automatically updated via WebSocket
             } else {
                 this.showNotification(data.error || 'Error changing folder', 'error');
             }
         } catch (error) {
             console.error('Error changing folder:', error);
-            this.showNotification('Server connection error', 'error');
+            this.showNotification('Server connection error: ' + error.message, 'error');
         } finally {
             this.changeFolderBtn.disabled = false;
-            this.changeFolderBtn.textContent = '✅ Change';
+            this.changeFolderBtn.textContent = 'Change';
         }
     }
 
@@ -1285,8 +1369,8 @@ class PhotoLiveControl {
 
     async handleWatermarkFileSelection(file) {
         // Validate file type
-        if (!file.type.startsWith('image/')) {
-            this.showNotification('Please select an image file', 'error');
+        if (!file || !file.type.startsWith('image/')) {
+            this.showNotification('Please select a valid image file', 'error');
             return;
         }
 
@@ -1298,8 +1382,12 @@ class PhotoLiveControl {
 
         try {
             // Show upload progress
-            this.watermarkFileName.textContent = 'Uploading...';
-            this.watermarkBrowseBtn.disabled = true;
+            if (this.watermarkFileName) {
+                this.watermarkFileName.textContent = 'Uploading...';
+            }
+            if (this.watermarkBrowseBtn) {
+                this.watermarkBrowseBtn.disabled = true;
+            }
 
             // Create FormData for file upload
             const formData = new FormData();
@@ -1310,26 +1398,35 @@ class PhotoLiveControl {
                 body: formData
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
             const data = await response.json();
 
-            if (response.ok) {
+            if (data.success && data.filePath) {
                 // Update the UI with the selected file
-                this.watermarkFileName.textContent = file.name;
+                if (this.watermarkFileName) {
+                    this.watermarkFileName.textContent = file.name;
+                }
                 
                 // Update the setting with the uploaded file path
                 this.updateSetting('watermarkImage', data.filePath);
                 
                 this.showNotification('Watermark uploaded successfully', 'success');
             } else {
-                this.showNotification(data.error || 'Upload failed', 'error');
-                this.watermarkFileName.textContent = 'No file selected';
+                throw new Error(data.error || 'Upload failed');
             }
         } catch (error) {
             console.error('Error uploading watermark:', error);
-            this.showNotification('Upload failed. Please try again.', 'error');
-            this.watermarkFileName.textContent = 'No file selected';
+            this.showNotification('Upload failed: ' + error.message, 'error');
+            if (this.watermarkFileName) {
+                this.watermarkFileName.textContent = 'No file selected';
+            }
         } finally {
-            this.watermarkBrowseBtn.disabled = false;
+            if (this.watermarkBrowseBtn) {
+                this.watermarkBrowseBtn.disabled = false;
+            }
         }
     }
 
@@ -1372,7 +1469,18 @@ class PhotoLiveControl {
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
-    window.control = new PhotoLiveControl();
+    console.log('DOM loaded, initializing PhotoLive Control...');
+    try {
+        window.control = new PhotoLiveControl();
+        console.log('PhotoLive Control instance created');
+    } catch (error) {
+        console.error('Failed to create PhotoLive Control instance:', error);
+        // Show error message to user
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'position: fixed; top: 20px; left: 20px; right: 20px; background: #f56565; color: white; padding: 16px; border-radius: 8px; z-index: 9999;';
+        errorDiv.textContent = 'Failed to initialize control interface: ' + error.message;
+        document.body.appendChild(errorDiv);
+    }
 });
 
 // Optimized auto-refresh with connection check and exponential backoff
