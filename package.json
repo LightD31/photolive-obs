@@ -5,8 +5,11 @@
   "main": "server.js",
   "homepage": ".",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "node server-new.js",
+    "start:old": "node server.js",
+    "dev": "node server-new.js",
+    "dev:old": "node server.js",
+    "test:logging": "node test-logging.js",
     "clean": "rimraf dist node_modules package-lock.json",
     "reinstall": "npm run clean && npm install"
   },
