@@ -908,10 +908,16 @@ function restartSlideshowTimer() {
 function addImageToQueue(imagePath) {
   logger.debug(`Adding image to queue: ${imagePath}`);
   newImageQueue.push(imagePath);
+  logger.debug(`Queue length after adding ${imagePath}: ${newImageQueue.length}`);
   
   // If not already processing queue, schedule queue processing after current timer finishes
   if (!isProcessingQueue && newImageQueue.length === 1) {
+    logger.debug(`Queue not processing and this is first image, scheduling queue processing`);
     scheduleQueueProcessing();
+  } else if (isProcessingQueue) {
+    logger.debug(`Queue already processing, image ${imagePath} will be processed next`);
+  } else {
+    logger.debug(`Queue has ${newImageQueue.length} images, waiting for current processing to complete`);
   }
 }
 
@@ -930,6 +936,8 @@ function scheduleQueueProcessing() {
 }
 
 function processImageQueue() {
+  logger.debug(`processImageQueue called, queue length: ${newImageQueue.length}, isProcessingQueue: ${isProcessingQueue}`);
+  
   if (newImageQueue.length === 0) {
     // Queue is empty, resume normal slideshow
     logger.debug('Queue processing complete, resuming normal slideshow');
@@ -945,6 +953,7 @@ function processImageQueue() {
   
   // Get next image from queue
   const nextImagePath = newImageQueue.shift();
+  logger.debug(`Processing next image from queue: ${nextImagePath}, remaining queue length: ${newImageQueue.length}`);
   
   // Find the image in the current images list to get full image data
   const nextImage = currentImages.find(img => 
@@ -979,12 +988,14 @@ function processImageQueue() {
         );
         nextOriginalIndex = nextQueueImage ? 
           currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+        logger.debug(`Next image will be from queue: ${nextQueuePath}`);
       } else {
         // Next image would be from normal slideshow after queue finishes
         const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
         nextQueueImage = imagesList[nextIndex];
         nextOriginalIndex = nextQueueImage ? 
           currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+        logger.debug(`Next image will be from normal slideshow after queue finishes`);
       }
       
       io.emit('image-changed', {
@@ -1000,6 +1011,7 @@ function processImageQueue() {
       });
       
       // Schedule the next image in the queue or resume normal slideshow
+      logger.debug(`Scheduling next queue processing in ${slideshowSettings.interval}ms`);
       queueTimer = setTimeout(() => {
         processImageQueue();
       }, slideshowSettings.interval);
@@ -1065,7 +1077,9 @@ function setupFileWatcher() {
           
           // Instead of immediate scanning, first do a silent scan to load the image data
           // then add to queue for ordered display and emit UI update
+          logger.debug(`Starting scan for new image: ${trackingKey}`);
           await scanImagesForQueue(trackingKey);
+          logger.debug(`Scan completed for new image: ${trackingKey}`);
           
           // Emit updated images to UI so control interface shows new images immediately
           io.emit('images-updated', {
@@ -1076,7 +1090,9 @@ function setupFileWatcher() {
           });
           
           // Add to queue for sequential display
+          logger.debug(`Adding to queue: ${trackingKey}`);
           addImageToQueue(trackingKey);
+          logger.debug(`Successfully added to queue: ${trackingKey}, queue length: ${newImageQueue.length}`);
           
           // Clean marking after 5 minutes with error handling
           setTimeout(() => {
