@@ -167,6 +167,9 @@ class SlideshowControls {
     this.nextImage = data.nextImage;
     this.currentIndex = data.currentIndex;
     this.totalImages = data.totalImages;
+    this.originalIndex = data.originalIndex;
+    this.nextOriginalIndex = data.nextOriginalIndex;
+    this.totalOriginalImages = data.totalOriginalImages;
     
     this.updatePlayPauseButton();
     this.updatePreviews();
@@ -230,8 +233,12 @@ class SlideshowControls {
     }
     
     if (this.currentImageIndex) {
-      this.currentImageIndex.textContent = this.totalImages > 0 ? 
-        `${this.currentIndex + 1} / ${this.totalImages}` : '0 / 0';
+      // Use original index (chronological order) instead of shuffled index
+      const currentOriginalIndex = this.originalIndex !== undefined && this.originalIndex >= 0 ? 
+        this.originalIndex + 1 : 0;
+      const totalOriginal = this.totalOriginalImages || this.totalImages;
+      this.currentImageIndex.textContent = totalOriginal > 0 ? 
+        `${currentOriginalIndex} / ${totalOriginal}` : '0 / 0';
     }
 
     // Next image info
@@ -241,9 +248,12 @@ class SlideshowControls {
     }
     
     if (this.nextImageIndex) {
-      const nextIndex = this.totalImages > 0 ? ((this.currentIndex + 1) % this.totalImages) + 1 : 0;
-      this.nextImageIndex.textContent = this.totalImages > 0 ? 
-        `${nextIndex} / ${this.totalImages}` : '0 / 0';
+      // Use next original index (chronological order) instead of shuffled index
+      const nextOriginalIndex = this.nextOriginalIndex !== undefined && this.nextOriginalIndex >= 0 ? 
+        this.nextOriginalIndex + 1 : 0;
+      const totalOriginal = this.totalOriginalImages || this.totalImages;
+      this.nextImageIndex.textContent = totalOriginal > 0 ? 
+        `${nextOriginalIndex} / ${totalOriginal}` : '0 / 0';
     }
   }
 

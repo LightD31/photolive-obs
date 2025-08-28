@@ -196,20 +196,31 @@ class SlideshowService {
     }
   }
 
-  jumpToImage(index) {
+  jumpToImage(originalIndex) {
+    const allImagesList = this.getAllImagesList();
     const imagesList = this.getCurrentImagesList();
-    if (index >= 0 && index < imagesList.length) {
+    
+    // If originalIndex is within bounds of all images
+    if (originalIndex >= 0 && originalIndex < allImagesList.length) {
+      const targetImage = allImagesList[originalIndex];
+      
+      // Find the index of this image in the filtered list
+      const filteredIndex = imagesList.findIndex(img => img.filename === targetImage.filename);
+      
+      // If the image is not in the filtered list (e.g., it's excluded), don't jump
+      if (filteredIndex === -1) {
+        this.logger.debug(`Cannot jump to excluded image: ${targetImage.filename}`);
+        return;
+      }
+      
       const previousIndex = this.state.currentIndex;
       
-      this.state.currentIndex = index;
+      this.state.currentIndex = filteredIndex;
       this.state.currentImage = imagesList[this.state.currentIndex];
       
-      const direction = index > previousIndex ? 1 : (index < previousIndex ? -1 : 0);
+      const direction = filteredIndex > previousIndex ? 1 : (filteredIndex < previousIndex ? -1 : 0);
       
-      this.logger.debug(`Jumped to image: ${previousIndex} -> ${index} (${this.state.currentImage?.filename})`);
-      
-      const originalIndex = this.state.currentImage ? 
-        this.currentImages.findIndex(img => img.filename === this.state.currentImage.filename) : -1;
+      this.logger.debug(`Jumped to image: ${previousIndex} -> ${filteredIndex} (${this.state.currentImage?.filename})`);
       
       let nextImage = null;
       let nextOriginalIndex = -1;
