@@ -139,7 +139,8 @@ class SocketService {
         nextOriginalIndex: nextOriginalIndex,
         isPlaying: state.isPlaying,
         totalImages: imagesList.length,
-        totalOriginalImages: currentImages.length
+        totalOriginalImages: currentImages.length,
+        interval: settings.interval
       };
 
       // Use setTimeout to prevent blocking operations

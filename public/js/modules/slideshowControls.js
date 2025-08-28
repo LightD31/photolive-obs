@@ -11,6 +11,9 @@ class SlideshowControls {
     this.nextImage = null;
     this.currentIndex = 0;
     this.totalImages = 0;
+    this.currentInterval = 5000; // Default 5 seconds
+    this.timerStartTime = null;
+    this.progressUpdateInterval = null;
     
     this.setupElements();
     this.setupEventHandlers();
@@ -34,6 +37,10 @@ class SlideshowControls {
     this.nextPreviewContainer = document.getElementById('next-preview-container');
     this.nextImageName = document.getElementById('next-image-name');
     this.nextImageIndex = document.getElementById('next-image-index');
+    
+    // Timer progress elements
+    this.timerProgressFill = document.getElementById('timer-progress-fill');
+    this.timerProgressText = document.getElementById('timer-progress-text');
   }
 
   setupEventHandlers() {
@@ -76,11 +83,14 @@ class SlideshowControls {
     this.socket.on('pause-slideshow', () => {
       this.isPlaying = false;
       this.updatePlayPauseButton();
+      this.stopTimerProgress();
+      this.updateTimerProgressText();
     });
 
     this.socket.on('resume-slideshow', () => {
       this.isPlaying = true;
       this.updatePlayPauseButton();
+      this.startTimerProgress();
     });
   }
 
@@ -121,32 +131,50 @@ class SlideshowControls {
   pause() {
     this.isPlaying = false;
     this.updatePlayPauseButton();
+    this.stopTimerProgress();
+    this.updateTimerProgressText();
     this.socket.send('pause-slideshow');
   }
 
   resume() {
     this.isPlaying = true;
     this.updatePlayPauseButton();
+    this.startTimerProgress();
     this.socket.send('resume-slideshow');
   }
 
   goToNextImage() {
     this.socket.send('next-image');
+    // Reset timer on manual navigation
+    this.startTimerProgress();
   }
 
   previousImage() {
     this.socket.send('prev-image');
+    // Reset timer on manual navigation
+    this.startTimerProgress();
   }
 
   jumpToImage(index) {
     this.socket.send('jump-to-image', index);
+    // Reset timer on manual navigation
+    this.startTimerProgress();
   }
 
   updateInterval(seconds) {
     const milliseconds = seconds * 1000;
+    this.currentInterval = milliseconds;
     
     if (this.intervalValue) {
       this.intervalValue.textContent = `${seconds}s`;
+    }
+    
+    // Update timer progress text
+    this.updateTimerProgressText();
+    
+    // Reset timer progress when interval changes
+    if (this.isPlaying) {
+      this.startTimerProgress();
     }
     
     // Send to server
@@ -162,6 +190,9 @@ class SlideshowControls {
   }
 
   updateState(data) {
+    // Check if the playing state changed
+    const wasPlaying = this.isPlaying;
+    
     this.isPlaying = data.isPlaying;
     this.currentImage = data.currentImage;
     this.nextImage = data.nextImage;
@@ -171,9 +202,23 @@ class SlideshowControls {
     this.nextOriginalIndex = data.nextOriginalIndex;
     this.totalOriginalImages = data.totalOriginalImages;
     
+    // Update interval if provided
+    if (data.interval) {
+      this.currentInterval = data.interval;
+    }
+    
+    console.log('Update state:', {
+      isPlaying: this.isPlaying,
+      currentInterval: this.currentInterval,
+      currentImage: this.currentImage?.filename || 'none'
+    });
+    
     this.updatePlayPauseButton();
     this.updatePreviews();
     this.updateImageInfo();
+    
+    // Always restart timer progress when state updates (new image or state change)
+    this.startTimerProgress();
     
     if (this.options.onStateChange) {
       this.options.onStateChange(data);
@@ -268,11 +313,18 @@ class SlideshowControls {
   }
 
   setInterval(seconds) {
+    this.currentInterval = seconds * 1000;
     if (this.intervalSlider) {
       this.intervalSlider.value = seconds;
     }
     if (this.intervalValue) {
       this.intervalValue.textContent = `${seconds}s`;
+    }
+    this.updateTimerProgressText();
+    
+    // Reset timer progress when interval is set from server
+    if (this.isPlaying) {
+      this.startTimerProgress();
     }
   }
 
@@ -294,6 +346,80 @@ class SlideshowControls {
 
   isCurrentlyPlaying() {
     return this.isPlaying;
+  }
+
+  startTimerProgress() {
+    // Clear any existing timer
+    this.stopTimerProgress();
+    
+    if (!this.isPlaying) {
+      // If paused, show static progress
+      this.updateTimerProgressText();
+      console.log('Timer progress: paused state');
+      return;
+    }
+    
+    // Reset timer
+    this.timerStartTime = Date.now();
+    console.log('Timer progress: started for', this.currentInterval / 1000, 'seconds');
+    
+    // Update progress every 100ms for smooth animation
+    this.progressUpdateInterval = setInterval(() => {
+      this.updateTimerProgress();
+    }, 100);
+    
+    // Initial update
+    this.updateTimerProgress();
+  }
+
+  stopTimerProgress() {
+    if (this.progressUpdateInterval) {
+      clearInterval(this.progressUpdateInterval);
+      this.progressUpdateInterval = null;
+    }
+  }
+
+  updateTimerProgress() {
+    if (!this.timerStartTime || !this.isPlaying) {
+      return;
+    }
+    
+    const elapsed = Date.now() - this.timerStartTime;
+    const progress = Math.min((elapsed / this.currentInterval) * 100, 100);
+    
+    // Update progress bar
+    if (this.timerProgressFill) {
+      this.timerProgressFill.style.width = `${progress}%`;
+    }
+    
+    // Update text
+    const elapsedSeconds = Math.floor(elapsed / 1000);
+    const totalSeconds = Math.floor(this.currentInterval / 1000);
+    
+    if (this.timerProgressText) {
+      this.timerProgressText.textContent = `${elapsedSeconds}s / ${totalSeconds}s`;
+    }
+    
+    // If progress is complete, reset for next cycle
+    if (progress >= 100) {
+      this.timerStartTime = Date.now();
+      console.log('Timer progress: reset for next cycle');
+    }
+  }
+
+  updateTimerProgressText() {
+    const totalSeconds = Math.floor(this.currentInterval / 1000);
+    if (this.timerProgressText) {
+      if (this.isPlaying) {
+        this.timerProgressText.textContent = `0s / ${totalSeconds}s`;
+      } else {
+        this.timerProgressText.textContent = `Paused / ${totalSeconds}s`;
+      }
+    }
+    
+    if (this.timerProgressFill && !this.isPlaying) {
+      this.timerProgressFill.style.width = '0%';
+    }
   }
 }
 

@@ -138,7 +138,8 @@ class SlideshowService {
         nextOriginalIndex: nextOriginalIndex,
         isPlaying: this.state.isPlaying,
         totalImages: imagesList.length,
-        totalOriginalImages: this.currentImages.length
+        totalOriginalImages: this.currentImages.length,
+        interval: this.settings.interval
       });
     }
   }
@@ -191,7 +192,9 @@ class SlideshowService {
         nextImage: nextImage,
         nextOriginalIndex: nextOriginalIndex,
         direction: direction,
-        totalImages: imagesList.length
+        totalImages: imagesList.length,
+        interval: this.settings.interval,
+        isPlaying: this.state.isPlaying
       });
     }
   }
@@ -239,7 +242,9 @@ class SlideshowService {
           nextImage: nextImage,
           nextOriginalIndex: nextOriginalIndex,
           direction: direction,
-          totalImages: imagesList.length
+          totalImages: imagesList.length,
+          interval: this.settings.interval,
+          isPlaying: this.state.isPlaying
         });
       }
     }
@@ -425,7 +430,9 @@ class SlideshowService {
               direction: 1,
               totalImages: imagesList.length,
               isQueueProcessing: false,
-              queueLength: 0
+              queueLength: 0,
+              interval: this.settings.interval,
+              isPlaying: this.state.isPlaying
             });
           }
         }
@@ -494,7 +501,9 @@ class SlideshowService {
             direction: 1,
             totalImages: imagesList.length,
             isQueueProcessing: true,
-            queueLength: this.newImageQueue.length
+            queueLength: this.newImageQueue.length,
+            interval: this.settings.interval,
+            isPlaying: this.state.isPlaying
           });
         }
         

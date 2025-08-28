@@ -194,6 +194,12 @@ class PhotoLiveControl {
         // Update settings UI
         if (settings) {
             this.settingsManager.updateUI(settings);
+            
+            // Update slideshow controls interval
+            if (settings.interval && this.slideshowControls) {
+                const intervalSeconds = Math.round(settings.interval / 1000);
+                this.slideshowControls.setInterval(intervalSeconds);
+            }
         }
         
         // Update images count
@@ -238,6 +244,12 @@ class PhotoLiveControl {
     onSettingsChanged(settings) {
         // Handle any additional logic when settings change
         console.log('Settings changed:', settings);
+        
+        // Update slideshow controls interval if changed
+        if (settings.interval && this.slideshowControls) {
+            const intervalSeconds = Math.round(settings.interval / 1000);
+            this.slideshowControls.setInterval(intervalSeconds);
+        }
     }
 
     handleScanProgress(data) {

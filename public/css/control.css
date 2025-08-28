@@ -288,6 +288,40 @@ header h1 {
     flex-shrink: 0;
 }
 
+/* Timer Progress Bar */
+.timer-progress-container {
+    margin-top: 12px;
+}
+
+.timer-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.timer-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    border-radius: 4px;
+    transition: width 0.1s ease-out;
+    width: 0%;
+}
+
+.timer-progress-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.timer-progress-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
 /* Compact layouts */
 .setting-row {
     display: flex;
