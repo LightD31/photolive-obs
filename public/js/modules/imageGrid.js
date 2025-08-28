@@ -233,7 +233,7 @@ class ImageGrid {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
-  highlightCurrentImage(currentIndex) {
+  highlightCurrentImage(currentIndex, scrollToImage = false) {
     // Remove previous highlights
     this.container.querySelectorAll('.image-item.current').forEach(item => {
       item.classList.remove('current');
@@ -245,12 +245,14 @@ class ImageGrid {
       if (currentItem) {
         currentItem.classList.add('current');
         
-        // Scroll into view if needed
-        currentItem.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'nearest',
-          inline: 'nearest'
-        });
+        // Only scroll if explicitly requested
+        if (scrollToImage) {
+          currentItem.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
       }
     }
   }
