@@ -120,13 +120,15 @@ class ImageService {
     // Combine: new images first, then regular images
     this.imageOrder = [...newImagesList, ...regularImages];
     
-    // If there are new images, jump to the first new image to display it immediately
+    // Reset index if out of bounds
+    if (this.currentIndex >= this.imageOrder.length) {
+      this.currentIndex = 0;
+    }
+    
+    // Log new images being queued, but don't jump immediately
     if (newImagesList.length > 0) {
-      this.currentIndex = 0;
-      logger.debug(`Jumping to first new image: ${newImagesList[0]}`);
-    } else if (this.currentIndex >= this.imageOrder.length) {
-      // Reset index if out of bounds (only when no new images)
-      this.currentIndex = 0;
+      logger.debug(`${newImagesList.length} new images queued at front: ${newImagesList.join(', ')}`);
+      logger.debug(`Next timer interval will show new images, current index: ${this.currentIndex}`);
     }
 
     logger.debug(`Updated image order: ${this.imageOrder.length} images (${newImagesList.length} new)`);
