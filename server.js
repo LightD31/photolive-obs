@@ -228,6 +228,7 @@ let slideshowTimer = null;
 let newImageQueue = []; // Queue of new images to display
 let isProcessingQueue = false; // Flag to track if we're processing the queue
 let queueTimer = null; // Timer for queue processing
+let originalSlideshowIndex = -1; // Index where normal slideshow was when queue started
 
 // Semaphore to limit concurrent EXIF operations and prevent file descriptor exhaustion
 class ExifSemaphore {
@@ -910,14 +911,12 @@ function addImageToQueue(imagePath) {
   newImageQueue.push(imagePath);
   logger.debug(`Queue length after adding ${imagePath}: ${newImageQueue.length}`);
   
-  // If not already processing queue, schedule queue processing after current timer finishes
-  if (!isProcessingQueue && newImageQueue.length === 1) {
-    logger.debug(`Queue not processing and this is first image, scheduling queue processing`);
+  // If not already processing queue and we have images in queue, schedule queue processing
+  if (!isProcessingQueue && newImageQueue.length > 0) {
+    logger.debug(`Queue not processing and has ${newImageQueue.length} images, scheduling queue processing`);
     scheduleQueueProcessing();
   } else if (isProcessingQueue) {
     logger.debug(`Queue already processing, image ${imagePath} will be processed next`);
-  } else {
-    logger.debug(`Queue has ${newImageQueue.length} images, waiting for current processing to complete`);
   }
 }
 
@@ -925,8 +924,12 @@ function scheduleQueueProcessing() {
   if (isProcessingQueue) {
     return; // Already processing
   }
-  
+
   logger.debug('Scheduling queue processing after current timer finishes');
+  
+  // Save the current slideshow position before starting queue processing
+  originalSlideshowIndex = slideshowState.currentIndex;
+  logger.debug(`Saved original slideshow index: ${originalSlideshowIndex}`);
   
   // Stop the normal slideshow timer to prevent it from changing images during queue processing
   stopSlideshowTimer();
@@ -939,9 +942,51 @@ function processImageQueue() {
   logger.debug(`processImageQueue called, queue length: ${newImageQueue.length}, isProcessingQueue: ${isProcessingQueue}`);
   
   if (newImageQueue.length === 0) {
-    // Queue is empty, resume normal slideshow
+    // Queue is empty, resume normal slideshow from original position
     logger.debug('Queue processing complete, resuming normal slideshow');
     isProcessingQueue = false;
+    
+    // Resume slideshow from the position where it was when queue started
+    if (originalSlideshowIndex !== -1) {
+      const imagesList = getCurrentImagesList();
+      const resumeIndex = (originalSlideshowIndex + 1) % imagesList.length;
+      const resumeImage = imagesList[resumeIndex];
+      
+      if (resumeImage) {
+        slideshowState.currentIndex = resumeIndex;
+        slideshowState.currentImage = resumeImage;
+        logger.debug(`Resuming slideshow at index ${resumeIndex}: ${resumeImage.filename}`);
+        
+        // Emit the resumed slideshow state
+        const originalIndex = currentImages.findIndex(img => img.filename === resumeImage.filename);
+        
+        // Calculate next image for resumed slideshow
+        let nextImage = null;
+        let nextOriginalIndex = -1;
+        if (imagesList.length > 1) {
+          const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+          nextImage = imagesList[nextIndex];
+          nextOriginalIndex = nextImage ? 
+            currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+        }
+        
+        io.emit('image-changed', {
+          currentImage: slideshowState.currentImage,
+          currentIndex: slideshowState.currentIndex,
+          originalIndex: originalIndex,
+          nextImage: nextImage,
+          nextOriginalIndex: nextOriginalIndex,
+          direction: 1,
+          totalImages: imagesList.length,
+          isQueueProcessing: false,
+          queueLength: 0
+        });
+      }
+      
+      // Reset original slideshow index
+      originalSlideshowIndex = -1;
+    }
+    
     restartSlideshowTimer();
     return;
   }
@@ -990,12 +1035,21 @@ function processImageQueue() {
           currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
         logger.debug(`Next image will be from queue: ${nextQueuePath}`);
       } else {
-        // Next image would be from normal slideshow after queue finishes
-        const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
-        nextQueueImage = imagesList[nextIndex];
-        nextOriginalIndex = nextQueueImage ? 
-          currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
-        logger.debug(`Next image will be from normal slideshow after queue finishes`);
+        // Queue will be empty after this image, show where slideshow will resume
+        if (originalSlideshowIndex !== -1) {
+          const resumeIndex = (originalSlideshowIndex + 1) % imagesList.length;
+          nextQueueImage = imagesList[resumeIndex];
+          nextOriginalIndex = nextQueueImage ? 
+            currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+          logger.debug(`Next image will be from normal slideshow resuming at index ${resumeIndex}`);
+        } else {
+          // Fallback: next image in current sequence
+          const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+          nextQueueImage = imagesList[nextIndex];
+          nextOriginalIndex = nextQueueImage ? 
+            currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+          logger.debug(`Next image will be from normal slideshow after queue finishes (fallback)`);
+        }
       }
       
       io.emit('image-changed', {
