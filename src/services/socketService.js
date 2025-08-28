@@ -56,6 +56,7 @@ class SocketService {
     socket.on('next-image', () => this.handleNextImage(socket));
     socket.on('prev-image', () => this.handlePreviousImage(socket));
     socket.on('jump-to-image', (data) => this.handleJumpToImage(socket, data));
+    socket.on('jump-to-image-by-filename', (data) => this.handleJumpToImageByFilename(socket, data));
     socket.on('pause-slideshow', () => this.handlePauseSlideshow(socket));
     socket.on('resume-slideshow', () => this.handleResumeSlideshow(socket));
     socket.on('get-slideshow-state', () => this.handleGetSlideshowState(socket));
@@ -121,6 +122,18 @@ class SocketService {
     if (image) {
       this.broadcastSlideshowState();
       logger.debug(`Jumped to image ${index}: ${image.filename}`);
+    }
+  }
+
+  /**
+   * Handle jump to image by filename request
+   */
+  handleJumpToImageByFilename(socket, data) {
+    const filename = typeof data === 'string' ? data : data.filename;
+    const image = imageService.jumpToImageByFilename(filename);
+    if (image) {
+      this.broadcastSlideshowState();
+      logger.debug(`Jumped to image by filename: ${filename}`);
     }
   }
 

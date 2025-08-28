@@ -216,9 +216,9 @@ class PhotoLiveControl {
     setupGridEventDelegation() {
         this.imagesPreview.addEventListener('click', (e) => {
             const imageItem = e.target.closest('.image-item');
-            if (imageItem && imageItem.dataset.index) {
-                const originalIndex = parseInt(imageItem.dataset.index);
-                this.socket.emit('jump-to-image', { index: originalIndex });
+            if (imageItem && imageItem.dataset.filename) {
+                const filename = imageItem.dataset.filename;
+                this.socket.emit('jump-to-image-by-filename', { filename });
             }
         });
     }

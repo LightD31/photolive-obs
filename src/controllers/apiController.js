@@ -256,7 +256,7 @@ router.post('/slideshow/:action', (req, res) => {
 });
 
 /**
- * Jump to image
+ * Jump to image by index in slideshow order
  */
 router.post('/slideshow/jump/:index', (req, res) => {
   try {
@@ -291,6 +291,34 @@ router.post('/slideshow/jump/:index', (req, res) => {
 });
 
 /**
+ * Jump to image by filename
+ */
+router.post('/slideshow/jump-to/:filename', (req, res) => {
+  try {
+    const { filename } = req.params;
+    
+    const image = imageService.jumpToImageByFilename(filename);
+    
+    if (image) {
+      socketService.broadcastSlideshowState();
+      res.json({ 
+        success: true, 
+        message: `Jumped to image ${filename}`,
+        data: image 
+      });
+    } else {
+      res.status(404).json({ 
+        success: false, 
+        error: 'Image not found or not in slideshow' 
+      });
+    }
+  } catch (error) {
+    logger.error('Error jumping to image by filename:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
  * Toggle image properties
  */
 router.post('/images/:filename/:action', (req, res) => {
@@ -302,9 +330,7 @@ router.post('/images/:filename/:action', (req, res) => {
       case 'exclude':
         result = imageService.toggleImageExclusion(filename);
         break;
-      case 'priority':
-        result = imageService.toggleImagePriority(filename);
-        break;
+
       case 'seen':
         result = imageService.markImageAsSeen(filename);
         break;

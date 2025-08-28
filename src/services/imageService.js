@@ -16,7 +16,7 @@ class ImageService {
   constructor() {
     this.images = [];
     this.newImages = new Set();
-    this.priorityImages = new Set();
+    this.newImageQueue = []; // Queue for newly detected images
     this.excludedImages = new Set();
     this.currentPhotosPath = config.photosPath;
     this.imageOrder = [];
@@ -69,7 +69,6 @@ class ImageService {
               photoDate: await getPhotoDate(filePath),
               thumbnail: await extractExifThumbnail(filePath),
               isNew: this.newImages.has(file),
-              isPriority: this.priorityImages.has(file),
               isExcluded: this.excludedImages.has(file)
             };
 
@@ -104,29 +103,29 @@ class ImageService {
       .filter(img => !img.isExcluded)
       .map(img => img.filename);
 
-    // Handle priority images
-    const priorityList = Array.from(this.priorityImages).filter(img => 
+    // Handle new images queue (highest priority)
+    const newImagesList = this.newImageQueue.filter(img => 
       availableImages.includes(img)
     );
     
     const regularImages = availableImages.filter(img => 
-      !this.priorityImages.has(img)
+      !this.newImageQueue.includes(img)
     );
 
-    // Shuffle if enabled
+    // Shuffle if enabled (only regular images)
     if (config.defaults.shuffle) {
       shuffleArray(regularImages);
     }
 
-    // Combine priority images first, then regular images
-    this.imageOrder = [...priorityList, ...regularImages];
+    // Combine: new images first, then regular images
+    this.imageOrder = [...newImagesList, ...regularImages];
     
     // Reset index if out of bounds
     if (this.currentIndex >= this.imageOrder.length) {
       this.currentIndex = 0;
     }
 
-    logger.debug(`Updated image order: ${this.imageOrder.length} images (${priorityList.length} priority)`);
+    logger.debug(`Updated image order: ${this.imageOrder.length} images (${newImagesList.length} new)`);
     
     // Restart timer with new image order
     this.restartSlideshowTimer();
@@ -172,6 +171,25 @@ class ImageService {
    */
   nextImage() {
     if (this.imageOrder.length === 0) return null;
+    
+    const currentFilename = this.imageOrder[this.currentIndex];
+    
+    // If current image was in new queue, remove it and move to regular rotation
+    if (this.newImageQueue.includes(currentFilename)) {
+      this.newImageQueue = this.newImageQueue.filter(img => img !== currentFilename);
+      this.newImages.delete(currentFilename);
+      const image = this.images.find(img => img.filename === currentFilename);
+      if (image) image.isNew = false;
+      
+      // Update order after removing from new queue (this will shuffle if enabled)
+      this.updateImageOrder();
+      
+      // Adjust current index since order changed
+      if (this.currentIndex >= this.imageOrder.length) {
+        this.currentIndex = 0;
+      }
+    }
+    
     this.currentIndex = (this.currentIndex + 1) % this.imageOrder.length;
     return this.getCurrentImage();
   }
@@ -186,11 +204,29 @@ class ImageService {
   }
 
   /**
-   * Jump to specific image
+   * Jump to specific image by index in imageOrder
    */
   jumpToImage(index) {
     if (index >= 0 && index < this.imageOrder.length) {
       this.currentIndex = index;
+      return this.getCurrentImage();
+    }
+    return null;
+  }
+
+  /**
+   * Jump to specific image by filename
+   */
+  jumpToImageByFilename(filename) {
+    const index = this.imageOrder.findIndex(img => img === filename);
+    if (index !== -1) {
+      this.currentIndex = index;
+      
+      // If jumping to a regular image but new images exist, return to new queue after this image
+      if (this.newImageQueue.length > 0 && !this.newImageQueue.includes(filename)) {
+        this.currentIndex = this.newImageQueue.length - 1; // Will advance to first new image on next timer
+      }
+      
       return this.getCurrentImage();
     }
     return null;
@@ -221,12 +257,12 @@ class ImageService {
       photoDate: await getPhotoDate(filePath),
       thumbnail: await extractExifThumbnail(filePath),
       isNew: true,
-      isPriority: false,
       isExcluded: false
     };
 
-    // Add to new images set
+    // Add to new images set and queue
     this.newImages.add(filename);
+    this.newImageQueue.unshift(filename); // Add to front of queue
     
     // Add to images array
     this.images.push(imageInfo);
@@ -237,7 +273,7 @@ class ImageService {
     // Update order
     this.updateImageOrder();
     
-    logger.info(`Added new image: ${filename}`);
+    logger.info(`Added new image to queue: ${filename}`);
     return true;
   }
 
@@ -249,7 +285,7 @@ class ImageService {
     if (index !== -1) {
       this.images.splice(index, 1);
       this.newImages.delete(filename);
-      this.priorityImages.delete(filename);
+      this.newImageQueue = this.newImageQueue.filter(img => img !== filename);
       this.excludedImages.delete(filename);
       this.updateImageOrder();
       logger.info(`Removed image: ${filename}`);
@@ -277,24 +313,7 @@ class ImageService {
     return null;
   }
 
-  /**
-   * Toggle image priority
-   */
-  toggleImagePriority(filename) {
-    const image = this.images.find(img => img.filename === filename);
-    if (image) {
-      if (this.priorityImages.has(filename)) {
-        this.priorityImages.delete(filename);
-        image.isPriority = false;
-      } else {
-        this.priorityImages.add(filename);
-        image.isPriority = true;
-      }
-      this.updateImageOrder();
-      return image.isPriority;
-    }
-    return null;
-  }
+
 
   /**
    * Mark image as seen (not new)
@@ -326,7 +345,7 @@ class ImageService {
 
     this.currentPhotosPath = resolvedPath;
     this.newImages.clear();
-    this.priorityImages.clear();
+    this.newImageQueue = [];
     this.excludedImages.clear();
     
     await this.loadImages();
