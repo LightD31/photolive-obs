@@ -132,7 +132,6 @@ class SlideshowControls {
     this.isPlaying = false;
     this.updatePlayPauseButton();
     this.stopTimerProgress();
-    this.updateTimerProgressText();
     this.socket.send('pause-slideshow');
   }
 
@@ -168,9 +167,6 @@ class SlideshowControls {
     if (this.intervalValue) {
       this.intervalValue.textContent = `${seconds}s`;
     }
-    
-    // Update timer progress text
-    this.updateTimerProgressText();
     
     // Reset timer progress when interval changes
     if (this.isPlaying) {
@@ -320,8 +316,6 @@ class SlideshowControls {
     if (this.intervalValue) {
       this.intervalValue.textContent = `${seconds}s`;
     }
-    this.updateTimerProgressText();
-    
     // Reset timer progress when interval is set from server
     if (this.isPlaying) {
       this.startTimerProgress();
@@ -353,9 +347,7 @@ class SlideshowControls {
     this.stopTimerProgress();
     
     if (!this.isPlaying) {
-      // If paused, show static progress
-      this.updateTimerProgressText();
-      console.log('Timer progress: paused state');
+        console.log('Timer progress: paused state');
       return;
     }
     
@@ -392,13 +384,7 @@ class SlideshowControls {
       this.timerProgressFill.style.width = `${progress}%`;
     }
     
-    // Update text
-    const elapsedSeconds = Math.floor(elapsed / 1000);
-    const totalSeconds = Math.floor(this.currentInterval / 1000);
-    
-    if (this.timerProgressText) {
-      this.timerProgressText.textContent = `${elapsedSeconds}s / ${totalSeconds}s`;
-    }
+
     
     // If progress is complete, reset for next cycle
     if (progress >= 100) {
@@ -407,20 +393,7 @@ class SlideshowControls {
     }
   }
 
-  updateTimerProgressText() {
-    const totalSeconds = Math.floor(this.currentInterval / 1000);
-    if (this.timerProgressText) {
-      if (this.isPlaying) {
-        this.timerProgressText.textContent = `0s / ${totalSeconds}s`;
-      } else {
-        this.timerProgressText.textContent = `Paused / ${totalSeconds}s`;
-      }
-    }
-    
-    if (this.timerProgressFill && !this.isPlaying) {
-      this.timerProgressFill.style.width = '0%';
-    }
-  }
+
 }
 
 // Export for use in other modules
