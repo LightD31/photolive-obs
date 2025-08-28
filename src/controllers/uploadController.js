@@ -38,11 +38,12 @@ const watermarkUpload = multer({
     files: 1
   },
   fileFilter: (req, file, cb) => {
-    // Only allow PNG files for watermarks
-    if (file.mimetype === 'image/png') {
+    // Allow common image formats for watermarks
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PNG files are allowed for watermarks'), false);
+      cb(new Error('Only image files (PNG, JPEG, GIF, WebP) are allowed for watermarks'), false);
     }
   }
 });
@@ -67,10 +68,16 @@ router.post('/watermark', watermarkUpload.single('watermark'), async (req, res) 
     
     logger.info(`Watermark uploaded: ${req.file.filename}`);
     
+    // Return the path relative to uploads for the frontend
+    const relativePath = `/uploads/watermarks/${req.file.filename}`;
+    
     res.json({ 
       success: true, 
       message: 'Watermark uploaded successfully',
-      data: watermark 
+      data: { 
+        ...watermark,
+        path: relativePath 
+      } 
     });
   } catch (error) {
     logger.error('Error uploading watermark:', error);
@@ -84,7 +91,7 @@ router.post('/watermark', watermarkUpload.single('watermark'), async (req, res) 
       }
     }
     
-    if (error.message.includes('PNG files')) {
+    if (error.message.includes('image files')) {
       res.status(400).json({ 
         success: false, 
         error: error.message 

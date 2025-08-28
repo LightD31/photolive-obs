@@ -14,6 +14,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 // Controllers
 const apiController = require('./controllers/apiController');
 const uploadController = require('./controllers/uploadController');
+const photoController = require('./controllers/photoController');
 
 // Services
 const imageService = require('./services/imageService');
@@ -91,7 +92,7 @@ class PhotoLiveApp {
     
     // Static files
     this.app.use(express.static(config.publicPath));
-    this.app.use('/photos', express.static(config.photosPath));
+    // Note: /photos is now handled by dynamic routes in photoController
     this.app.use('/uploads', express.static(config.uploadsPath));
     
     logger.info('Middleware configured');
@@ -101,16 +102,24 @@ class PhotoLiveApp {
    * Setup application routes
    */
   setupRoutes() {
+    // Photos routes (must be before static middleware)
+    this.app.use('/photos', photoController);
+    
     // API routes
     this.app.use('/api', apiController);
     this.app.use('/api/upload', uploadController);
     
-    // Root route - serve control interface
+    // Root route - serve slideshow interface (for OBS)
     this.app.get('/', (req, res) => {
+      res.sendFile(path.join(config.publicPath, 'slideshow.html'));
+    });
+    
+    // Control route
+    this.app.get('/control', (req, res) => {
       res.sendFile(path.join(config.publicPath, 'control.html'));
     });
     
-    // Slideshow route
+    // Slideshow route (alias)
     this.app.get('/slideshow', (req, res) => {
       res.sendFile(path.join(config.publicPath, 'slideshow.html'));
     });

@@ -115,7 +115,8 @@ class SocketService {
    * Handle jump to image request
    */
   handleJumpToImage(socket, data) {
-    const { index } = data;
+    // Handle both number and object formats for compatibility
+    const index = typeof data === 'number' ? data : data.index;
     const image = imageService.jumpToImage(index);
     if (image) {
       this.broadcastSlideshowState();
@@ -153,7 +154,8 @@ class SocketService {
    * Handle toggle image exclusion
    */
   handleToggleImageExclusion(socket, data) {
-    const { filename } = data;
+    // Handle both string and object formats for compatibility
+    const filename = typeof data === 'string' ? data : data.filename;
     const isExcluded = imageService.toggleImageExclusion(filename);
     
     if (isExcluded !== null) {
@@ -166,7 +168,8 @@ class SocketService {
    * Handle toggle image priority
    */
   handleToggleImagePriority(socket, data) {
-    const { filename } = data;
+    // Handle both string and object formats for compatibility
+    const filename = typeof data === 'string' ? data : data.filename;
     const isPriority = imageService.toggleImagePriority(filename);
     
     if (isPriority !== null) {
@@ -179,7 +182,8 @@ class SocketService {
    * Handle mark image as seen
    */
   handleMarkImageSeen(socket, data) {
-    const { filename } = data;
+    // Handle both string and object formats for compatibility
+    const filename = typeof data === 'string' ? data : data.filename;
     const marked = imageService.markImageAsSeen(filename);
     
     if (marked) {

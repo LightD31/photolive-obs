@@ -37,7 +37,27 @@ class Config {
       ];
       
       // Default settings
-      this.defaults = configData.defaults;
+      // Merge with defaults to ensure all properties exist
+      this.defaults = {
+        shuffle: true,
+        filter: 'none',
+        transition: 'none',
+        watermark: {
+          enabled: false,
+          type: 'text',
+          text: 'PhotoLive OBS',
+          position: 'bottom-right',
+          opacity: 0.8,
+          size: 'medium',
+          image: null
+        },
+        backgroundColor: 'transparent',
+        repeatLatest: false,
+        latestCount: 5,
+        recursiveSearch: false,
+        excludedImages: [],
+        ...configData.defaults
+      };
       
       // CORS configuration
       this.corsOrigins = process.env.ALLOWED_ORIGINS 
@@ -87,16 +107,21 @@ class Config {
     this.defaults = {
       shuffle: true,
       filter: 'none',
+      transition: 'none',
       watermark: {
         enabled: false,
         type: 'text',
-        text: 'PhotoLive',
+        text: 'PhotoLive OBS',
         position: 'bottom-right',
-        opacity: 0.7,
+        opacity: 0.8,
         size: 'medium',
         image: null
       },
-      backgroundColor: 'transparent'
+      backgroundColor: 'transparent',
+      repeatLatest: false,
+      latestCount: 5,
+      recursiveSearch: false,
+      excludedImages: []
     };
     this.corsOrigins = ["http://localhost:3001", "http://127.0.0.1:3001"];
   }
@@ -105,9 +130,30 @@ class Config {
     return {
       interval: this.slideInterval,
       shuffle: this.defaults.shuffle,
+      shuffleImages: this.defaults.shuffle, // Alias for compatibility
       filter: this.defaults.filter,
-      watermark: this.defaults.watermark,
+      transition: this.defaults.transition || 'none',
+      
+      // Flatten watermark settings for compatibility
+      showWatermark: this.defaults.watermark.enabled,
+      watermarkText: this.defaults.watermark.text,
+      watermarkType: this.defaults.watermark.type,
+      watermarkImage: this.defaults.watermark.image,
+      watermarkPosition: this.defaults.watermark.position,
+      watermarkSize: this.defaults.watermark.size,
+      watermarkOpacity: Math.round(this.defaults.watermark.opacity * 100),
+      
       backgroundColor: this.defaults.backgroundColor,
+      transparentBackground: this.defaults.backgroundColor === 'transparent',
+      
+      // Additional settings for compatibility
+      repeatLatest: this.defaults.repeatLatest || false,
+      latestCount: this.defaults.latestCount || 5,
+      recursiveSearch: this.defaults.recursiveSearch || false,
+      excludedImages: this.defaults.excludedImages || [],
+      photosPath: this.photosPath,
+      
+      // Configuration arrays
       filters: this.filters,
       watermarkPositions: this.watermarkPositions,
       watermarkTypes: this.watermarkTypes,
@@ -119,18 +165,65 @@ class Config {
     if (newSettings.interval !== undefined) {
       this.slideInterval = newSettings.interval;
     }
-    if (newSettings.shuffle !== undefined) {
-      this.defaults.shuffle = newSettings.shuffle;
+    if (newSettings.shuffle !== undefined || newSettings.shuffleImages !== undefined) {
+      this.defaults.shuffle = newSettings.shuffle || newSettings.shuffleImages;
     }
     if (newSettings.filter !== undefined) {
       this.defaults.filter = newSettings.filter;
     }
+    if (newSettings.transition !== undefined) {
+      this.defaults.transition = newSettings.transition;
+    }
+    
+    // Handle flat watermark settings
+    if (newSettings.showWatermark !== undefined) {
+      this.defaults.watermark.enabled = newSettings.showWatermark;
+    }
+    if (newSettings.watermarkText !== undefined) {
+      this.defaults.watermark.text = newSettings.watermarkText;
+    }
+    if (newSettings.watermarkType !== undefined) {
+      this.defaults.watermark.type = newSettings.watermarkType;
+    }
+    if (newSettings.watermarkImage !== undefined) {
+      this.defaults.watermark.image = newSettings.watermarkImage;
+    }
+    if (newSettings.watermarkPosition !== undefined) {
+      this.defaults.watermark.position = newSettings.watermarkPosition;
+    }
+    if (newSettings.watermarkSize !== undefined) {
+      this.defaults.watermark.size = newSettings.watermarkSize;
+    }
+    if (newSettings.watermarkOpacity !== undefined) {
+      this.defaults.watermark.opacity = newSettings.watermarkOpacity / 100;
+    }
+    
+    // Handle nested watermark settings
     if (newSettings.watermark !== undefined) {
       this.defaults.watermark = { ...this.defaults.watermark, ...newSettings.watermark };
     }
+    
     if (newSettings.backgroundColor !== undefined) {
       this.defaults.backgroundColor = newSettings.backgroundColor;
     }
+    if (newSettings.transparentBackground !== undefined) {
+      this.defaults.backgroundColor = newSettings.transparentBackground ? 'transparent' : '#000000';
+    }
+    
+    // Additional settings
+    if (newSettings.repeatLatest !== undefined) {
+      this.defaults.repeatLatest = newSettings.repeatLatest;
+    }
+    if (newSettings.latestCount !== undefined) {
+      this.defaults.latestCount = newSettings.latestCount;
+    }
+    if (newSettings.recursiveSearch !== undefined) {
+      this.defaults.recursiveSearch = newSettings.recursiveSearch;
+    }
+    if (newSettings.excludedImages !== undefined) {
+      this.defaults.excludedImages = newSettings.excludedImages;
+    }
+    
     return this.getSettings();
   }
 }

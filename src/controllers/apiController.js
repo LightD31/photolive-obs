@@ -80,8 +80,8 @@ router.post('/photos/path', async (req, res) => {
       });
     }
 
-    // Validate path
-    if (!isPathSafe(newPath, '/')) {
+    // Basic path validation - just check if it's a string and not empty
+    if (typeof newPath !== 'string' || newPath.trim().length === 0) {
       return res.status(400).json({ 
         success: false, 
         error: 'Invalid path' 
@@ -133,6 +133,11 @@ router.post('/settings', (req, res) => {
     // Update image order if shuffle setting changed
     if (req.body.shuffle !== undefined) {
       imageService.updateImageOrder();
+    }
+    
+    // Restart timer if interval changed
+    if (req.body.interval !== undefined) {
+      imageService.restartSlideshowTimer();
     }
     
     // Broadcast settings update

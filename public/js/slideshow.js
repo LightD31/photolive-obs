@@ -70,9 +70,11 @@ class PhotoLiveSlideshow {
         });
 
         this.socket.on('images-updated', (data) => {
-            console.log('Images mises à jour:', data.images.length);
-            this.updateImages(data.images, data.newImageAdded);
-            this.updateSettings(data.settings);
+            console.log('Images mises à jour:', data.images ? data.images.length : 0);
+            this.updateImages(data.images || [], data.newImageAdded);
+            if (data.settings) {
+                this.updateSettings(data.settings);
+            }
         });
 
         this.socket.on('settings-updated', (settings) => {
@@ -80,13 +82,8 @@ class PhotoLiveSlideshow {
             this.updateSettings(settings);
         });
 
-        this.socket.on('pause-slideshow', () => {
-            this.pauseSlideshow();
-        });
-
-        this.socket.on('resume-slideshow', () => {
-            this.resumeSlideshow();
-        });
+        // Remove these handlers as they're not used in the new architecture
+        // Slideshow state is managed through 'slideshow-state' events
 
         this.socket.on('image-changed', (data) => {
             console.log('Image changed from server:', data);
@@ -154,10 +151,14 @@ class PhotoLiveSlideshow {
     async loadInitialData() {
         try {
             const response = await fetch('/api/images');
-            const data = await response.json();
+            const result = await response.json();
             
-            this.updateImages(data.images);
-            this.updateSettings(data.settings);
+            if (result.success && result.data) {
+                this.updateImages(result.data.images || []);
+                this.updateSettings(result.data.settings || {});
+            } else {
+                throw new Error(result.error || 'Unknown API error');
+            }
             
             // Demander l'état actuel du slideshow au serveur pour se synchroniser
             if (this.socket) {

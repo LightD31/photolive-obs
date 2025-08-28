@@ -31,6 +31,8 @@ class ImageService {
   async initialize() {
     await ensureDirectoryExists(this.currentPhotosPath);
     await this.loadImages();
+    // Start slideshow timer after loading images
+    this.startSlideshowTimer();
   }
 
   /**
@@ -58,10 +60,12 @@ class ImageService {
 
             const imageInfo = {
               filename: file,
-              path: filePath,
+              path: `/photos/${file}`, // Web-accessible path
+              fullPath: filePath, // Keep full path for internal use
               size: stats.size,
               createdAt: stats.birthtime,
               modifiedAt: stats.mtime,
+              modified: stats.mtime, // Alias for compatibility
               photoDate: await getPhotoDate(filePath),
               thumbnail: await extractExifThumbnail(filePath),
               isNew: this.newImages.has(file),
@@ -123,6 +127,9 @@ class ImageService {
     }
 
     logger.debug(`Updated image order: ${this.imageOrder.length} images (${priorityList.length} priority)`);
+    
+    // Restart timer with new image order
+    this.restartSlideshowTimer();
   }
 
   /**
@@ -147,6 +154,16 @@ class ImageService {
   getCurrentImage() {
     if (this.imageOrder.length === 0) return null;
     const filename = this.imageOrder[this.currentIndex];
+    return this.images.find(img => img.filename === filename);
+  }
+
+  /**
+   * Get next image
+   */
+  getNextImage() {
+    if (this.imageOrder.length === 0) return null;
+    const nextIndex = (this.currentIndex + 1) % this.imageOrder.length;
+    const filename = this.imageOrder[nextIndex];
     return this.images.find(img => img.filename === filename);
   }
 
@@ -195,10 +212,12 @@ class ImageService {
 
     const imageInfo = {
       filename,
-      path: filePath,
+      path: `/photos/${filename}`, // Web-accessible path
+      fullPath: filePath, // Keep full path for internal use
       size: stats.size,
       createdAt: stats.birthtime,
       modifiedAt: stats.mtime,
+      modified: stats.mtime, // Alias for compatibility
       photoDate: await getPhotoDate(filePath),
       thumbnail: await extractExifThumbnail(filePath),
       isNew: true,
@@ -320,10 +339,22 @@ class ImageService {
    * Get slideshow state
    */
   getSlideshowState() {
+    const currentImage = this.getCurrentImage();
+    const nextImage = this.getNextImage();
+    
+    // Find original indices in the full images array
+    const originalIndex = currentImage ? this.images.findIndex(img => img.filename === currentImage.filename) : -1;
+    const nextOriginalIndex = nextImage ? this.images.findIndex(img => img.filename === nextImage.filename) : -1;
+    
     return {
-      currentImage: this.getCurrentImage(),
+      currentImage,
       currentIndex: this.currentIndex,
+      originalIndex,
+      nextImage,
+      nextOriginalIndex,
       totalImages: this.imageOrder.length,
+      totalOriginalImages: this.images.length,
+      isPlaying: !this.isPaused,
       isPaused: this.isPaused,
       interval: config.slideInterval,
       settings: config.getSettings()
@@ -343,7 +374,65 @@ class ImageService {
    */
   resumeSlideshow() {
     this.isPaused = false;
+    this.startSlideshowTimer();
     return this.getSlideshowState();
+  }
+
+  /**
+   * Start slideshow timer
+   */
+  startSlideshowTimer() {
+    this.stopSlideshowTimer();
+    
+    if (this.imageOrder.length > 1 && !this.isPaused) {
+      this.intervalId = setInterval(() => {
+        logger.debug('Server timer: moving to next image');
+        const nextImage = this.nextImage();
+        if (nextImage) {
+          // Import socketService here to avoid circular dependency
+          const socketService = require('./socketService');
+          socketService.broadcastImageChange(nextImage);
+          socketService.broadcastSlideshowState();
+        }
+      }, config.slideInterval);
+      logger.debug(`Slideshow timer started (interval: ${config.slideInterval}ms)`);
+    }
+  }
+
+  /**
+   * Stop slideshow timer
+   */
+  stopSlideshowTimer() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+      logger.debug('Slideshow timer stopped');
+    }
+  }
+
+  /**
+   * Restart slideshow timer
+   */
+  restartSlideshowTimer() {
+    if (!this.isPaused) {
+      this.startSlideshowTimer();
+    }
+  }
+
+  /**
+   * Pause slideshow
+   */
+  pauseSlideshow() {
+    this.isPaused = true;
+    this.stopSlideshowTimer();
+    return this.getSlideshowState();
+  }
+
+  /**
+   * Get current photos path
+   */
+  getCurrentPhotosPath() {
+    return this.currentPhotosPath;
   }
 }
 

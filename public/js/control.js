@@ -218,7 +218,7 @@ class PhotoLiveControl {
             const imageItem = e.target.closest('.image-item');
             if (imageItem && imageItem.dataset.index) {
                 const originalIndex = parseInt(imageItem.dataset.index);
-                this.socket.emit('jump-to-image', originalIndex);
+                this.socket.emit('jump-to-image', { index: originalIndex });
             }
         });
     }
@@ -361,10 +361,10 @@ class PhotoLiveControl {
         });
 
         this.socket.on('images-updated', (data) => {
-            console.log('Images updated:', data.allImages ? data.allImages.length : data.images ? data.images.length : 0);
+            console.log('Images updated:', data.images ? data.images.length : 0);
             try {
-                // Use allImages for grid display, images for slideshow count
-                this.updateImages(data.allImages || data.images || []);
+                // New format: data.images contains all images
+                this.updateImages(data.images || []);
                 if (data.settings) {
                     this.updateSettings(data.settings);
                 }
@@ -643,12 +643,17 @@ class PhotoLiveControl {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
-            const data = await response.json();
+            const result = await response.json();
             
-            // Use allImages for grid display, images for slideshow functionality
-            this.updateImages(data.allImages || data.images);
-            if (data.settings) {
-                this.updateSettings(data.settings);
+            if (result.success && result.data) {
+                // New API format: result.data contains images and settings
+                this.updateImages(result.data.images || []);
+                if (result.data.settings) {
+                    this.updateSettings(result.data.settings);
+                }
+            } else {
+                // Handle API error response
+                throw new Error(result.error || 'Unknown API error');
             }
         } catch (error) {
             console.error('Error during initial loading:', error);
@@ -813,11 +818,16 @@ class PhotoLiveControl {
             }
             return response.json();
         })
-        .then(data => {
+        .then(result => {
             console.log('Setting updated successfully:', key, value);
-            // Update settings with server response to ensure consistency
-            if (data) {
-                this.settings = { ...this.settings, ...data };
+            // Handle new API response format
+            if (result.success && result.data) {
+                this.settings = { ...this.settings, ...result.data };
+            } else if (result.success) {
+                // Settings updated successfully but no data returned
+                console.log('Setting updated:', result.message);
+            } else {
+                throw new Error(result.error || 'Unknown error');
             }
         })
         .catch(error => {
@@ -1095,7 +1105,7 @@ class PhotoLiveControl {
         }
         
         console.log('Toggling exclusion for:', filename);
-        this.socket.emit('toggle-image-exclusion', filename);
+        this.socket.emit('toggle-image-exclusion', { filename });
     }
 
     formatFileSize(bytes) {
@@ -1141,23 +1151,23 @@ class PhotoLiveControl {
             this.changeFolderBtn.disabled = true;
             this.changeFolderBtn.textContent = 'Changing...';
             
-            const response = await fetch('/api/photos-path', {
+            const response = await fetch('/api/photos/path', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ photosPath: newPath })
+                body: JSON.stringify({ path: newPath })
             });
 
-            const data = await response.json();
+            const result = await response.json();
 
-            if (response.ok) {
-                this.showNotification(`Folder changed to: ${data.photosPath}`, 'success');
+            if (result.success) {
+                this.showNotification(result.message, 'success');
                 // Update the input field with the resolved path
-                this.photosPath.value = data.photosPath;
+                this.photosPath.value = result.data.path;
                 // Images will be automatically updated via WebSocket
             } else {
-                this.showNotification(data.error || 'Error changing folder', 'error');
+                this.showNotification(result.error || 'Error changing folder', 'error');
             }
         } catch (error) {
             console.error('Error changing folder:', error);
@@ -1173,8 +1183,20 @@ class PhotoLiveControl {
             this.rescanFolderBtn.disabled = true;
             this.rescanFolderBtn.innerHTML = '🔄 Scanning...';
             
-            // Emit rescan request to server
-            this.socket.emit('rescan-images');
+            const response = await fetch('/api/images/reload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showNotification(result.message, 'success');
+            } else {
+                this.showNotification(result.error || 'Error rescanning folder', 'error');
+            }
             
         } catch (error) {
             console.error('Error rescanning folder:', error);
@@ -1393,7 +1415,7 @@ class PhotoLiveControl {
             const formData = new FormData();
             formData.append('watermark', file);
 
-            const response = await fetch('/api/watermark-upload', {
+            const response = await fetch('/api/upload/watermark', {
                 method: 'POST',
                 body: formData
             });
@@ -1402,20 +1424,20 @@ class PhotoLiveControl {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const result = await response.json();
 
-            if (data.success && data.filePath) {
+            if (result.success && result.data && result.data.path) {
                 // Update the UI with the selected file
                 if (this.watermarkFileName) {
                     this.watermarkFileName.textContent = file.name;
                 }
                 
                 // Update the setting with the uploaded file path
-                this.updateSetting('watermarkImage', data.filePath);
+                this.updateSetting('watermarkImage', result.data.path);
                 
                 this.showNotification('Watermark uploaded successfully', 'success');
             } else {
-                throw new Error(data.error || 'Upload failed');
+                throw new Error(result.error || 'Upload failed');
             }
         } catch (error) {
             console.error('Error uploading watermark:', error);
