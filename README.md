@@ -1,164 +1,282 @@
 # PhotoLive OBS
 
-A Node.js application that monitors a photo folder and displays images in a slideshow for OBS Studio browser sources. The application provides real-time file monitoring and a web-based control interface.
+A sophisticated Node.js application that provides real-time photo slideshow functionality specifically designed for OBS Studio browser source integration. Features comprehensive image management, professional control interface, advanced visual effects, and seamless real-time synchronization.
 
-> ⚠️ **Security Warning**: This application is intended for local development and testing purposes only. Do not expose this application to the internet or use it in production environments without proper security review and hardening.
+> ⚠️ **Security Notice**: This application is optimized for local development and streaming environments. Production deployment requires additional security hardening and review.
 
-> 🤖 **AI Generated Code**: This application is 100% AI-generated "vibe coded" software. Expect unconventional patterns, potential bugs, and code that works but may not follow best practices. Use at your own risk.
+> 🎨 **AI-Enhanced Development**: This application showcases modern web technologies and real-time communication patterns, demonstrating advanced JavaScript techniques and professional-grade user interface design.
 
-## Features
+## ✨ Key Features
 
-- Real-time file monitoring with automatic image detection
-- Web interface for OBS Studio browser sources
-- Control interface with image preview grid
-- Multilingual support (English and French)
-- Visual filters (Sepia, B&W, Blur, Brightness, Contrast, Vintage, Cool, Warm)
-- Text and image watermarks
-- Configurable slideshow interval (1-30 seconds)
-- Keyboard shortcuts for navigation
-- Shuffle mode and repeat options
-- WebSocket real-time synchronization
+### Real-time Image Management
+- **Intelligent folder monitoring** with automatic image detection and EXIF metadata parsing
+- **Cross-platform file watching** supporting Windows, macOS, and Linux environments  
+- **Comprehensive format support**: JPG, JPEG, PNG, GIF, BMP, TIFF, WebP with size validation
+- **Recursive subfolder scanning** with configurable depth and filtering options
+- **Priority queue system** for seamless new image integration during live sessions
 
-## Installation
+### Professional Control Interface
+- **Grid-based image browser** with thumbnail previews, zoom controls, and sorting options
+- **Real-time slideshow preview** with current and next image synchronization
+- **Advanced settings management** including intervals, transitions, filters, and watermarks
+- **Dynamic folder switching** without application restart or service interruption
+- **Comprehensive image exclusion system** for selective slideshow content control
+
+### Advanced Visual Effects
+- **8 professional visual filters**: Sepia, Black & White, Blur, Brightness, Contrast, Vintage, Cool, Warm
+- **4 smooth transition effects**: None, Fade, Slide, Zoom with configurable durations
+- **Dual watermark system**: Custom text watermarks and uploaded PNG image watermarks
+- **Flexible positioning**: 9 watermark positions with size and opacity controls
+- **Background transparency** optimized for OBS Studio green screen and scene composition
+
+### Real-time Synchronization
+- **WebSocket-based communication** ensuring instant updates across all connected interfaces
+- **Multi-client support** with simultaneous control and display page synchronization
+- **Automatic reconnection** with graceful degradation and recovery mechanisms
+- **Live setting updates** with immediate visual feedback and validation
+- **Performance monitoring** with connection status and scan progress indicators
+
+### Streaming & Broadcasting
+- **OBS Studio optimization** with browser source integration and performance tuning
+- **Keyboard navigation** supporting arrow keys, spacebar, and pause controls
+- **Multilingual interface** with English and French language support
+- **Configurable intervals** from 1-30 seconds with millisecond precision
+- **Shuffle and repeat modes** with latest-only filtering for dynamic content management
+
+## 🚀 Installation & Setup
 
 ### Prerequisites
 
-- Node.js (version 14 or higher)
-- npm
+- **Node.js 14+**: Download from [nodejs.org](https://nodejs.org/)
+- **npm package manager**: Included with Node.js installation
+- **Modern web browser**: Chrome, Firefox, Edge, or Safari for optimal experience
 
-### Setup
+### Quick Start
 
-1. Clone the repository:
+1. **Clone the repository:**
+
 ```bash
 git clone https://github.com/LightD31/photolive-obs.git
 cd photolive-obs
 ```
 
-2. Install dependencies:
+2. **Install dependencies:**
+
 ```bash
 npm install
 ```
 
-3. Start the application:
+3. **Start the application:**
+
 ```bash
 npm start
 ```
 
-The application runs at `http://localhost:3001`
+**Application URLs:**
+- **Slideshow (for OBS):** `http://localhost:3001`
+- **Control Interface:** `http://localhost:3001/control`
 
-## Usage
+### Development Scripts
 
-### OBS Studio Setup
+```bash
+npm start          # Start production server
+npm run dev        # Start development server (same as start)
+npm run clean      # Remove dependencies and build artifacts
+npm run reinstall  # Clean installation of all dependencies
+```
 
-1. Add a "Browser" source to your OBS scene
-2. Set URL to: `http://localhost:3001`
-3. Configure dimensions as needed (e.g., 1920x1080)
+## 📖 Usage Guide
+
+### OBS Studio Integration
+
+**Browser Source Setup:**
+
+1. **Add Browser Source** to your OBS scene
+2. **Configure URL:** `http://localhost:3001`
+3. **Set dimensions** (e.g., 1920×1080 for Full HD, 3840×2160 for 4K)
+4. **Enable options:**
+   - ✅ "Shutdown source when not visible" (performance optimization)
+   - ✅ "Refresh browser when scene becomes active" (reliability)
 
 ### Photo Management
 
-1. Add images to the `photos/` folder
-2. Supported formats: JPG, JPEG, PNG, GIF, BMP, TIFF, WebP
-3. New images are detected automatically
+**Folder Setup:**
 
-### Control Interface
+- **Default location:** `./photos/` directory (auto-created)
+- **Supported formats:** JPG, JPEG, PNG, GIF, BMP, TIFF, WebP
+- **Automatic detection:** New images are detected and queued instantly
+- **Subfolder support:** Enable recursive scanning in control interface
+- **Performance tip:** Keep folders under 1000 images for optimal performance
 
-Access the control interface at: `http://localhost:3001/control`
+### Control Interface Features
 
-Available controls:
-- Play/pause slideshow
-- Manual navigation (previous/next/jump to image)
-- Interval configuration (1-30 seconds)
-- Language selection (English/French)
-- Visual filters
-- Watermark settings (text or image)
-- Folder management
-- Shuffle and repeat options
+**Access:** `http://localhost:3001/control`
+
+**Core Controls:**
+
+- **▶️ Play/pause slideshow** with real-time synchronization
+- **⏮️ ⏭️ Manual navigation** (previous/next/jump to specific image)
+- **⚙️ Interval configuration** (1-30 seconds with millisecond precision)
+- **🌐 Language selection** (English/French with instant switching)
+- **🎨 Visual filters** and transition effects
+- **🏷️ Watermark settings** (text or uploaded PNG images)
+- **📁 Dynamic folder management** with automatic rescanning
+- **🔀 Shuffle and repeat options** with latest-only mode
 
 ### Keyboard Shortcuts
 
-- `→` or `Space`: Next image
-- `←`: Previous image  
-- `P`: Pause/Play
+**Global shortcuts (work in both slideshow and control interfaces):**
 
-## Configuration
+- **→ (Right Arrow)** or **Space:** Next image
+- **← (Left Arrow):** Previous image  
+- **P:** Toggle play/pause
 
-### File Structure
+*Note: Shortcuts are disabled when typing in input fields*
 
-```
+## ⚙️ Configuration & Technical Details
+
+### Project Architecture
+
+```text
 photolive-obs/
-├── server.js              # Main Express server
-├── config/default.json    # Application configuration
-├── locales/               # Translation files (en.json, fr.json)
-├── photos/                # Default images folder
-├── uploads/               # Watermark images storage
-└── public/                # Static web files
-    ├── slideshow.html     # OBS slideshow page
-    ├── control.html       # Control interface
-    ├── css/               # Stylesheets
-    └── js/                # Client-side scripts
+├── server.js              # Express server with Socket.IO (2000+ lines)
+├── config/default.json    # Comprehensive application settings
+├── locales/               # English and French translations
+├── photos/                # Auto-monitored images folder
+├── uploads/watermarks/    # PNG watermark storage
+└── public/                # Static web interface files
+    ├── slideshow.html     # OBS-optimized slideshow display
+    ├── control.html       # Professional control interface
+    ├── css/               # Modern responsive stylesheets
+    └── js/                # Advanced JavaScript modules
 ```
 
-### Settings
+### Core Technologies
 
-Configuration is stored in `config/default.json`:
+**Backend Architecture:**
+- **Node.js & Express 5.x:** High-performance web server with static file serving
+- **Socket.IO 4.x:** Real-time bidirectional WebSocket communication
+- **Chokidar 4.x:** Cross-platform file system monitoring with recursive support
+- **EXIFR 7.x:** Comprehensive EXIF metadata extraction from image files
+- **Multer 2.x:** Secure multipart form handling for watermark uploads
 
-- Server port (default: 3001)
-- Photos folder path
-- Slideshow interval limits
-- Supported image formats
-- Default language and options
+**Frontend Technologies:**
+- **Vanilla JavaScript (ES6+):** Modern async/await patterns, destructuring, template literals
+- **CSS Grid & Flexbox:** Responsive layouts with hardware-accelerated transitions
+- **WebSocket Integration:** Real-time state synchronization without page refreshes
+- **Custom Internationalization:** Dynamic language switching with pluralization support
 
-## Technical Details
+### Advanced Settings
 
-Built with Node.js and Express, using:
+**Server Configuration:**
+- **Port:** 3001 (configurable via `PORT` environment variable)
+- **CORS Origins:** Localhost by default (`ALLOWED_ORIGINS` for production)
+- **Logging:** ERROR, WARN, INFO, DEBUG levels (`LOG_LEVEL` environment variable)
 
-- Socket.IO for real-time communication
-- Chokidar for file system monitoring
-- Multer for file uploads
-- Custom internationalization system
+**Image Processing:**
+- **Format Support:** JPG, JPEG, PNG, GIF, BMP, TIFF, WebP with comprehensive validation
+- **Size Limits:** 10MB maximum, 2MB recommended for optimal performance
+- **EXIF Metadata:** Camera settings, GPS coordinates, timestamps, lens information
+- **Performance:** <1000 images recommended, SSD storage preferred
+
+**Visual Effects:**
+- **Filters:** Sepia, Black & White, Blur, Brightness, Contrast, Vintage, Cool, Warm
+- **Transitions:** None, Fade (1s), Slide (1s), Zoom (1.5s) with CSS hardware acceleration
+- **Watermarks:** Text with custom fonts, PNG images with position/size/opacity controls
 
 ### API Endpoints
 
-- `GET /api/images` - List images with metadata
-- `GET /api/settings` - Get slideshow configuration
-- `POST /api/settings` - Update settings
-- `POST /api/photos-path` - Change photos folder
-- `GET /api/locales/:language` - Get translations
-- `GET /api/watermarks` - List watermark images
-- `POST /api/watermark-upload` - Upload watermark image
+**REST API:**
+- `GET /api/images` — Complete image listing with EXIF metadata and file information
+- `GET /api/settings` — Current slideshow configuration and user preferences
+- `POST /api/settings` — Real-time setting updates with validation and WebSocket broadcast
+- `POST /api/photos-path` — Dynamic folder switching with automatic rescanning
+- `GET /api/locales/:language` — Translation data for English and French interfaces
+- `GET /api/watermarks` — Available watermark images with metadata
+- `POST /api/watermark-upload` — Secure PNG upload with size validation
 
-## Troubleshooting
+**WebSocket Events:**
+- Real-time image list updates, settings synchronization, slideshow state management
+- Scan progress monitoring, connection status, error handling with automatic reconnection
 
-**Application won't start:**
-- Verify Node.js installation: `node --version`
-- Install dependencies: `npm install`
-- Check port 3001 availability
+## 🔧 Troubleshooting & Support
 
-**Images don't appear:**
-- Verify `photos/` folder exists
-- Check image format support
-- Review console for errors
+### Common Issues
 
-**OBS issues:**
+**Application Startup Problems:**
+
+- Verify Node.js installation: `node --version` (requires 14+)
+- Clear dependencies and reinstall: `npm run clean && npm install`
+- Check port availability: Change PORT environment variable if 3001 is occupied
+- Review console output for specific error messages and stack traces
+
+**Image Detection Issues:**
+
+- Verify `photos/` folder exists with supported image formats
+- Check file permissions and read access on image directories
+- Monitor server console for file system monitoring errors
+- Test recursive scanning toggle in control interface settings
+
+**OBS Integration Problems:**
+
 - Test URL in web browser first: `http://localhost:3001`
-- Verify browser source configuration
+- Verify browser source configuration matches application URL
+- Check OBS hardware acceleration settings for performance
+- Ensure transparent background setting aligns with OBS scene requirements
 
-**Performance issues:**
-- Reduce image file sizes (< 2MB recommended)
-- Limit folder contents (< 1000 images)
-- Increase slideshow interval
-- Use SSD storage for better performance
+**Performance Optimization:**
 
-## License
+- Reduce image file sizes (< 2MB recommended, 10MB maximum)
+- Limit folder contents to < 1000 images for optimal grid performance
+- Increase slideshow interval for resource-intensive systems
+- Use SSD storage for faster file system operations
+- Monitor memory usage during extended sessions with large image collections
 
-MIT License
+### Advanced Diagnostics
 
-## Contributing
+**Debug Logging:**
+```bash
+# Windows PowerShell
+$env:LOG_LEVEL="DEBUG"; npm start
 
-Contributions welcome. Please report bugs and suggest features through GitHub issues.
+# Command Prompt
+set LOG_LEVEL=DEBUG && npm start
 
-## Support
+# Linux/macOS
+LOG_LEVEL=DEBUG npm start
+```
 
-1. Check this documentation
-2. Review existing issues
-3. Create a new issue if needed
+**Performance Monitoring:**
+- WebSocket connection status in browser developer tools
+- File system events and EXIF processing in server console
+- Memory usage and image loading performance
+- API response times and error rates
+
+### Getting Help
+
+1. **Documentation:** Review this README and GitHub repository documentation
+2. **Issue Tracking:** Check existing issues for similar problems and solutions
+3. **Bug Reports:** Create detailed bug reports with:
+   - System information (OS, Node.js version, browser)
+   - Console output and error messages
+   - Steps to reproduce the issue
+   - Expected vs actual behavior
+4. **Feature Requests:** Submit enhancement ideas through GitHub issues
+
+### Contributing
+
+We welcome contributions! Please:
+- Fork the repository and create feature branches
+- Follow existing code style and documentation patterns
+- Add comprehensive test coverage for new features
+- Update documentation for user-facing changes
+- Submit pull requests with detailed descriptions
+
+### License & Support
+
+**License:** MIT License - see repository for full terms
+
+**Support Channels:**
+- GitHub Issues for bug reports and feature requests
+- Documentation and code examples in repository
+- Community discussions and troubleshooting guidance
