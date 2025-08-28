@@ -138,9 +138,6 @@ class ImageGrid {
         <img src="${thumbnailSrc}" alt="${image.filename}" loading="lazy">
         <div class="image-overlay">
           <div class="image-actions">
-            <button class="btn-icon jump-btn" title="Jump to image" data-index="${index}">
-              <span>▶️</span>
-            </button>
             <button class="btn-icon exclude-btn ${isExcluded ? 'excluded' : ''}" 
                     title="${isExcluded ? 'Include in slideshow' : 'Exclude from slideshow'}" 
                     data-filename="${image.filename}">
@@ -159,18 +156,8 @@ class ImageGrid {
     `;
 
     // Add event listeners
-    const jumpBtn = div.querySelector('.jump-btn');
     const excludeBtn = div.querySelector('.exclude-btn');
     const img = div.querySelector('img');
-
-    jumpBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (this.options.onImageClick) {
-        // Find original index in unsorted array
-        const originalIndex = this.images.findIndex(img => img.filename === image.filename);
-        this.options.onImageClick(originalIndex, image);
-      }
-    });
 
     excludeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -179,7 +166,7 @@ class ImageGrid {
       }
     });
 
-    img.addEventListener('click', () => {
+    div.addEventListener('click', () => {
       if (this.options.onImageClick) {
         // Find original index in unsorted array
         const originalIndex = this.images.findIndex(img => img.filename === image.filename);
