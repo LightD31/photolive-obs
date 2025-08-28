@@ -9,6 +9,9 @@
     "interval": 5000,
     "minInterval": 1000,
     "maxInterval": 30000,
+    "transitionDuration": 1000,
+    "minTransitionDuration": 100,
+    "maxTransitionDuration": 3000,
     "supportedFormats": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
     "maxImageSize": "10MB",
     "thumbnailSize": 200
@@ -51,6 +54,7 @@
   "defaults": {
     "interval": 5000,
     "transition": "none",
+    "transitionDuration": 1000,
     "filter": "none",
     "showWatermark": false,
     "watermarkText": "PhotoLive OBS",

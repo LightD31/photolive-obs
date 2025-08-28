@@ -15,6 +15,8 @@ class SettingsManager {
     // Filter and transition controls
     this.filterSelect = document.getElementById('filter-select');
     this.transitionSelect = document.getElementById('transition-select');
+    this.transitionDurationSlider = document.getElementById('transition-duration-slider');
+    this.transitionDurationValue = document.getElementById('transition-duration-value');
     
     // Checkbox controls
     this.shuffleImagesCheckbox = document.getElementById('shuffle-images');
@@ -60,6 +62,17 @@ class SettingsManager {
     if (this.transitionSelect) {
       this.transitionSelect.addEventListener('change', (e) => {
         this.updateSetting('transition', e.target.value);
+      });
+    }
+
+    // Transition duration slider
+    if (this.transitionDurationSlider) {
+      this.transitionDurationSlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        if (this.transitionDurationValue) {
+          this.transitionDurationValue.textContent = (value / 1000).toFixed(1) + 's';
+        }
+        this.updateSetting('transitionDuration', value);
       });
     }
 
@@ -205,6 +218,14 @@ class SettingsManager {
     // Update transition select
     if (this.transitionSelect && settings.transition) {
       this.transitionSelect.value = settings.transition;
+    }
+
+    // Update transition duration slider
+    if (this.transitionDurationSlider && settings.transitionDuration !== undefined) {
+      this.transitionDurationSlider.value = settings.transitionDuration;
+      if (this.transitionDurationValue) {
+        this.transitionDurationValue.textContent = (settings.transitionDuration / 1000).toFixed(1) + 's';
+      }
     }
 
     // Update checkboxes

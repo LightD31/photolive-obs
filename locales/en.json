@@ -40,6 +40,7 @@
   "settings": {
     "filter": "Filter",
     "transition": "Transition",
+    "transition_duration": "Transition Duration",
     "shuffle": "Shuffle",
     "transparent_bg": "Transparent BG",
     "photos_folder": "Photos Folder",

@@ -133,6 +133,13 @@
                                     <option value="zoom" data-i18n="transitions.zoom">Zoom</option>
                                 </select>
                             </div>
+                            <div class="setting-row slider-row">
+                                <label for="transition-duration-slider" data-i18n="settings.transition_duration">Transition Duration:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="transition-duration-slider" min="100" max="3000" step="100" value="1000" class="slider">
+                                    <span id="transition-duration-value" class="slider-value">1.0s</span>
+                                </div>
+                            </div>
                             <div class="setting-row checkbox-row">
                                 <label class="checkbox-label compact">
                                     <input type="checkbox" id="shuffle-images">

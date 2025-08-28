@@ -40,6 +40,7 @@
   "settings": {
     "filter": "Filtre",
     "transition": "Transition",
+    "transition_duration": "Durée de Transition",
     "shuffle": "Mélanger",
     "transparent_bg": "Fond Transparent",
     "photos_folder": "Dossier Photos",

@@ -68,11 +68,11 @@ body.transparent {
 
 /* Transition effects */
 .slide-image.transition-fade {
-    transition: opacity 1s ease-in-out;
+    transition: opacity var(--transition-duration, 1s) ease-in-out;
 }
 
 .slide-image.transition-slide {
-    transition: transform 1s ease-in-out, opacity 0.1s ease-in-out;
+    transition: transform var(--transition-duration, 1s) ease-in-out, opacity 0.1s ease-in-out;
 }
 
 /* Filtres */

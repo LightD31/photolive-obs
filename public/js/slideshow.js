@@ -6,6 +6,7 @@ class PhotoLiveSlideshow {
         this.settings = {
             interval: 5000,
             transition: 'none',
+            transitionDuration: 1000,
             filter: 'none',
             showWatermark: false,
             watermarkText: 'PhotoLive OBS',
@@ -293,7 +294,7 @@ class PhotoLiveSlideshow {
             // After transition completes, finalize the switch
             setTimeout(() => {
                 this.completeTransition(currentElement, nextElement);
-            }, 1000);
+            }, this.settings.transitionDuration || 1000);
         };
         img.onerror = () => {
             console.error('Error loading image for fade transition:', imagePath);
@@ -338,7 +339,7 @@ class PhotoLiveSlideshow {
             // After transition completes, finalize the switch
             setTimeout(() => {
                 this.completeTransition(currentElement, nextElement);
-            }, 1000);
+            }, this.settings.transitionDuration || 1000);
         };
         img.onerror = () => {
             console.error('Error loading image for slide transition:', imagePath);
@@ -459,6 +460,11 @@ class PhotoLiveSlideshow {
         
         this.settings = { ...this.settings, ...settings };
         
+        // Update CSS transition duration if changed
+        if (settings.transitionDuration !== undefined) {
+            this.updateTransitionDuration(settings.transitionDuration);
+        }
+        
         this.updateBackground();
         this.updateWatermark();
         this.updateOverlay();
@@ -467,6 +473,11 @@ class PhotoLiveSlideshow {
         if (settings.filter !== undefined && settings.filter !== previousFilter) {
             this.updateCurrentImageFilter();
         }
+    }
+
+    updateTransitionDuration(duration) {
+        // Update CSS custom property for transition duration
+        document.documentElement.style.setProperty('--transition-duration', `${duration}ms`);
     }
 
     updateWatermark() {

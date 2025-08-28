@@ -59,7 +59,7 @@ function createApiRoutes(config, slideshowService, imageService) {
   router.post('/settings', (req, res) => {
     try {
       const allowedSettings = [
-        'interval', 'transition', 'filter', 'showWatermark', 'watermarkText',
+        'interval', 'transition', 'transitionDuration', 'filter', 'showWatermark', 'watermarkText',
         'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
         'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
         'transparentBackground', 'photosPath', 'excludedImages', 'language',
@@ -72,6 +72,11 @@ function createApiRoutes(config, slideshowService, imageService) {
           switch (key) {
             case 'interval':
               if (typeof value === 'number' && value >= 1000 && value <= 60000) {
+                newSettings[key] = value;
+              }
+              break;
+            case 'transitionDuration':
+              if (typeof value === 'number' && value >= 100 && value <= 3000) {
                 newSettings[key] = value;
               }
               break;
