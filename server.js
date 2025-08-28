@@ -224,6 +224,12 @@ let slideshowState = {
 // Server-side slideshow timer
 let slideshowTimer = null;
 
+// New image queue system
+let newImageQueue = []; // Queue of new images to display
+let isProcessingQueue = false; // Flag to track if we're processing the queue
+let queueTimer = null; // Timer for queue processing
+let originalSlideshowIndex = -1; // Index where normal slideshow was when queue started
+
 // Semaphore to limit concurrent EXIF operations and prevent file descriptor exhaustion
 class ExifSemaphore {
   constructor(maxConcurrent = 3) { // Reduced from 10 to 3 for more conservative approach
@@ -445,20 +451,19 @@ function updateShuffledImagesList(newImageAdded = null) {
     return;
   }
 
-  // Separate new images from existing ones
+  // Check if we have any new images
   const newImages = currentImages.filter(img => img.isNew);
   const existingImages = currentImages.filter(img => !img.isNew);
 
-  // Shuffle existing images
-  const shuffledExisting = shuffleArray([...existingImages]);
-  
-  // Priority: new images first, then shuffled existing ones
-  shuffledImages = [...newImages, ...shuffledExisting];
-  
-  logger.debug(`🔀 Shuffle mode: ${newImages.length} new images priority, ${existingImages.length} existing shuffled`);
-  
   if (newImages.length > 0) {
-    logger.debug('📸 New images:', newImages.map(img => img.filename));
+    // When new images are added, shuffle all images together to properly integrate them
+    shuffledImages = shuffleArray([...currentImages]);
+    logger.debug(`🔀 Shuffle mode: ${newImages.length} new images integrated with ${existingImages.length} existing images`);
+    logger.debug('📸 New images added to shuffle:', newImages.map(img => img.filename));
+  } else {
+    // No new images, just shuffle existing images
+    shuffledImages = shuffleArray([...currentImages]);
+    logger.debug(`🔀 Shuffle mode: ${currentImages.length} total images shuffled`);
   }
 }
 
@@ -713,6 +718,67 @@ async function scanImages(newImageFilename = null) {
   }
 }
 
+// Silent image scanning for queue processing (doesn't emit events or restart timers)
+async function scanImagesForQueue(newImageFilename = null) {
+  try {
+    let images = [];
+    
+    if (slideshowSettings.recursiveSearch) {
+      // Recursive scanning with optimized processing
+      images = await scanImagesRecursive(currentPhotosPath);
+    } else {
+      // Non-recursive: scan only the base directory
+      const items = await fs.readdir(currentPhotosPath, { withFileTypes: true });
+      const imageFiles = items
+        .filter(item => item.isFile())
+        .map(item => item.name)
+        .filter(filename => {
+          const ext = path.extname(filename).toLowerCase();
+          return config.supportedFormats.includes(ext);
+        });
+
+      // Process images with semaphore to prevent resource exhaustion
+      for (const filename of imageFiles) {
+        const imagePath = path.join(currentPhotosPath, filename);
+        
+        const imageData = await exifSemaphore.execute(async () => {
+          const stats = await fs.stat(imagePath);
+          const photoDate = await getPhotoDate(imagePath);
+          const thumbnail = await extractExifThumbnail(imagePath);
+          
+          return {
+            filename: filename,
+            path: `/photos/${filename}`,
+            size: stats.size,
+            created: stats.birthtime,
+            modified: stats.mtime,
+            photoDate: photoDate, // Use consistent field name with regular scanning
+            isNew: newlyAddedImages.has(filename),
+            thumbnail: thumbnail
+          };
+        });
+        
+        images.push(imageData);
+      }
+    }
+
+    // Sort by photo date (oldest first - ascending chronological order)
+    images.sort((a, b) => a.photoDate - b.photoDate);
+    
+    // Update global images array silently
+    currentImages = images;
+    
+    // Update shuffled images list
+    updateShuffledImagesList(newImageFilename);
+    
+    logger.debug(`Silent scan completed: ${images.length} images, new: ${newImageFilename || 'none'}`);
+    return images;
+  } catch (error) {
+    logger.error('Error in silent image scan:', error);
+    return [];
+  }
+}
+
 // Update slideshow state
 function updateSlideshowState(emitEvent = true) {
   const imagesList = getCurrentImagesList();
@@ -834,9 +900,195 @@ function stopSlideshowTimer() {
 
 // Restart timer with new parameters
 function restartSlideshowTimer() {
-  if (slideshowState.isPlaying) {
+  if (slideshowState.isPlaying && !isProcessingQueue) {
     startSlideshowTimer();
   }
+}
+
+// Queue management functions
+function addImageToQueue(imagePath) {
+  logger.debug(`Adding image to queue: ${imagePath}`);
+  newImageQueue.push(imagePath);
+  logger.debug(`Queue length after adding ${imagePath}: ${newImageQueue.length}`);
+  
+  // If not already processing queue and we have images in queue, schedule queue processing
+  if (!isProcessingQueue && newImageQueue.length > 0) {
+    logger.debug(`Queue not processing and has ${newImageQueue.length} images, scheduling queue processing`);
+    scheduleQueueProcessing();
+  } else if (isProcessingQueue) {
+    logger.debug(`Queue already processing, image ${imagePath} will be processed next`);
+  }
+}
+
+function scheduleQueueProcessing() {
+  if (isProcessingQueue) {
+    return; // Already processing
+  }
+
+  logger.debug('Scheduling queue processing after current timer finishes');
+  
+  // Save the current slideshow position before starting queue processing
+  originalSlideshowIndex = slideshowState.currentIndex;
+  logger.debug(`Saved original slideshow index: ${originalSlideshowIndex}`);
+  
+  // Stop the normal slideshow timer to prevent it from changing images during queue processing
+  stopSlideshowTimer();
+  
+  // Start queue processing immediately (the current image is already displayed)
+  processImageQueue();
+}
+
+function processImageQueue() {
+  logger.debug(`processImageQueue called, queue length: ${newImageQueue.length}, isProcessingQueue: ${isProcessingQueue}`);
+  
+  if (newImageQueue.length === 0) {
+    // Queue is empty, resume normal slideshow from original position
+    logger.debug('Queue processing complete, resuming normal slideshow');
+    isProcessingQueue = false;
+    
+    // Resume slideshow from the position where it was when queue started
+    if (originalSlideshowIndex !== -1) {
+      const imagesList = getCurrentImagesList();
+      const resumeIndex = (originalSlideshowIndex + 1) % imagesList.length;
+      const resumeImage = imagesList[resumeIndex];
+      
+      if (resumeImage) {
+        slideshowState.currentIndex = resumeIndex;
+        slideshowState.currentImage = resumeImage;
+        logger.debug(`Resuming slideshow at index ${resumeIndex}: ${resumeImage.filename}`);
+        
+        // Emit the resumed slideshow state
+        const originalIndex = currentImages.findIndex(img => img.filename === resumeImage.filename);
+        
+        // Calculate next image for resumed slideshow
+        let nextImage = null;
+        let nextOriginalIndex = -1;
+        if (imagesList.length > 1) {
+          const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+          nextImage = imagesList[nextIndex];
+          nextOriginalIndex = nextImage ? 
+            currentImages.findIndex(img => img.filename === nextImage.filename) : -1;
+        }
+        
+        io.emit('image-changed', {
+          currentImage: slideshowState.currentImage,
+          currentIndex: slideshowState.currentIndex,
+          originalIndex: originalIndex,
+          nextImage: nextImage,
+          nextOriginalIndex: nextOriginalIndex,
+          direction: 1,
+          totalImages: imagesList.length,
+          isQueueProcessing: false,
+          queueLength: 0
+        });
+      }
+      
+      // Reset original slideshow index
+      originalSlideshowIndex = -1;
+    }
+    
+    restartSlideshowTimer();
+    return;
+  }
+  
+  if (!isProcessingQueue) {
+    isProcessingQueue = true;
+    logger.debug(`Starting queue processing with ${newImageQueue.length} images`);
+  }
+  
+  // Get next image from queue
+  const nextImagePath = newImageQueue.shift();
+  logger.debug(`Processing next image from queue: ${nextImagePath}, remaining queue length: ${newImageQueue.length}`);
+  
+  // Find the image in the current images list to get full image data
+  const nextImage = currentImages.find(img => 
+    img.filename === path.basename(nextImagePath) || 
+    img.path === nextImagePath
+  );
+  
+  if (nextImage) {
+    logger.debug(`Processing queued image: ${nextImage.filename}`);
+    
+    // Update slideshow state to the queued image
+    const imagesList = getCurrentImagesList();
+    const newIndex = imagesList.findIndex(img => img.filename === nextImage.filename);
+    
+    if (newIndex !== -1) {
+      slideshowState.currentIndex = newIndex;
+      slideshowState.currentImage = nextImage;
+      
+      // Emit image change event
+      const originalIndex = currentImages.findIndex(img => img.filename === nextImage.filename);
+      
+      // Calculate next image information (from queue or normal slideshow)
+      let nextQueueImage = null;
+      let nextOriginalIndex = -1;
+      
+      if (newImageQueue.length > 0) {
+        // Next image is from queue
+        const nextQueuePath = newImageQueue[0];
+        nextQueueImage = currentImages.find(img => 
+          img.filename === path.basename(nextQueuePath) || 
+          img.path === nextQueuePath
+        );
+        nextOriginalIndex = nextQueueImage ? 
+          currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+        logger.debug(`Next image will be from queue: ${nextQueuePath}`);
+      } else {
+        // Queue will be empty after this image, show where slideshow will resume
+        if (originalSlideshowIndex !== -1) {
+          const resumeIndex = (originalSlideshowIndex + 1) % imagesList.length;
+          nextQueueImage = imagesList[resumeIndex];
+          nextOriginalIndex = nextQueueImage ? 
+            currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+          logger.debug(`Next image will be from normal slideshow resuming at index ${resumeIndex}`);
+        } else {
+          // Fallback: next image in current sequence
+          const nextIndex = (slideshowState.currentIndex + 1) % imagesList.length;
+          nextQueueImage = imagesList[nextIndex];
+          nextOriginalIndex = nextQueueImage ? 
+            currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
+          logger.debug(`Next image will be from normal slideshow after queue finishes (fallback)`);
+        }
+      }
+      
+      io.emit('image-changed', {
+        currentImage: slideshowState.currentImage,
+        currentIndex: slideshowState.currentIndex,
+        originalIndex: originalIndex,
+        nextImage: nextQueueImage,
+        nextOriginalIndex: nextOriginalIndex,
+        direction: 1, // Always forward for queue processing
+        totalImages: imagesList.length,
+        isQueueProcessing: true,
+        queueLength: newImageQueue.length
+      });
+      
+      // Schedule the next image in the queue or resume normal slideshow
+      logger.debug(`Scheduling next queue processing in ${slideshowSettings.interval}ms`);
+      queueTimer = setTimeout(() => {
+        processImageQueue();
+      }, slideshowSettings.interval);
+    } else {
+      logger.warn(`Queued image ${nextImage.filename} not found in current images list, skipping`);
+      // Skip this image and process next
+      processImageQueue();
+    }
+  } else {
+    logger.warn(`Queued image not found: ${nextImagePath}, skipping`);
+    // Skip this image and process next
+    processImageQueue();
+  }
+}
+
+function stopQueueProcessing() {
+  if (queueTimer) {
+    clearTimeout(queueTimer);
+    queueTimer = null;
+  }
+  isProcessingQueue = false;
+  newImageQueue = [];
+  logger.debug('Queue processing stopped');
 }
 
 // File change monitoring
@@ -862,7 +1114,7 @@ function setupFileWatcher() {
   fileWatcher = chokidar.watch(currentPhotosPath, watchOptions);
 
   fileWatcher
-    .on('add', (filePath) => {
+    .on('add', async (filePath) => {
       try {
         const filename = path.basename(filePath);
         const ext = path.extname(filename).toLowerCase();
@@ -877,8 +1129,24 @@ function setupFileWatcher() {
           // Mark as new image using appropriate key
           newlyAddedImages.add(trackingKey);
           
-          // Rescan with new image information
-          scanImages(trackingKey);
+          // Instead of immediate scanning, first do a silent scan to load the image data
+          // then add to queue for ordered display and emit UI update
+          logger.debug(`Starting scan for new image: ${trackingKey}`);
+          await scanImagesForQueue(trackingKey);
+          logger.debug(`Scan completed for new image: ${trackingKey}`);
+          
+          // Emit updated images to UI so control interface shows new images immediately
+          io.emit('images-updated', {
+            allImages: getAllImagesList(), // Complete list for grid display
+            images: getCurrentImagesList(), // Filtered list for slideshow
+            settings: slideshowSettings,
+            newImageAdded: trackingKey
+          });
+          
+          // Add to queue for sequential display
+          logger.debug(`Adding to queue: ${trackingKey}`);
+          addImageToQueue(trackingKey);
+          logger.debug(`Successfully added to queue: ${trackingKey}, queue length: ${newImageQueue.length}`);
           
           // Clean marking after 5 minutes with error handling
           setTimeout(() => {
@@ -911,7 +1179,28 @@ function setupFileWatcher() {
         // Remove from new images tracker if present
         newlyAddedImages.delete(trackingKey);
         
-        scanImages(); // Rescan all images
+        // Store current image info before rescanning to preserve context
+        const currentImageFilename = slideshowState.currentImage ? slideshowState.currentImage.filename : null;
+        const wasCurrentImageDeleted = (currentImageFilename === filename);
+        
+        // Rescan all images
+        scanImages().then(() => {
+          if (wasCurrentImageDeleted) {
+            logger.debug(`Current image was deleted, slideshow state updated`);
+            // The updateSlideshowState in scanImages() will handle moving to a valid image
+          } else if (currentImageFilename) {
+            // Try to maintain position if the current image still exists
+            const imagesList = getCurrentImagesList();
+            const newIndex = imagesList.findIndex(img => img.filename === currentImageFilename);
+            if (newIndex !== -1 && newIndex !== slideshowState.currentIndex) {
+              slideshowState.currentIndex = newIndex;
+              updateSlideshowState();
+              logger.debug(`Slideshow position preserved after deletion`);
+            }
+          }
+        }).catch(error => {
+          logger.error('Error updating slideshow state after deletion:', error);
+        });
       } catch (error) {
         logger.error('Error processing file removal:', error);
       }
@@ -1662,6 +1951,10 @@ async function gracefulShutdown(signal) {
       logger.info('Slideshow timer stopped');
     }
     
+    // Stop queue processing
+    stopQueueProcessing();
+    logger.info('Queue processing stopped');
+    
     // Close socket connections
     io.close(() => {
       logger.info('Socket.io connections closed');
@@ -1708,6 +2001,9 @@ process.on('SIGINT', () => {
   // Arrêter le timer du diaporama
   stopSlideshowTimer();
   
+  // Stop queue processing
+  stopQueueProcessing();
+  
   if (fileWatcher) {
     fileWatcher.close();
     logger.info('File monitoring stopped');
@@ -1723,6 +2019,9 @@ process.on('SIGTERM', () => {
   
   // Arrêter le timer du diaporama
   stopSlideshowTimer();
+  
+  // Stop queue processing
+  stopQueueProcessing();
   
   if (fileWatcher) {
     fileWatcher.close();

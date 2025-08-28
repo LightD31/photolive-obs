@@ -1026,6 +1026,10 @@ class PhotoLiveControl {
 
     formatDate(dateString) {
         const date = new Date(dateString);
+        if (isNaN(date)) {
+            return 'Invalid Date';
+        }
+        
         return date.toLocaleDateString('fr-FR', {
             day: '2-digit',
             month: '2-digit',
