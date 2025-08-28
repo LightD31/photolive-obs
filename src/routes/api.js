@@ -127,7 +127,7 @@ function createApiRoutes(config, slideshowService, imageService) {
       
       // Emit events for specific setting changes
       if (newSettings.recursiveSearch !== undefined) {
-        logger.debug(`Recursive search mode changed to: ${newSettings.recursiveSearch}`);
+        logger.debug(`Recursive search: ${newSettings.recursiveSearch}`);
         // This will be handled by the main application
         req.app.emit('recursiveSearchChanged', newSettings.recursiveSearch);
       }
@@ -168,7 +168,7 @@ function createApiRoutes(config, slideshowService, imageService) {
         return res.status(400).json({ error: 'No file provided' });
       }
 
-      logger.info('Watermark uploaded:', req.file.filename);
+      logger.debug(`Watermark uploaded: ${req.file.filename}`);
 
       const filePath = `/uploads/watermarks/${req.file.filename}`;
       
@@ -206,7 +206,7 @@ function createApiRoutes(config, slideshowService, imageService) {
         
         res.json(translations);
       } catch (fileError) {
-        logger.error(`Locale file not found: ${language}`, fileError);
+        logger.warn(`Locale file not found: ${language}`);
         res.status(404).json({ error: `Language '${language}' not available` });
       }
     } catch (error) {
@@ -220,7 +220,7 @@ function createApiRoutes(config, slideshowService, imageService) {
     try {
       const { photosPath } = req.body;
       
-      logger.debug('Photos folder change request:', photosPath);
+      logger.debug(`Photos folder change requested: ${photosPath}`);
       
       if (!photosPath || typeof photosPath !== 'string') {
         return res.status(400).json({ error: 'Photos path required and must be a string' });
@@ -231,7 +231,7 @@ function createApiRoutes(config, slideshowService, imageService) {
       }
 
       const resolvedPath = path.resolve(photosPath);
-      logger.debug('Resolved path:', resolvedPath);
+      logger.debug(`Resolved path: ${resolvedPath}`);
 
       try {
         const stats = await fs.stat(resolvedPath);
@@ -239,14 +239,14 @@ function createApiRoutes(config, slideshowService, imageService) {
           return res.status(400).json({ error: 'Specified path is not a directory' });
         }
       } catch (error) {
-        logger.debug('Error checking folder:', error.message);
+        logger.debug(`Folder check error: ${error.message}`);
         return res.status(400).json({ error: 'Specified folder does not exist or is not accessible' });
       }
 
       // Emit event for folder change
       req.app.emit('photosPathChanged', resolvedPath);
       
-      logger.info(`Photos folder changed to: ${resolvedPath}`);
+      logger.info(`Photos folder changed: ${resolvedPath}`);
       
       res.json({ 
         success: true, 

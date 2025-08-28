@@ -55,14 +55,13 @@ class FileWatcher {
           const filename = path.basename(filePath);
           const ext = path.extname(filename).toLowerCase();
           
-          this.logger.debug(`📁 File system event: ADD - ${filePath}`);
-          this.logger.debug(`Extension: ${ext}, Supported: ${this.config.supportedFormats.includes(ext)}`);
+          this.logger.debug(`File added: ${filePath}`);
           
           if (this.config.supportedFormats.includes(ext)) {
             const relativePath = path.relative(this.currentPath, filePath);
             const trackingKey = this.recursive ? relativePath : filename;
             
-            this.logger.info(`🆕 WATCHER: New image detected - ${trackingKey}`);
+            this.logger.debug(`New image detected: ${trackingKey}`);
             this.emit('imageAdded', filePath, trackingKey);
           } else {
             this.logger.debug(`Ignoring non-image file: ${filename}`);
@@ -77,8 +76,7 @@ class FileWatcher {
           const relativePath = path.relative(this.currentPath, filePath);
           const trackingKey = this.recursive ? relativePath : filename;
           
-          this.logger.info(`🗑️ WATCHER: Image deleted - ${trackingKey}`);
-          this.logger.debug(`Full path: ${filePath}`);
+          this.logger.debug(`Image deleted: ${trackingKey}`);
           this.emit('imageRemoved', filePath, trackingKey);
         } catch (error) {
           this.logger.error('Error processing file removal:', error);
@@ -99,18 +97,16 @@ class FileWatcher {
         }
       })
       .on('error', error => {
-        this.logger.error('Watcher error:', error);
+        this.logger.error('File watcher error:', error);
         this.emit('error', error);
         
-        // Attempt to restart watcher on critical error
         setTimeout(() => {
-          this.logger.info('Attempting to restart watcher...');
+          this.logger.warn('Restarting file watcher after error');
           this.start(this.currentPath, this.recursive);
         }, 5000);
       });
 
-    const mode = this.recursive ? 'recursive' : 'non-recursive';
-    this.logger.info(`Monitoring folder: ${photosPath} (${mode})`);
+    this.logger.info(`File monitoring started: ${photosPath} (${this.recursive ? 'recursive' : 'non-recursive'})`);
   }
 
   stop() {

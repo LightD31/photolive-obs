@@ -106,23 +106,19 @@ class PhotoLiveApp {
   setupEventHandlers() {
     // File watcher events
     this.fileWatcher.on('imageAdded', async (filePath, trackingKey) => {
-      this.logger.info(`🆕 FILE ADDED: ${trackingKey} at ${filePath}`);
-      this.logger.debug(`Marking as new and starting scan process...`);
+      this.logger.info(`New image detected: ${trackingKey}`);
+      this.logger.debug(`File path: ${filePath}`);
       
       this.imageService.markAsNew(trackingKey);
       
-      // Silent scan to load image data
-      this.logger.debug(`Scanning images after adding ${trackingKey}...`);
       const images = await this.imageService.scanImages(
         this.currentPhotosPath, 
         this.slideshowService.getSettings().recursiveSearch
       );
       
-      this.logger.debug(`Scan complete: ${images.length} total images found`);
+      this.logger.debug(`Scan complete: ${images.length} total images`);
       this.slideshowService.updateImages(images);
       
-      // Emit updated images to UI
-      this.logger.debug(`Broadcasting image update to clients...`);
       this.socketService.broadcastImagesUpdated({
         allImages: this.slideshowService.getAllImagesList(),
         images: this.slideshowService.getCurrentImagesList(),
@@ -130,29 +126,23 @@ class PhotoLiveApp {
         newImageAdded: trackingKey
       });
       
-      // Add to queue for display
-      this.logger.debug(`Adding ${trackingKey} to slideshow queue`);
       this.slideshowService.addImageToQueue(trackingKey);
-      this.logger.info(`✅ FILE PROCESSING COMPLETE: ${trackingKey}`);
+      this.logger.debug(`Image ${trackingKey} added to queue`);
     });
 
     this.fileWatcher.on('imageRemoved', async (filePath, trackingKey) => {
-      this.logger.info(`🗑️ FILE REMOVED: ${trackingKey} at ${filePath}`);
+      this.logger.info(`Image removed: ${trackingKey}`);
       
       const currentImageFilename = this.slideshowService.getState().currentImage?.filename;
       const wasCurrentImageDeleted = (currentImageFilename === path.basename(filePath));
       
-      this.logger.debug(`Current image: ${currentImageFilename}, deleted image: ${path.basename(filePath)}`);
-      this.logger.debug(`Was current image deleted: ${wasCurrentImageDeleted}`);
+      this.logger.debug(`Current image: ${currentImageFilename}, deleted: ${path.basename(filePath)}`);
       
-      // Rescan images
-      this.logger.debug(`Rescanning images after removal...`);
       await this.scanImages();
       
       if (wasCurrentImageDeleted) {
-        this.logger.info(`⚠️ CURRENT IMAGE DELETED: Slideshow state updated`);
+        this.logger.warn(`Current image was deleted, slideshow state updated`);
       }
-      this.logger.info(`✅ FILE REMOVAL COMPLETE: ${trackingKey}`);
     });
 
     this.fileWatcher.on('directoryRemoved', async () => {
@@ -221,7 +211,10 @@ class PhotoLiveApp {
         newImageAdded: newImageFilename
       });
 
-      this.logger.info(`${images.length} images found in ${this.currentPhotosPath}${newImageFilename ? ` (new: ${newImageFilename})` : ''}`);
+      this.logger.info(`Scan completed: ${images.length} images found`);
+      if (newImageFilename) {
+        this.logger.debug(`New image processed: ${newImageFilename}`);
+      }
       return images;
     } catch (error) {
       this.logger.error('Error scanning images:', error);
@@ -266,7 +259,7 @@ class PhotoLiveApp {
       // Start slideshow timer
       this.slideshowService.startSlideshowTimer();
       
-      this.logger.info('PhotoLive OBS application initialized successfully');
+      this.logger.info('Application initialized successfully');
     } catch (error) {
       this.logger.error('Error during initialization:', error);
       throw error;
@@ -277,10 +270,10 @@ class PhotoLiveApp {
     await this.initialize();
     
     const startServer = () => {
-      this.logger.info(`PhotoLive OBS server started on http://localhost:${this.config.port}`);
+      this.logger.info(`Server started on port ${this.config.port}`);
       this.logger.info(`Control interface: http://localhost:${this.config.port}/control`);
-      this.logger.info(`Slideshow for OBS: http://localhost:${this.config.port}/`);
-      this.logger.info(`Photos folder monitored: ${this.currentPhotosPath}`);
+      this.logger.info(`Slideshow display: http://localhost:${this.config.port}/`);
+      this.logger.debug(`Photos folder: ${this.currentPhotosPath}`);
     };
 
     this.server.listen(this.config.port, startServer).on('error', (err) => {
@@ -302,37 +295,32 @@ class PhotoLiveApp {
   }
 
   async gracefulShutdown(signal) {
-    this.logger.info(`\n${signal} received. Starting graceful shutdown...`);
+    this.logger.info(`${signal} received, starting graceful shutdown`);
     
     try {
-      // Stop file watcher
       this.fileWatcher.stop();
-      this.logger.info('File watcher stopped');
+      this.logger.debug('File watcher stopped');
       
-      // Stop slideshow service
       this.slideshowService.stopSlideshowTimer();
       this.slideshowService.stopQueueProcessing();
-      this.logger.info('Slideshow service stopped');
+      this.logger.debug('Slideshow service stopped');
       
-      // Close socket connections
       this.io.close(() => {
-        this.logger.info('Socket.io connections closed');
+        this.logger.debug('Socket connections closed');
       });
       
-      // Close HTTP server
       this.server.close(() => {
-        this.logger.info('HTTP server closed');
+        this.logger.info('Server shutdown complete');
         process.exit(0);
       });
       
-      // Force exit after 10 seconds
       setTimeout(() => {
-        this.logger.error('Could not close connections in time, forcefully shutting down');
+        this.logger.error('Shutdown timeout exceeded, forcing exit');
         process.exit(1);
       }, 10000);
       
     } catch (error) {
-      this.logger.error('Error during shutdown:', error);
+      this.logger.error('Shutdown error:', error);
       process.exit(1);
     }
   }

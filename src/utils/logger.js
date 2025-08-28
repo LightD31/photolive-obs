@@ -11,30 +11,31 @@ class Logger {
   }
 
   setLevel(level) {
-    this.level = typeof level === 'string' ? LogLevel[level.toUpperCase()] : level;
+    const normalizedLevel = typeof level === 'string' ? level.toUpperCase() : 'INFO';
+    this.level = LogLevel[normalizedLevel] !== undefined ? LogLevel[normalizedLevel] : LogLevel.INFO;
   }
 
   error(...args) {
     if (this.level >= LogLevel.ERROR) {
-      console.error('[ERROR]', new Date().toISOString(), ...args);
+      console.error(`[ERROR] ${new Date().toISOString()}`, ...args);
     }
   }
 
   warn(...args) {
     if (this.level >= LogLevel.WARN) {
-      console.warn('[WARN]', new Date().toISOString(), ...args);
+      console.warn(`[WARN]  ${new Date().toISOString()}`, ...args);
     }
   }
 
   info(...args) {
     if (this.level >= LogLevel.INFO) {
-      console.log('[INFO]', new Date().toISOString(), ...args);
+      console.log(`[INFO]  ${new Date().toISOString()}`, ...args);
     }
   }
 
   debug(...args) {
     if (this.level >= LogLevel.DEBUG) {
-      console.log('[DEBUG]', new Date().toISOString(), ...args);
+      console.log(`[DEBUG] ${new Date().toISOString()}`, ...args);
     }
   }
 }

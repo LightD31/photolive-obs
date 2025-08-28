@@ -57,13 +57,13 @@ class ImageService {
       if (thumbnailBuffer && thumbnailBuffer.length > 0) {
         const base64Thumbnail = Buffer.from(thumbnailBuffer).toString('base64');
         const dataUrl = `data:image/jpeg;base64,${base64Thumbnail}`;
-        this.logger.debug(`Extracted EXIF thumbnail for ${path.basename(filePath)} (${thumbnailBuffer.length} bytes)`);
+        this.logger.debug(`EXIF thumbnail extracted: ${path.basename(filePath)} (${thumbnailBuffer.length} bytes)`);
         return dataUrl;
       }
       
       return null;
     } catch (error) {
-      this.logger.debug(`No EXIF thumbnail found for ${path.basename(filePath)}: ${error.message}`);
+      this.logger.debug(`No EXIF thumbnail: ${path.basename(filePath)}`);
       return null;
     } finally {
       buffer = null;
@@ -93,7 +93,9 @@ class ImageService {
           };
           
           const exifData = await exifr.parse(buffer, options);
-          this.logger.debug(`EXIF data for ${path.basename(filePath)}:`, exifData);
+          if (exifData && Object.keys(exifData).length > 0) {
+            this.logger.debug(`EXIF data found: ${path.basename(filePath)}`);
+          }
           
           const parseExifDate = (dateValue) => {
             if (!dateValue) return null;
@@ -137,20 +139,20 @@ class ImageService {
           for (const candidate of dateCandidates) {
             const parsedDate = parseExifDate(candidate);
             if (parsedDate) {
-              this.logger.debug(`Found EXIF date for ${path.basename(filePath)}: ${parsedDate}`);
+              this.logger.debug(`EXIF date found: ${path.basename(filePath)} - ${parsedDate.toISOString()}`);
               return parsedDate;
             }
           }
           
-          this.logger.debug(`No valid EXIF date found for ${path.basename(filePath)}`);
+          this.logger.debug(`No EXIF date found: ${path.basename(filePath)}`);
           
         } catch (error) {
-          this.logger.debug(`Could not read EXIF date for ${path.basename(filePath)}: ${error.message}`);
+          this.logger.debug(`EXIF read error: ${path.basename(filePath)} - ${error.message}`);
         } finally {
           buffer = null;
         }
         
-        this.logger.debug(`No EXIF date available for ${path.basename(filePath)}, falling back to file system date`);
+        this.logger.debug(`Using file system date: ${path.basename(filePath)}`);
         return stats.birthtime || stats.mtime;
       });
     } catch (error) {
@@ -170,7 +172,7 @@ class ImageService {
           return await this.extractExifThumbnail(filePath);
         });
       } catch (error) {
-        this.logger.debug(`Thumbnail extraction failed for ${relativePath || path.basename(filePath)}: ${error.message}`);
+        this.logger.debug(`Thumbnail extraction failed: ${relativePath || path.basename(filePath)}`);
       }
       
       const filename = relativePath || path.basename(filePath);
@@ -270,7 +272,7 @@ class ImageService {
       
       if (recursive) {
         images = await this.scanImagesRecursive(photosPath, '', progressCallback);
-        this.logger.debug(`Recursive scan found ${images.length} images`);
+        this.logger.debug(`Recursive scan complete: ${images.length} images`);
       } else {
         const files = await fs.readdir(photosPath);
         const imageFiles = files.filter(file => {
@@ -328,10 +330,10 @@ class ImageService {
     setTimeout(() => {
       try {
         this.newlyAddedImages.delete(filename);
-        this.logger.debug(`Image ${filename} is no longer considered new`);
+        this.logger.debug(`Image no longer marked as new: ${filename}`);
         
         if (this.newlyAddedImages.size > 100) {
-          this.logger.warn(`Cleaning image tracker: ${this.newlyAddedImages.size} entries`);
+          this.logger.warn(`Image tracker size exceeded, clearing cache`);
           this.newlyAddedImages.clear();
         }
       } catch (error) {

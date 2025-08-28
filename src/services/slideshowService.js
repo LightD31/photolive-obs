@@ -61,7 +61,7 @@ class SlideshowService {
     if (this.settings.repeatLatest && filteredImages.length > 0) {
       const latestCount = Math.min(this.settings.latestCount || 5, filteredImages.length);
       filteredImages = filteredImages.slice(0, latestCount);
-      this.logger.debug(`Latest mode: showing ${latestCount} latest images of ${allImages.length} total`);
+      this.logger.debug(`Latest mode: ${latestCount} of ${allImages.length} images`);
     }
     
     return filteredImages;
@@ -79,11 +79,13 @@ class SlideshowService {
 
     if (newImages.length > 0) {
       this.shuffledImages = this.shuffleArray([...this.currentImages]);
-      this.logger.debug(`Shuffle mode: ${newImages.length} new images integrated with ${existingImages.length} existing images`);
-      this.logger.debug('New images added to shuffle:', newImages.map(img => img.filename));
+      this.logger.debug(`Shuffle mode: ${newImages.length} new + ${existingImages.length} existing images`);
+      if (newImages.length > 0) {
+        this.logger.debug(`New images: ${newImages.map(img => img.filename).join(', ')}`);
+      }
     } else {
       this.shuffledImages = this.shuffleArray([...this.currentImages]);
-      this.logger.debug(`Shuffle mode: ${this.currentImages.length} total images shuffled`);
+      this.logger.debug(`Shuffle mode: ${this.currentImages.length} images shuffled`);
     }
   }
 
@@ -157,7 +159,7 @@ class SlideshowService {
     this.state.currentIndex = newIndex;
     this.state.currentImage = imagesList[this.state.currentIndex];
     
-    this.logger.debug(`Changed image: ${oldIndex} -> ${newIndex} (direction: ${direction}), current: ${this.state.currentImage?.filename}`);
+    this.logger.debug(`Image changed: ${oldIndex} -> ${newIndex} (${this.state.currentImage?.filename})`);
     
     const originalIndex = this.state.currentImage ? 
       this.currentImages.findIndex(img => img.filename === this.state.currentImage.filename) : -1;
@@ -204,7 +206,7 @@ class SlideshowService {
       
       const direction = index > previousIndex ? 1 : (index < previousIndex ? -1 : 0);
       
-      this.logger.debug(`Jumped to image: ${previousIndex} -> ${index}, current: ${this.state.currentImage?.filename}`);
+      this.logger.debug(`Jumped to image: ${previousIndex} -> ${index} (${this.state.currentImage?.filename})`);
       
       const originalIndex = this.state.currentImage ? 
         this.currentImages.findIndex(img => img.filename === this.state.currentImage.filename) : -1;
@@ -239,18 +241,15 @@ class SlideshowService {
     const imagesList = this.getCurrentImagesList();
     if (imagesList.length > 1 && this.state.isPlaying) {
       this.slideshowTimer = setInterval(() => {
-        this.logger.debug('Server timer: moving to next image');
-        
-        // Check if we should start processing the queue instead of normal slideshow
         if (this.isProcessingQueue && this.newImageQueue.length > 0) {
-          this.logger.debug('Timer expired, starting queue processing');
+          this.logger.debug('Processing image queue');
           this.stopSlideshowTimer();
           this.processImageQueue();
         } else {
           this.changeImage(1);
         }
       }, this.settings.interval);
-      this.logger.debug(`Slideshow timer started (interval: ${this.settings.interval}ms)`);
+      this.logger.debug(`Timer started: ${this.settings.interval}ms interval`);
     }
   }
 
@@ -258,7 +257,7 @@ class SlideshowService {
     if (this.slideshowTimer) {
       clearInterval(this.slideshowTimer);
       this.slideshowTimer = null;
-      this.logger.debug('Slideshow timer stopped');
+      this.logger.debug('Timer stopped');
     }
   }
 
@@ -289,7 +288,7 @@ class SlideshowService {
     this.settings = { ...this.settings, ...newSettings };
     
     if (newSettings.shuffleImages !== undefined && previousShuffleState !== newSettings.shuffleImages) {
-      this.logger.debug(`Shuffle mode changed: ${previousShuffleState} → ${newSettings.shuffleImages}`);
+      this.logger.debug(`Shuffle mode: ${previousShuffleState} -> ${newSettings.shuffleImages}`);
       
       const currentImageFilename = this.state.currentImage ? this.state.currentImage.filename : null;
       
@@ -325,10 +324,10 @@ class SlideshowService {
     
     if (isExcluded) {
       this.settings.excludedImages = excludedImages.filter(img => img !== filename);
-      this.logger.debug(`Image ${filename} reintegrated into slideshow`);
+      this.logger.debug(`Image included: ${filename}`);
     } else {
       this.settings.excludedImages = [...excludedImages, filename];
-      this.logger.debug(`Image ${filename} excluded from slideshow`);
+      this.logger.debug(`Image excluded: ${filename}`);
     }
     
     let shouldRestartTimer = false;
@@ -351,15 +350,15 @@ class SlideshowService {
 
   // Queue management
   addImageToQueue(imagePath) {
-    this.logger.debug(`Adding image to queue: ${imagePath}`);
+    this.logger.debug(`Adding to queue: ${imagePath}`);
     this.newImageQueue.push(imagePath);
-    this.logger.debug(`Queue length after adding ${imagePath}: ${this.newImageQueue.length}`);
+    this.logger.debug(`Queue length: ${this.newImageQueue.length}`);
     
     // Update the next image preview to show the queued image
     this.updateSlideshowState();
     
     if (!this.isProcessingQueue && this.newImageQueue.length > 0) {
-      this.logger.debug(`Queue not processing and has ${this.newImageQueue.length} images, scheduling queue processing`);
+      this.logger.debug(`Scheduling queue processing (${this.newImageQueue.length} items)`);
       this.scheduleQueueProcessing();
     }
   }
@@ -367,10 +366,10 @@ class SlideshowService {
   scheduleQueueProcessing() {
     if (this.isProcessingQueue) return;
 
-    this.logger.debug('Scheduling queue processing after current timer expires');
+    this.logger.debug('Queue processing scheduled');
     
     this.originalSlideshowIndex = this.state.currentIndex;
-    this.logger.debug(`Saved original slideshow index: ${this.originalSlideshowIndex}`);
+    this.logger.debug(`Saved slideshow position: ${this.originalSlideshowIndex}`);
     
     // Don't stop the current timer - let it finish naturally
     // The queue will be processed when the timer fires
@@ -378,10 +377,10 @@ class SlideshowService {
   }
 
   processImageQueue() {
-    this.logger.debug(`processImageQueue called, queue length: ${this.newImageQueue.length}, isProcessingQueue: ${this.isProcessingQueue}`);
+    this.logger.debug(`Processing queue: ${this.newImageQueue.length} items remaining`);
     
     if (this.newImageQueue.length === 0) {
-      this.logger.debug('Queue processing complete, resuming normal slideshow');
+      this.logger.debug('Queue processing complete, resuming slideshow');
       this.isProcessingQueue = false;
       
       if (this.originalSlideshowIndex !== -1) {
@@ -392,7 +391,7 @@ class SlideshowService {
         if (resumeImage) {
           this.state.currentIndex = resumeIndex;
           this.state.currentImage = resumeImage;
-          this.logger.debug(`Resuming slideshow at index ${resumeIndex}: ${resumeImage.filename}`);
+          this.logger.debug(`Resuming slideshow: ${resumeIndex} (${resumeImage.filename})`);
           
           const originalIndex = this.currentImages.findIndex(img => img.filename === resumeImage.filename);
           
@@ -429,11 +428,11 @@ class SlideshowService {
     
     if (!this.isProcessingQueue) {
       this.isProcessingQueue = true;
-      this.logger.debug(`Starting queue processing with ${this.newImageQueue.length} images`);
+      this.logger.debug(`Starting queue processing: ${this.newImageQueue.length} images`);
     }
     
     const nextImagePath = this.newImageQueue.shift();
-    this.logger.debug(`Processing next image from queue: ${nextImagePath}, remaining queue length: ${this.newImageQueue.length}`);
+    this.logger.debug(`Processing queued image: ${nextImagePath} (${this.newImageQueue.length} remaining)`);
     
     const nextImage = this.currentImages.find(img => 
       img.filename === require('path').basename(nextImagePath) || 
@@ -441,7 +440,7 @@ class SlideshowService {
     );
     
     if (nextImage) {
-      this.logger.debug(`Processing queued image: ${nextImage.filename}`);
+      this.logger.debug(`Displaying queued image: ${nextImage.filename}`);
       
       const imagesList = this.getCurrentImagesList();
       const newIndex = imagesList.findIndex(img => img.filename === nextImage.filename);
@@ -463,14 +462,14 @@ class SlideshowService {
           );
           nextOriginalIndex = nextQueueImage ? 
             this.currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
-          this.logger.debug(`Next image will be from queue: ${nextQueuePath}`);
+          this.logger.debug(`Next from queue: ${nextQueuePath}`);
         } else {
           if (this.originalSlideshowIndex !== -1) {
             const resumeIndex = (this.originalSlideshowIndex + 1) % imagesList.length;
             nextQueueImage = imagesList[resumeIndex];
             nextOriginalIndex = nextQueueImage ? 
               this.currentImages.findIndex(img => img.filename === nextQueueImage.filename) : -1;
-            this.logger.debug(`Next image will be from normal slideshow resuming at index ${resumeIndex}`);
+            this.logger.debug(`Next from slideshow: index ${resumeIndex}`);
           }
         }
         
@@ -488,16 +487,16 @@ class SlideshowService {
           });
         }
         
-        this.logger.debug(`Scheduling next queue processing in ${this.settings.interval}ms`);
+        this.logger.debug(`Next queue item in ${this.settings.interval}ms`);
         this.queueTimer = setTimeout(() => {
           this.processImageQueue();
         }, this.settings.interval);
       } else {
-        this.logger.warn(`Queued image ${nextImage.filename} not found in current images list, skipping`);
+        this.logger.warn(`Queued image not in current list: ${nextImage.filename}`);
         this.processImageQueue();
       }
     } else {
-      this.logger.warn(`Queued image not found: ${nextImagePath}, skipping`);
+      this.logger.warn(`Queued image not found: ${nextImagePath}`);
       this.processImageQueue();
     }
   }

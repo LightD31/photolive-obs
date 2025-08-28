@@ -43,7 +43,7 @@ class SocketService {
 
   initialize() {
     this.io.on('connection', (socket) => {
-      this.logger.debug('Client connected:', socket.id);
+      this.logger.debug(`Client connected: ${socket.id}`);
       
       // Send current state to new client
       this.sendCurrentState(socket);
@@ -52,7 +52,7 @@ class SocketService {
       this.setupSocketHandlers(socket);
 
       socket.on('disconnect', () => {
-        this.logger.debug('Client disconnected:', socket.id);
+        this.logger.debug(`Client disconnected: ${socket.id}`);
       });
     });
   }
@@ -112,7 +112,7 @@ class SocketService {
   setupSocketHandlers(socket) {
     // Navigation controls
     socket.on('next-image', () => {
-      this.logger.debug('Next image requested from client');
+      this.logger.debug('Next image requested');
       if (this.slideshowService) {
         this.slideshowService.changeImage(1);
         this.slideshowService.restartSlideshowTimer();
@@ -120,7 +120,7 @@ class SocketService {
     });
 
     socket.on('prev-image', () => {
-      this.logger.debug('Previous image requested from client');
+      this.logger.debug('Previous image requested');
       if (this.slideshowService) {
         this.slideshowService.changeImage(-1);
         this.slideshowService.restartSlideshowTimer();
@@ -139,7 +139,7 @@ class SocketService {
       if (this.slideshowService) {
         this.slideshowService.pause();
         socket.broadcast.emit('pause-slideshow');
-        this.logger.debug('Slideshow paused by a client');
+        this.logger.debug('Slideshow paused by client');
       }
     });
 
@@ -147,7 +147,7 @@ class SocketService {
       if (this.slideshowService) {
         this.slideshowService.resume();
         socket.broadcast.emit('resume-slideshow');
-        this.logger.debug('Slideshow resumed by a client');
+        this.logger.debug('Slideshow resumed by client');
       }
     });
 
@@ -157,7 +157,7 @@ class SocketService {
 
     // Image management
     socket.on('rescan-images', () => {
-      this.logger.info('Manual rescan requested by client');
+      this.logger.debug('Manual rescan requested');
       this.emit('rescan-requested');
     });
 
