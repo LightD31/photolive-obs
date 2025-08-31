@@ -52,13 +52,20 @@ class ImageService {
     let buffer = null;
     try {
       buffer = await fs.readFile(filePath);
-      const thumbnailBuffer = await exifr.thumbnail(buffer);
+      const [thumbnailBuffer, orientation] = await Promise.all([
+        exifr.thumbnail(buffer),
+        exifr.orientation(buffer)
+      ]);
       
       if (thumbnailBuffer && thumbnailBuffer.length > 0) {
         const base64Thumbnail = Buffer.from(thumbnailBuffer).toString('base64');
         const dataUrl = `data:image/jpeg;base64,${base64Thumbnail}`;
         this.logger.debug(`EXIF thumbnail extracted: ${path.basename(filePath)} (${thumbnailBuffer.length} bytes)`);
-        return dataUrl;
+        
+        return {
+          dataUrl,
+          orientation: orientation || 1
+        };
       }
       
       return null;
@@ -166,9 +173,9 @@ class ImageService {
       const stats = await fs.stat(filePath);
       const photoDate = await this.getPhotoDate(filePath);
       
-      let thumbnailDataUrl = null;
+      let thumbnailData = null;
       try {
-        thumbnailDataUrl = await this.exifSemaphore.execute(async () => {
+        thumbnailData = await this.exifSemaphore.execute(async () => {
           return await this.extractExifThumbnail(filePath);
         });
       } catch (error) {
@@ -185,7 +192,8 @@ class ImageService {
         modified: stats.mtime,
         photoDate: photoDate,
         isNew: this.newlyAddedImages.has(filename),
-        thumbnail: thumbnailDataUrl
+        thumbnail: thumbnailData?.dataUrl || null,
+        orientation: thumbnailData?.orientation || 1
       };
     } catch (error) {
       this.logger.warn(`Error processing image ${relativePath || path.basename(filePath)}: ${error.message}`);

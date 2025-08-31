@@ -129,13 +129,17 @@ class ImageGrid {
 
     // Create thumbnail image
     let thumbnailSrc = image.path;
+    let orientationStyle = '';
+    
     if (image.thumbnail) {
       thumbnailSrc = image.thumbnail;
+      // Apply CSS transform based on EXIF orientation
+      orientationStyle = this.getOrientationStyle(image.orientation || 1);
     }
 
     div.innerHTML = `
       <div class="image-preview">
-        <img src="${thumbnailSrc}" alt="${image.filename}" loading="lazy">
+        <img src="${thumbnailSrc}" alt="${image.filename}" loading="lazy" style="${orientationStyle}">
         <div class="image-overlay">
           <div class="image-actions">
             <button class="btn-icon exclude-btn ${isExcluded ? 'excluded' : ''}" 
@@ -250,6 +254,22 @@ class ImageGrid {
 
   getImageIndex(filename) {
     return this.filteredImages.findIndex(img => img.filename === filename);
+  }
+
+  getOrientationStyle(orientation) {
+    // EXIF orientation values and their corresponding CSS transforms
+    const orientationStyles = {
+      1: '', // Normal
+      2: 'transform: scaleX(-1);', // Flip horizontal
+      3: 'transform: rotate(180deg);', // Rotate 180°
+      4: 'transform: scaleY(-1);', // Flip vertical
+      5: 'transform: rotate(90deg) scaleX(-1);', // Rotate 90° and flip horizontal
+      6: 'transform: rotate(90deg);', // Rotate 90°
+      7: 'transform: rotate(270deg) scaleX(-1);', // Rotate 270° and flip horizontal
+      8: 'transform: rotate(270deg);' // Rotate 270°
+    };
+    
+    return orientationStyles[orientation] || '';
   }
 }
 
