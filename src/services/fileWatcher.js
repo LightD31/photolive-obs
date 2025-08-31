@@ -1,5 +1,6 @@
 const chokidar = require('chokidar');
 const path = require('path');
+const fs = require('fs').promises;
 const Logger = require('../utils/logger');
 
 class FileWatcher {
@@ -10,6 +11,7 @@ class FileWatcher {
     this.currentPath = null;
     this.recursive = false;
     this.eventHandlers = {};
+    this.pendingFiles = new Map(); // Track files being copied
   }
 
   on(event, handler) {
@@ -58,11 +60,7 @@ class FileWatcher {
           this.logger.debug(`File added: ${filePath}`);
           
           if (this.config.supportedFormats.includes(ext)) {
-            const relativePath = path.relative(this.currentPath, filePath);
-            const trackingKey = this.recursive ? relativePath : filename;
-            
-            this.logger.debug(`New image detected: ${trackingKey}`);
-            this.emit('imageAdded', filePath, trackingKey);
+            await this.waitForFileCopyComplete(filePath);
           } else {
             this.logger.debug(`Ignoring non-image file: ${filename}`);
           }
@@ -135,6 +133,54 @@ class FileWatcher {
 
   isRecursive() {
     return this.recursive;
+  }
+
+  async waitForFileCopyComplete(filePath) {
+    const filename = path.basename(filePath);
+    const relativePath = path.relative(this.currentPath, filePath);
+    const trackingKey = this.recursive ? relativePath : filename;
+    
+    // Cancel any existing check for this file
+    if (this.pendingFiles.has(filePath)) {
+      clearTimeout(this.pendingFiles.get(filePath));
+    }
+    
+    let lastSize = -1;
+    let stableCount = 0;
+    const requiredStableChecks = 3;
+    const checkInterval = 100; // ms
+    
+    const checkFileStability = async () => {
+      try {
+        const stats = await fs.stat(filePath);
+        const currentSize = stats.size;
+        
+        if (currentSize === lastSize && currentSize > 0) {
+          stableCount++;
+          if (stableCount >= requiredStableChecks) {
+            this.pendingFiles.delete(filePath);
+            this.logger.debug(`File copy complete: ${trackingKey}`);
+            this.emit('imageAdded', filePath, trackingKey);
+            return;
+          }
+        } else {
+          stableCount = 0;
+        }
+        
+        lastSize = currentSize;
+        
+        const timeoutId = setTimeout(checkFileStability, checkInterval);
+        this.pendingFiles.set(filePath, timeoutId);
+        
+      } catch (error) {
+        this.pendingFiles.delete(filePath);
+        this.logger.warn(`File became unavailable during copy check: ${trackingKey}`);
+      }
+    };
+    
+    // Start the stability check
+    const timeoutId = setTimeout(checkFileStability, checkInterval);
+    this.pendingFiles.set(filePath, timeoutId);
   }
 }
 
