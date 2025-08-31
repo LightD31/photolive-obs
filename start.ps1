@@ -1,6 +1,9 @@
 # PhotoLive OBS - Script de démarrage PowerShell
 # Nécessite PowerShell 7+ pour un affichage optimal des émojis
 
+# Changer vers le répertoire du script
+Set-Location -Path $PSScriptRoot
+
 Write-Host "📸 PhotoLive OBS - Démarrage..." -ForegroundColor Cyan
 Write-Host ""
 
