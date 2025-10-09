@@ -29,22 +29,26 @@ npm start
 ```
 
 URLs:
+
 - Slideshow: `http://localhost:3001`
 - Control: `http://localhost:3001/control`
 
 ## Usage
 
 ### OBS Setup
+
 1. Add Browser Source
 2. URL: `http://localhost:3001`
 3. Set your resolution
 
 ### Photos
+
 - Put images in `./photos/` folder
 - Supports: JPG, PNG, GIF, BMP, TIFF, WebP
 - Auto-detects new images
 
 ### Controls
+
 - Control page: `http://localhost:3001/control`
 - Arrow keys or space for navigation
 - P to pause/play
@@ -60,6 +64,7 @@ URLs:
 ## Configuration
 
 Environment variables:
+
 - `PORT` - Server port (default: 3001)
 - `LOG_LEVEL` - ERROR, WARN, INFO, DEBUG
 - `ALLOWED_ORIGINS` - CORS origins
@@ -69,16 +74,19 @@ Config file: `config/default.json`
 ## Troubleshooting
 
 **App won't start:**
+
 - Check Node.js version (need 14+)
 - Try `npm run clean && npm install`
 - Check if port 3001 is free
 
 **Images not showing:**
+
 - Check `photos/` folder exists
 - Verify image formats are supported
 - Look at console for errors
 
 **OBS not working:**
+
 - Test URL in browser first
 - Check OBS browser source settings
 - Try refreshing the source
