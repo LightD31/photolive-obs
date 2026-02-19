@@ -1,13 +1,16 @@
 const Logger = require('../utils/logger');
 
-function createSecurityMiddleware(config) {
-  const logger = new Logger(config.logLevel);
+function createSecurityMiddleware(_config) {
+  const logger = Logger.getInstance();
 
   return (req, res, next) => {
     // Security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
+    // Allow framing from same origin (needed for OBS browser source)
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     
     // Path traversal protection
     if (req.url.includes('..') || req.url.includes('%2e%2e')) {

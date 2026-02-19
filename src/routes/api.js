@@ -3,10 +3,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/logger');
+const { settingsSchema, photosPathSchema } = require('../validation/schemas');
 
-function createApiRoutes(config, slideshowService, imageService) {
+function createApiRoutes(config, slideshowService, _imageService) {
   const router = express.Router();
-  const logger = new Logger(config.logLevel);
+  const logger = Logger.getInstance();
 
   // Multer configuration for watermark uploads
   const watermarkStorage = multer.diskStorage({
@@ -58,69 +59,14 @@ function createApiRoutes(config, slideshowService, imageService) {
   // Update settings
   router.post('/settings', (req, res) => {
     try {
-      const allowedSettings = [
-        'interval', 'transition', 'transitionDuration', 'filter', 'showWatermark', 'watermarkText',
-        'watermarkType', 'watermarkImage', 'watermarkPosition', 'watermarkSize',
-        'watermarkOpacity', 'shuffleImages', 'repeatLatest', 'latestCount',
-        'transparentBackground', 'photosPath', 'excludedImages', 'language',
-        'recursiveSearch'
-      ];
+      const result = settingsSchema.safeParse(req.body);
       
-      const newSettings = {};
-      for (const [key, value] of Object.entries(req.body)) {
-        if (allowedSettings.includes(key)) {
-          switch (key) {
-            case 'interval':
-              if (typeof value === 'number' && value >= 1000 && value <= 60000) {
-                newSettings[key] = value;
-              }
-              break;
-            case 'transitionDuration':
-              if (typeof value === 'number' && value >= 100 && value <= 3000) {
-                newSettings[key] = value;
-              }
-              break;
-            case 'watermarkOpacity':
-              if (typeof value === 'number' && value >= 0 && value <= 100) {
-                newSettings[key] = value;
-              }
-              break;
-            case 'latestCount':
-              if (typeof value === 'number' && value >= 1 && value <= 50) {
-                newSettings[key] = value;
-              }
-              break;
-            case 'watermarkText':
-              if (typeof value === 'string' && value.length <= 200) {
-                newSettings[key] = value;
-              }
-              break;
-            case 'showWatermark':
-            case 'shuffleImages':
-            case 'repeatLatest':
-            case 'transparentBackground':
-            case 'recursiveSearch':
-              if (typeof value === 'boolean') {
-                newSettings[key] = value;
-              }
-              break;
-            case 'excludedImages':
-              if (Array.isArray(value) && value.every(item => typeof item === 'string')) {
-                newSettings[key] = value;
-              }
-              break;
-            case 'language':
-              if (typeof value === 'string' && ['en', 'fr'].includes(value)) {
-                newSettings[key] = value;
-              }
-              break;
-            default:
-              if (typeof value === 'string' && value.length <= 100) {
-                newSettings[key] = value;
-              }
-          }
-        }
+      if (!result.success) {
+        const errors = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`);
+        return res.status(400).json({ error: 'Invalid settings', details: errors });
       }
+      
+      const newSettings = result.data;
       
       slideshowService.updateSettings(newSettings);
       
@@ -133,7 +79,6 @@ function createApiRoutes(config, slideshowService, imageService) {
       // Emit events for specific setting changes
       if (newSettings.recursiveSearch !== undefined) {
         logger.debug(`Recursive search: ${newSettings.recursiveSearch}`);
-        // This will be handled by the main application
         req.app.emit('recursiveSearchChanged', newSettings.recursiveSearch);
       }
       
@@ -210,7 +155,7 @@ function createApiRoutes(config, slideshowService, imageService) {
         });
         
         res.json(translations);
-      } catch (fileError) {
+      } catch (_fileError) {
         logger.warn(`Locale file not found: ${language}`);
         res.status(404).json({ error: `Language '${language}' not available` });
       }
@@ -223,18 +168,14 @@ function createApiRoutes(config, slideshowService, imageService) {
   // Change photos folder
   router.post('/photos-path', async (req, res) => {
     try {
-      const { photosPath } = req.body;
+      const result = photosPathSchema.safeParse(req.body);
       
-      logger.debug(`Photos folder change requested: ${photosPath}`);
-      
-      if (!photosPath || typeof photosPath !== 'string') {
-        return res.status(400).json({ error: 'Photos path required and must be a string' });
-      }
-      
-      if (photosPath.includes('..') || photosPath.length > 500) {
-        return res.status(400).json({ error: 'Invalid folder path' });
+      if (!result.success) {
+        const errors = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`);
+        return res.status(400).json({ error: 'Invalid path', details: errors });
       }
 
+      const { photosPath } = result.data;
       const resolvedPath = path.resolve(photosPath);
       logger.debug(`Resolved path: ${resolvedPath}`);
 

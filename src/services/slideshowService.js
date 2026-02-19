@@ -3,7 +3,7 @@ const Logger = require('../utils/logger');
 class SlideshowService {
   constructor(config) {
     this.config = config;
-    this.logger = new Logger(config.logLevel);
+    this.logger = Logger.getInstance();
     
     // Image data
     this.currentImages = [];
@@ -67,7 +67,7 @@ class SlideshowService {
     return filteredImages;
   }
 
-  updateShuffledImagesList(newImageAdded = null) {
+  updateShuffledImagesList(_newImageAdded = null) {
     if (!this.settings.shuffleImages) {
       this.shuffledImages = [...this.currentImages];
       this.logger.debug('Normal mode: chronological order');

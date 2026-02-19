@@ -5,11 +5,13 @@
   "main": "server.js",
   "homepage": ".",
   "scripts": {
-    "start": "node server-new.js",
-    "start:old": "node server.js",
-    "dev": "node server-new.js",
-    "dev:old": "node server.js",
-    "test:logging": "node test-logging.js",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "jest --verbose",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/ server.js",
+    "lint:fix": "eslint src/ server.js --fix",
     "clean": "rimraf dist node_modules package-lock.json",
     "reinstall": "npm run clean && npm install"
   },
@@ -27,13 +29,19 @@
   "type": "commonjs",
   "dependencies": {
     "chokidar": "^4.0.3",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
     "exifr": "^7.1.3",
     "express": "^5.1.0",
     "multer": "^2.0.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.0",
+    "jest": "^30.2.0",
     "rimraf": "^5.0.5"
   }
 }

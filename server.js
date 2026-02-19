@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const PhotoLiveApp = require('./src/app');
 
 // Create and start the application

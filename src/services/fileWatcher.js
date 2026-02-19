@@ -1,36 +1,18 @@
+const { EventEmitter } = require('events');
 const chokidar = require('chokidar');
 const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/logger');
 
-class FileWatcher {
+class FileWatcher extends EventEmitter {
   constructor(config) {
+    super();
     this.config = config;
-    this.logger = new Logger(config.logLevel);
+    this.logger = Logger.getInstance();
     this.watcher = null;
     this.currentPath = null;
     this.recursive = false;
-    this.eventHandlers = {};
     this.pendingFiles = new Map(); // Track files being copied
-  }
-
-  on(event, handler) {
-    if (!this.eventHandlers[event]) {
-      this.eventHandlers[event] = [];
-    }
-    this.eventHandlers[event].push(handler);
-  }
-
-  emit(event, ...args) {
-    if (this.eventHandlers[event]) {
-      this.eventHandlers[event].forEach(handler => {
-        try {
-          handler(...args);
-        } catch (error) {
-          this.logger.error(`Error in event handler for ${event}:`, error);
-        }
-      });
-    }
   }
 
   start(photosPath, recursive = false) {
@@ -172,7 +154,7 @@ class FileWatcher {
         const timeoutId = setTimeout(checkFileStability, checkInterval);
         this.pendingFiles.set(filePath, timeoutId);
         
-      } catch (error) {
+      } catch (_error) {
         this.pendingFiles.delete(filePath);
         this.logger.warn(`File became unavailable during copy check: ${trackingKey}`);
       }

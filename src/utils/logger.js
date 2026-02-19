@@ -6,6 +6,9 @@ const LogLevel = {
 };
 
 class Logger {
+  /**
+   * @param {string} [level='INFO'] - Log level: ERROR, WARN, INFO, DEBUG
+   */
   constructor(level = 'INFO') {
     this.setLevel(level);
   }
@@ -38,6 +41,29 @@ class Logger {
       console.log(`[DEBUG] ${new Date().toISOString()}`, ...args);
     }
   }
+
+  /**
+   * Get the singleton Logger instance.
+   * On first call, creates the instance with the given level.
+   * Subsequent calls return the same instance (level param is ignored).
+   * @param {string} [level='INFO']
+   * @returns {Logger}
+   */
+  static getInstance(level = 'INFO') {
+    if (!Logger._instance) {
+      Logger._instance = new Logger(level);
+    }
+    return Logger._instance;
+  }
+
+  /**
+   * Reset the singleton (useful for testing).
+   */
+  static resetInstance() {
+    Logger._instance = null;
+  }
 }
+
+Logger._instance = null;
 
 module.exports = Logger;

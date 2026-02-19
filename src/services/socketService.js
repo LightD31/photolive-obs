@@ -1,13 +1,14 @@
+const { EventEmitter } = require('events');
 const Logger = require('../utils/logger');
 
-class SocketService {
+class SocketService extends EventEmitter {
   constructor(io, config) {
+    super();
     this.io = io;
     this.config = config;
-    this.logger = new Logger(config.logLevel);
+    this.logger = Logger.getInstance();
     this.slideshowService = null;
     this.imageService = null;
-    this.eventHandlers = {};
   }
 
   setSlideshowService(slideshowService) {
@@ -20,25 +21,6 @@ class SocketService {
 
   setImageService(imageService) {
     this.imageService = imageService;
-  }
-
-  on(event, handler) {
-    if (!this.eventHandlers[event]) {
-      this.eventHandlers[event] = [];
-    }
-    this.eventHandlers[event].push(handler);
-  }
-
-  emit(event, ...args) {
-    if (this.eventHandlers[event]) {
-      this.eventHandlers[event].forEach(handler => {
-        try {
-          handler(...args);
-        } catch (error) {
-          this.logger.error(`Error in socket event handler for ${event}:`, error);
-        }
-      });
-    }
   }
 
   initialize() {

@@ -4,7 +4,7 @@ const Logger = require('../utils/logger');
 
 function createImageRoutes(config) {
   const router = express.Router();
-  const logger = new Logger(config.logLevel);
+  const logger = Logger.getInstance();
   
   let currentPhotosPath = config.photosPath;
 

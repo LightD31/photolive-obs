@@ -43,15 +43,14 @@ class ExifSemaphore {
 class ImageService {
   constructor(config) {
     this.config = config;
-    this.logger = new Logger(config.logLevel);
+    this.logger = Logger.getInstance();
     this.exifSemaphore = new ExifSemaphore(3);
     this.newlyAddedImages = new Set();
   }
 
   async extractExifThumbnail(filePath) {
-    let buffer = null;
     try {
-      buffer = await fs.readFile(filePath);
+      const buffer = await fs.readFile(filePath);
       const [thumbnailBuffer, orientation] = await Promise.all([
         exifr.thumbnail(buffer),
         exifr.orientation(buffer)
@@ -69,11 +68,9 @@ class ImageService {
       }
       
       return null;
-    } catch (error) {
+    } catch (_error) {
       this.logger.debug(`No EXIF thumbnail: ${path.basename(filePath)}`);
       return null;
-    } finally {
-      buffer = null;
     }
   }
 
@@ -82,9 +79,8 @@ class ImageService {
       const stats = await fs.stat(filePath);
       
       return await this.exifSemaphore.execute(async () => {
-        let buffer = null;
         try {
-          buffer = await fs.readFile(filePath);
+          const buffer = await fs.readFile(filePath);
           
           const options = {
             pick: [
@@ -155,8 +151,6 @@ class ImageService {
           
         } catch (error) {
           this.logger.debug(`EXIF read error: ${path.basename(filePath)} - ${error.message}`);
-        } finally {
-          buffer = null;
         }
         
         this.logger.debug(`Using file system date: ${path.basename(filePath)}`);
@@ -178,7 +172,7 @@ class ImageService {
         thumbnailData = await this.exifSemaphore.execute(async () => {
           return await this.extractExifThumbnail(filePath);
         });
-      } catch (error) {
+      } catch (_error) {
         this.logger.debug(`Thumbnail extraction failed: ${relativePath || path.basename(filePath)}`);
       }
       

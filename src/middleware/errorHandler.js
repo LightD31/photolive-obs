@@ -1,9 +1,9 @@
 const Logger = require('../utils/logger');
 
-function createErrorHandler(config) {
-  const logger = new Logger(config.logLevel);
+function createErrorHandler(_config) {
+  const logger = Logger.getInstance();
 
-  return (err, req, res, next) => {
+  return (err, req, res, _next) => {
     logger.error('Unhandled error:', err);
 
     // Multer errors

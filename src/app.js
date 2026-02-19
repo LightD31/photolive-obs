@@ -4,6 +4,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const fs = require('fs').promises;
 const cors = require('cors');
+const compression = require('compression');
 
 // Import services and utilities
 const config = require('./config');
@@ -22,7 +23,8 @@ const createErrorHandler = require('./middleware/errorHandler');
 class PhotoLiveApp {
   constructor() {
     this.config = config.get();
-    this.logger = new Logger(this.config.logLevel);
+    // Initialize Logger singleton first so all services share the same instance
+    this.logger = Logger.getInstance(this.config.logLevel);
     
     // Express app and server
     this.app = express();
@@ -54,6 +56,9 @@ class PhotoLiveApp {
   }
 
   setupMiddleware() {
+    // Compression middleware (gzip/deflate)
+    this.app.use(compression());
+    
     // Basic middleware
     this.app.use(cors());
     this.app.use(express.json({ limit: '1mb' }));

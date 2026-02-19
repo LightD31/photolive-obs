@@ -51,14 +51,20 @@ PhotoLive OBS is a sophisticated Node.js real-time photo slideshow application d
 ### Development Commands
 - `npm start`: Start production server (identical to dev for this application)
 - `npm run dev`: Start development server (same as npm start)
+- `npm test`: Run Jest test suite
+- `npm run test:watch`: Run tests in watch mode
+- `npm run test:coverage`: Run tests with coverage report
+- `npm run lint`: Run ESLint on source files
+- `npm run lint:fix`: Run ESLint with auto-fix
 - `npm run clean`: Remove dist, node_modules, package-lock.json
 - `npm run reinstall`: Clean and reinstall dependencies
 
 ### Debug Logging
-- **Enable debug logging**: Set `LOG_LEVEL=DEBUG` environment variable before starting
+- **Enable debug logging**: Set `LOG_LEVEL=DEBUG` in `.env` file or as environment variable
 - **Windows PowerShell**: `$env:LOG_LEVEL="DEBUG"; node server.js`
 - **Windows Command Prompt**: `set LOG_LEVEL=DEBUG && node server.js`
 - **Linux/macOS**: `LOG_LEVEL=DEBUG node server.js`
+- **Using .env file**: Copy `.env.example` to `.env` and set `LOG_LEVEL=DEBUG`
 - **Debug levels available**: ERROR, WARN, INFO, DEBUG (default: INFO)
 - **Debug output includes**: File monitoring events, WebSocket connections, API requests, image processing, real-time state changes
 
@@ -67,8 +73,13 @@ PhotoLive OBS is a sophisticated Node.js real-time photo slideshow application d
 - **File Monitoring**: Chokidar 4.x for cross-platform file system watching
 - **Image Processing**: EXIFR 7.x for comprehensive EXIF metadata extraction
 - **File Uploads**: Multer 2.x for multipart form handling (watermark uploads)
+- **Validation**: Zod for schema-based API input validation
+- **Compression**: compression middleware for HTTP gzip/deflate
+- **Environment**: dotenv for .env file support
 - **Frontend**: Vanilla JavaScript (ES6+), HTML5, CSS3 with CSS Grid and Flexbox
 - **Real-time Communication**: WebSocket via Socket.IO for bidirectional updates
+- **Testing**: Jest for unit and integration tests
+- **Linting**: ESLint with recommended rules
 - **Cross-Platform**: Windows, macOS, Linux support with native file watching
 
 ## Validation
@@ -185,14 +196,27 @@ if __name__ == "__main__":
 ## Application Architecture
 
 ### Core Server Components
-- **server.js**: Main Express server (2000+ lines) with comprehensive features:
-  - Express.js web server with static file serving
+- **server.js**: Entry point — loads dotenv, creates PhotoLiveApp, handles graceful shutdown
+- **src/app.js**: Main application class `PhotoLiveApp` orchestrating all services:
+  - Express.js web server with compression and static file serving
   - Socket.IO WebSocket server for real-time bidirectional communication
-  - Chokidar file system watcher with recursive monitoring support
-  - EXIFR-based metadata extraction system
-  - Multer-powered watermark upload system
-  - Advanced image queue management with priority handling
-  - Logger utility with configurable levels (ERROR, WARN, INFO, DEBUG)
+  - Service initialization and event wiring
+  - Graceful shutdown handling
+- **src/services/**: Business logic services:
+  - **imageService.js**: Image scanning, EXIF extraction, thumbnail generation, semaphore-based concurrency
+  - **slideshowService.js**: Slideshow state machine, timer, queue system, playback control
+  - **fileWatcher.js**: Chokidar-based file system watcher (extends Node.js EventEmitter)
+  - **socketService.js**: Socket.IO event handling and broadcasting (extends Node.js EventEmitter)
+- **src/routes/**: Express route handlers:
+  - **api.js**: REST API for settings, images, watermarks, locales, folder management
+  - **images.js**: Secure image serving with path validation
+- **src/middleware/**: Express middleware:
+  - **security.js**: Security headers (SAMEORIGIN for OBS, XSS protection, Referrer-Policy)
+  - **errorHandler.js**: Centralized error handling (Multer errors, generic errors)
+- **src/validation/**: Input validation schemas:
+  - **schemas.js**: Zod schemas for settings and photos-path validation
+- **src/config/index.js**: ConfigManager singleton loading config/default.json with fallback
+- **src/utils/logger.js**: Logger singleton with configurable levels (ERROR, WARN, INFO, DEBUG)
 
 ### Configuration & Internationalization
 - **config/default.json**: Comprehensive application configuration (74 lines)
@@ -221,12 +245,15 @@ if __name__ == "__main__":
   - CSS filter and transition management
   - Watermark rendering system
   - WebSocket event handling
-- **public/js/control.js**: Control interface logic (1400+ lines)
-  - Grid rendering with virtualization for performance
+- **public/js/control-new.js**: Control interface logic (modular)
+  - Uses modules from public/js/modules/
   - Real-time state synchronization
   - File upload handling
-  - Debounced setting updates
-  - Comprehensive error handling
+- **public/js/modules/**: Modular JavaScript components
+  - **socketClient.js**: WebSocket client with reconnection logic
+  - **imageGrid.js**: Grid rendering with zoom and sort controls  
+  - **slideshowControls.js**: Playback control UI module
+  - **settingsManager.js**: Settings synchronization module
 
 ### File System & Storage
 - **photos/**: Auto-created images folder with intelligent monitoring
@@ -319,17 +346,19 @@ if __name__ == "__main__":
 ## Professional Development Workflow
 
 ### Adding New Features
-1. **Server-side implementation**: Modify `server.js` for new API endpoints, WebSocket events, or core logic
-2. **Client-side integration**: Update `public/js/control.js` and/or `public/js/slideshow.js` for UI features
+1. **Server-side implementation**: Add/modify services in `src/services/`, routes in `src/routes/`, or validation in `src/validation/`
+2. **Client-side integration**: Update `public/js/control-new.js`, `public/js/modules/`, and/or `public/js/slideshow.js`
 3. **Configuration integration**: Add new settings to `config/default.json` with appropriate defaults
-4. **Internationalization**: Update `locales/en.json` and `locales/fr.json` for new UI strings
-5. **HTML structure**: Modify `public/control.html` or `public/slideshow.html` for new interface elements
-6. **CSS styling**: Update `public/css/control.css` or `public/css/slideshow.css` for visual changes
-7. **ALWAYS execute complete validation workflow** after any modifications
+4. **Validation**: Add Zod schema validation in `src/validation/schemas.js` for new settings
+5. **Internationalization**: Update `locales/en.json` and `locales/fr.json` for new UI strings
+6. **HTML structure**: Modify `public/control.html` or `public/slideshow.html` for new interface elements
+7. **CSS styling**: Update `public/css/control.css` or `public/css/slideshow.css` for visual changes
+8. **Tests**: Add Jest tests in `tests/unit/` for new service logic and validation
+9. **ALWAYS execute complete validation workflow** after any modifications
 
 ### Advanced Debugging & Diagnostics
 - **Server-side debugging**:
-  - Enable DEBUG logging: `$env:LOG_LEVEL="DEBUG"; node server.js` (PowerShell)
+  - Enable DEBUG logging: `$env:LOG_LEVEL="DEBUG"; node server.js` (PowerShell) or set in `.env`
   - Monitor: File detection events, WebSocket connections, API requests, image processing
   - EXIF parsing errors, queue management, performance metrics
 - **Client-side debugging**:
@@ -408,96 +437,69 @@ if __name__ == "__main__":
 
 ```
 photolive-obs/
-├── server.js                    # Main Express server (2000+ lines)
-│                               # - Express.js 5.x web server with static file serving
-│                               # - Socket.IO WebSocket server for real-time communication
-│                               # - Chokidar file system watcher with recursive support
-│                               # - EXIFR metadata extraction system
-│                               # - Multer watermark upload handling
-│                               # - Advanced image queue management
-│                               # - Configurable logger utility
+├── server.js                    # Entry point — loads dotenv, creates PhotoLiveApp
 │
-├── package.json                # Node.js dependencies and scripts
-│                               # - Express 5.x, Socket.IO 4.x, Chokidar 4.x
-│                               # - EXIFR 7.x, Multer 2.x, CORS 2.x
-│                               # - Development scripts and rimraf
+├── src/                         # Modular server-side code
+│   ├── app.js                  # Main PhotoLiveApp class (Express + Socket.IO + services)
+│   ├── config/
+│   │   └── index.js            # ConfigManager singleton (loads config/default.json)
+│   ├── middleware/
+│   │   ├── security.js         # Security headers (SAMEORIGIN, XSS, Referrer-Policy)
+│   │   └── errorHandler.js     # Centralized error handling
+│   ├── routes/
+│   │   ├── api.js              # REST API routes (settings, images, watermarks, locales)
+│   │   └── images.js           # Secure image serving with path validation
+│   ├── services/
+│   │   ├── imageService.js     # Image scanning, EXIF extraction, thumbnails
+│   │   ├── slideshowService.js # Slideshow state machine, timer, queue
+│   │   ├── fileWatcher.js      # Chokidar file watcher (extends EventEmitter)
+│   │   └── socketService.js    # Socket.IO event handling (extends EventEmitter)
+│   ├── utils/
+│   │   └── logger.js           # Logger singleton (ERROR/WARN/INFO/DEBUG)
+│   └── validation/
+│       └── schemas.js          # Zod schemas for API input validation
+│
+├── package.json                # Dependencies and npm scripts
+├── jest.config.js              # Jest test configuration
+├── eslint.config.js            # ESLint flat config
+├── .env.example                # Environment variables template
+│
+├── tests/                      # Automated test suite
+│   └── unit/
+│       ├── logger.test.js
+│       ├── slideshowService.test.js
+│       └── validation.test.js
 │
 ├── config/
-│   └── default.json           # Comprehensive application configuration (74 lines)
-│                               # - Server settings (port, CORS, logging)
-│                               # - Slideshow parameters and limits
-│                               # - Filter and transition definitions
-│                               # - Watermark and feature defaults
+│   └── default.json            # Application configuration
 │
-├── locales/                    # Complete internationalization system
-│   ├── en.json                # English translations with context
-│   └── fr.json                # French translations with pluralization
+├── locales/
+│   ├── en.json
+│   └── fr.json
 │
-├── photos/                     # Images folder (auto-created, auto-monitored)
-│                               # - 7 supported image formats
-│                               # - EXIF metadata extraction
-│                               # - Recursive subfolder scanning (optional)
-│                               # - Priority queue for new images
+├── photos/                     # Auto-created images folder
 │
 ├── uploads/
-│   └── watermarks/            # PNG watermark storage (auto-created)
-│                               # - File validation and size limits
-│                               # - Unique filename generation
+│   └── watermarks/
 │
-├── public/                     # Static web files served by Express
-│   ├── slideshow.html         # OBS-optimized slideshow display
-│   │                          # - Fullscreen-ready CSS Grid layout
-│   │                          # - Hardware-accelerated transitions
-│   │                          # - Keyboard navigation support
-│   │
-│   ├── control.html           # Professional control interface (500+ lines)
-│   │                          # - Responsive grid-based image browser
-│   │                          # - Real-time preview synchronization
-│   │                          # - Comprehensive settings management
-│   │
+├── public/
+│   ├── slideshow.html
+│   ├── control.html
 │   ├── css/
-│   │   ├── slideshow.css      # Slideshow styling and animations
-│   │   │                      # - CSS Grid layouts, transitions, filters
-│   │   │                      # - Watermark positioning system
-│   │   │                      # - Responsive design patterns
-│   │   │
-│   │   └── control.css        # Control interface styling
-│   │                          # - Grid virtualization for performance
-│   │                          # - Modern CSS with Flexbox and Grid
-│   │                          # - Responsive breakpoints
-│   │
+│   │   ├── slideshow.css
+│   │   └── control.css
 │   └── js/
-│       ├── slideshow.js       # Slideshow client logic (700+ lines)
-│       │                      # - Advanced image preloading and caching
-│       │                      # - CSS filter and transition management
-│       │                      # - Watermark rendering system
-│       │                      # - WebSocket event handling
-│       │
-│       ├── control.js         # Control interface logic (1400+ lines)
-│       │                      # - Grid rendering with performance optimization
-│       │                      # - Real-time state synchronization
-│       │                      # - File upload handling
-│       │                      # - Debounced setting updates
-│       │                      # - Comprehensive error handling
-│       │
-│       ├── i18n.js           # Internationalization client system
-│       │                      # - Dynamic language switching
-│       │                      # - DOM translation updates
-│       │                      # - Pluralization support
-│       │
-│       └── modules/           # Modular JavaScript components (future expansion)
+│       ├── slideshow.js
+│       ├── control-new.js      # Modular control interface
+│       ├── i18n.js
+│       └── modules/
+│           ├── socketClient.js
+│           ├── imageGrid.js
+│           ├── slideshowControls.js
+│           └── settingsManager.js
 │
-├── create_test_images.py      # Comprehensive test image generator (429 lines)
-│                               # - Realistic EXIF metadata generation
-│                               # - Multiple camera equipment simulation
-│                               # - GPS coordinates and timestamps
-│                               # - Cross-platform font handling
-│
-├── test_exif_parsing.py       # EXIF metadata testing utility
-├── test_exif.js              # Node.js EXIF testing script
-├── start.bat                  # Windows batch startup script
-├── start.ps1                  # PowerShell startup script
-├── start.sh                   # Unix/Linux shell startup script
+├── create_test_images.py
+├── start.bat / start.ps1 / start.sh
 │
 ├── .github/
 │   └── copilot-instructions.md # This comprehensive documentation
@@ -571,7 +573,7 @@ Both slideshow and control interfaces support:
 1. **Environment setup**: `npm start` (immediate startup, no build process required)
 2. **Test data creation**: Execute comprehensive Python image generation script
 3. **Complete feature validation**: Follow comprehensive end-to-end testing workflow
-4. **Code modification**: Edit server.js, client JavaScript, CSS, or configuration files
+4. **Code modification**: Edit services in `src/`, client JavaScript, CSS, or configuration files
 5. **Real-time testing**: Validate changes across slideshow and control interfaces simultaneously
 6. **Performance verification**: Monitor WebSocket connections, API response times, image loading
 7. **Cross-platform testing**: Verify functionality across Windows, macOS, Linux environments
