@@ -199,6 +199,48 @@
                         </div>
                     </section>
 
+                    <!-- FTP Server settings -->
+                    <section class="control-section compact collapsible collapsed">
+                        <h2 class="collapsible-header" data-i18n="sections.ftp_settings">📡 FTP Server <span class="collapse-icon">+</span></h2>
+                        <div class="collapsible-content">
+                            <div class="ftp-settings">
+                                <p class="settings-info-text" data-i18n="ftp.info_text">Enable the built-in FTP server to allow direct image uploads. Files are detected instantly when the transfer completes.</p>
+                                <div class="setting-row checkbox-row">
+                                    <label class="checkbox-label compact">
+                                        <input type="checkbox" id="ftp-enabled">
+                                        <span class="checkmark"></span>
+                                        <span data-i18n="ftp.enable">Enable FTP Server</span>
+                                    </label>
+                                    <span id="ftp-status-badge" class="status-badge status-stopped" data-i18n="ftp.status_stopped">Stopped</span>
+                                </div>
+                                <div id="ftp-details" class="ftp-details">
+                                    <div class="setting-row">
+                                        <label for="ftp-port" data-i18n="ftp.port">Port:</label>
+                                        <input type="number" id="ftp-port" class="compact-input" value="2121" min="1" max="65535">
+                                    </div>
+                                    <div class="setting-row">
+                                        <label for="ftp-username" data-i18n="ftp.username">Username:</label>
+                                        <input type="text" id="ftp-username" class="compact-input" value="photolive">
+                                    </div>
+                                    <div class="setting-row">
+                                        <label for="ftp-password" data-i18n="ftp.password">Password:</label>
+                                        <input type="text" id="ftp-password" class="compact-input" value="photolive">
+                                    </div>
+                                    <div class="ftp-connection-info" id="ftp-connection-info" style="display: none;">
+                                        <div class="setting-row">
+                                            <label data-i18n="ftp.address">FTP Address:</label>
+                                            <code id="ftp-address">ftp://localhost:2121</code>
+                                        </div>
+                                        <div class="ftp-stats">
+                                            <span><span data-i18n="ftp.connections">Connections</span>: <strong id="ftp-connections">0</strong></span>
+                                            <span><span data-i18n="ftp.total_uploads">Total uploads</span>: <strong id="ftp-total-uploads">0</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- Watermark settings -->
                     <section class="control-section compact">
                         <h2 data-i18n="sections.watermark_settings">🏷️ Watermark</h2>

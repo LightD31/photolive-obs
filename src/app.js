@@ -13,6 +13,7 @@ const ImageService = require('./services/imageService');
 const SlideshowService = require('./services/slideshowService');
 const FileWatcher = require('./services/fileWatcher');
 const SocketService = require('./services/socketService');
+const FtpService = require('./services/ftpService');
 
 // Import routes and middleware
 const createApiRoutes = require('./routes/api');
@@ -44,6 +45,7 @@ class PhotoLiveApp {
     this.slideshowService = new SlideshowService(this.config);
     this.fileWatcher = new FileWatcher(this.config);
     this.socketService = new SocketService(this.io, this.config);
+    this.ftpService = new FtpService(this.config);
     
     // Current photos path
     this.currentPhotosPath = this.config.photosPath;
@@ -78,7 +80,7 @@ class PhotoLiveApp {
     this.app.set('io', this.io);
     
     // API routes
-    const apiRoutes = createApiRoutes(this.config, this.slideshowService, this.imageService);
+    const apiRoutes = createApiRoutes(this.config, this.slideshowService, this.imageService, this.ftpService);
     this.app.use('/api', apiRoutes);
     
     // Image serving routes
@@ -109,8 +111,8 @@ class PhotoLiveApp {
   }
 
   setupEventHandlers() {
-    // File watcher events
-    this.fileWatcher.on('imageAdded', async (filePath, trackingKey) => {
+    // Shared handler for new images (used by both FileWatcher and FTP)
+    this._handleNewImage = async (filePath, trackingKey) => {
       this.logger.info(`New image detected: ${trackingKey}`);
       this.logger.debug(`File path: ${filePath}`);
       
@@ -133,7 +135,10 @@ class PhotoLiveApp {
       
       this.slideshowService.addImageToQueue(trackingKey);
       this.logger.debug(`Image ${trackingKey} added to queue`);
-    });
+    };
+
+    // File watcher events
+    this.fileWatcher.on('imageAdded', this._handleNewImage);
 
     this.fileWatcher.on('imageRemoved', async (filePath, trackingKey) => {
       this.logger.info(`Image removed: ${trackingKey}`);
@@ -160,6 +165,29 @@ class PhotoLiveApp {
       this.logger.error('File watcher error:', error);
     });
 
+    // FTP service events - file is guaranteed fully written when this fires
+    this.ftpService.on('imageAdded', this._handleNewImage);
+
+    this.ftpService.on('started', ({ port }) => {
+      this.socketService.broadcastFtpStatus(this.ftpService.getStatus());
+    });
+
+    this.ftpService.on('stopped', () => {
+      this.socketService.broadcastFtpStatus(this.ftpService.getStatus());
+    });
+
+    this.ftpService.on('clientConnected', () => {
+      this.socketService.broadcastFtpStatus(this.ftpService.getStatus());
+    });
+
+    this.ftpService.on('clientDisconnected', () => {
+      this.socketService.broadcastFtpStatus(this.ftpService.getStatus());
+    });
+
+    this.ftpService.on('error', (error) => {
+      this.logger.error('FTP server error:', error);
+    });
+
     // Socket service events
     this.socketService.on('rescan-requested', async () => {
       await this.scanImages();
@@ -173,6 +201,10 @@ class PhotoLiveApp {
 
     this.app.on('photosPathChanged', async (newPath) => {
       await this.changePhotosPath(newPath);
+    });
+
+    this.app.on('ftpSettingsChanged', async (newSettings) => {
+      await this.ftpService.updateSettings(newSettings);
     });
   }
 
@@ -246,6 +278,11 @@ class PhotoLiveApp {
     // Restart file watching
     this.fileWatcher.start(newPath, this.slideshowService.getSettings().recursiveSearch);
     
+    // Update FTP root directory
+    if (this.ftpService.isRunning) {
+      await this.ftpService.updatePhotosPath(newPath);
+    }
+    
     // Rescan images
     await this.scanImages();
   }
@@ -260,6 +297,13 @@ class PhotoLiveApp {
       
       // Start file watching
       this.fileWatcher.start(this.currentPhotosPath, this.slideshowService.getSettings().recursiveSearch);
+      
+      // Start FTP server if enabled
+      try {
+        await this.ftpService.start(this.currentPhotosPath);
+      } catch (error) {
+        this.logger.warn(`FTP server failed to start: ${error.message}`);
+      }
       
       // Start slideshow timer
       this.slideshowService.startSlideshowTimer();
@@ -305,6 +349,9 @@ class PhotoLiveApp {
     try {
       this.fileWatcher.stop();
       this.logger.debug('File watcher stopped');
+      
+      await this.ftpService.stop();
+      this.logger.debug('FTP server stopped');
       
       this.slideshowService.stopSlideshowTimer();
       this.slideshowService.stopQueueProcessing();

@@ -3,9 +3,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/logger');
-const { settingsSchema, photosPathSchema } = require('../validation/schemas');
+const { settingsSchema, photosPathSchema, ftpSettingsSchema } = require('../validation/schemas');
 
-function createApiRoutes(config, slideshowService, _imageService) {
+function createApiRoutes(config, slideshowService, _imageService, ftpService) {
   const router = express.Router();
   const logger = Logger.getInstance();
 
@@ -202,6 +202,57 @@ function createApiRoutes(config, slideshowService, _imageService) {
     } catch (error) {
       logger.error('Error changing folder:', error);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ==================== FTP Server Routes ====================
+
+  // Get FTP server status
+  router.get('/ftp/status', (req, res) => {
+    try {
+      if (!ftpService) {
+        return res.json({ enabled: false, running: false });
+      }
+      res.json(ftpService.getStatus());
+    } catch (error) {
+      logger.error('Error getting FTP status:', error);
+      res.status(500).json({ error: 'Failed to get FTP status' });
+    }
+  });
+
+  // Get FTP server settings
+  router.get('/ftp/settings', (req, res) => {
+    try {
+      if (!ftpService) {
+        return res.json({ enabled: false });
+      }
+      res.json(ftpService.getSettings());
+    } catch (error) {
+      logger.error('Error getting FTP settings:', error);
+      res.status(500).json({ error: 'Failed to get FTP settings' });
+    }
+  });
+
+  // Update FTP server settings
+  router.post('/ftp/settings', (req, res) => {
+    try {
+      const result = ftpSettingsSchema.safeParse(req.body);
+
+      if (!result.success) {
+        const errors = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`);
+        return res.status(400).json({ error: 'Invalid FTP settings', details: errors });
+      }
+
+      const newSettings = result.data;
+
+      // Emit event for app-level handling (start/stop/restart)
+      req.app.emit('ftpSettingsChanged', newSettings);
+
+      logger.info('FTP settings updated');
+      res.json({ success: true, settings: { ...ftpService.getSettings(), ...newSettings } });
+    } catch (error) {
+      logger.error('Error updating FTP settings:', error);
+      res.status(500).json({ error: 'Failed to update FTP settings' });
     }
   });
 

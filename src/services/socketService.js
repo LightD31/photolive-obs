@@ -345,6 +345,14 @@ class SocketService extends EventEmitter {
       this.logger.error('Error broadcasting image changed:', error);
     }
   }
+
+  broadcastFtpStatus(status) {
+    try {
+      this.io.emit('ftp-status', status);
+    } catch (error) {
+      this.logger.error('Error broadcasting FTP status:', error);
+    }
+  }
 }
 
 module.exports = SocketService;

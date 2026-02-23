@@ -22,6 +22,7 @@
     "folder_settings": "Paramètres Dossier",
     "watermark_settings": "Paramètres Filigrane",
     "advanced_settings": "Paramètres Avancés",
+    "ftp_settings": "Serveur FTP",
     "instructions": "Instructions"
   },
   "previews": {
@@ -145,5 +146,17 @@
   "languages": {
     "en": "English",
     "fr": "Français"
+  },
+  "ftp": {
+    "enable": "Activer le serveur FTP",
+    "port": "Port",
+    "username": "Identifiant",
+    "password": "Mot de passe",
+    "status_running": "En cours",
+    "status_stopped": "Arrêté",
+    "connections": "Connexions",
+    "total_uploads": "Uploads totaux",
+    "info_text": "Activez le serveur FTP intégré pour permettre l'envoi direct d'images. Les fichiers sont détectés instantanément à la fin du transfert.",
+    "address": "Adresse FTP"
   }
 }

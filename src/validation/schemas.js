@@ -35,7 +35,20 @@ const photosPathSchema = z.object({
   ),
 });
 
+/**
+ * Zod schema for FTP settings update.
+ */
+const ftpSettingsSchema = z.object({
+  enabled: z.boolean().optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  username: z.string().min(1).max(100).optional(),
+  password: z.string().min(1).max(100).optional(),
+  pasv_min: z.number().int().min(1024).max(65535).optional(),
+  pasv_max: z.number().int().min(1024).max(65535).optional(),
+}).strict();
+
 module.exports = {
   settingsSchema,
   photosPathSchema,
+  ftpSettingsSchema,
 };

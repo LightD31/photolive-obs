@@ -5,6 +5,14 @@
     "allowedOrigins": ["*"],
     "logLevel": "INFO"
   },
+  "ftp": {
+    "enabled": true,
+    "port": 2121,
+    "username": "photolive",
+    "password": "password",
+    "pasv_min": 1024,
+    "pasv_max": 1048
+  },
   "slideshow": {
     "interval": 5000,
     "minInterval": 1000,

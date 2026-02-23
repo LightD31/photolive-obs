@@ -49,6 +49,18 @@ class SettingsManager {
     this.photosPathInput = document.getElementById('photos-path');
     this.changeFolderBtn = document.getElementById('change-folder-btn');
     this.rescanFolderBtn = document.getElementById('rescan-folder-btn');
+
+    // FTP controls
+    this.ftpEnabledCheckbox = document.getElementById('ftp-enabled');
+    this.ftpPortInput = document.getElementById('ftp-port');
+    this.ftpUsernameInput = document.getElementById('ftp-username');
+    this.ftpPasswordInput = document.getElementById('ftp-password');
+    this.ftpStatusBadge = document.getElementById('ftp-status-badge');
+    this.ftpDetails = document.getElementById('ftp-details');
+    this.ftpConnectionInfo = document.getElementById('ftp-connection-info');
+    this.ftpAddress = document.getElementById('ftp-address');
+    this.ftpConnections = document.getElementById('ftp-connections');
+    this.ftpTotalUploads = document.getElementById('ftp-total-uploads');
   }
 
   setupEventHandlers() {
@@ -183,6 +195,45 @@ class SettingsManager {
     this.socket.on('settings-updated', (settings) => {
       this.updateUI(settings);
     });
+
+    // FTP status events
+    this.socket.on('ftp-status', (status) => {
+      this.updateFtpStatusUI(status);
+    });
+
+    // FTP controls
+    if (this.ftpEnabledCheckbox) {
+      this.ftpEnabledCheckbox.addEventListener('change', (e) => {
+        this.updateFtpSetting({ enabled: e.target.checked });
+      });
+    }
+
+    if (this.ftpPortInput) {
+      this.ftpPortInput.addEventListener('change', (e) => {
+        const port = parseInt(e.target.value);
+        if (port >= 1 && port <= 65535) {
+          this.updateFtpSetting({ port });
+        }
+      });
+    }
+
+    if (this.ftpUsernameInput) {
+      this.ftpUsernameInput.addEventListener('change', (e) => {
+        const username = e.target.value.trim();
+        if (username) {
+          this.updateFtpSetting({ username });
+        }
+      });
+    }
+
+    if (this.ftpPasswordInput) {
+      this.ftpPasswordInput.addEventListener('change', (e) => {
+        const password = e.target.value.trim();
+        if (password) {
+          this.updateFtpSetting({ password });
+        }
+      });
+    }
   }
 
   updateSetting(key, value) {
@@ -367,6 +418,107 @@ class SettingsManager {
 
   rescanFolder() {
     this.socket.send('rescan-images');
+  }
+
+  // ==================== FTP Settings ====================
+
+  updateFtpSetting(settings) {
+    fetch('/api/ftp/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        console.log('FTP settings updated');
+        // Refresh status
+        this.fetchFtpStatus();
+      } else {
+        console.error('FTP settings update failed:', data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error updating FTP settings:', error);
+    });
+  }
+
+  fetchFtpStatus() {
+    fetch('/api/ftp/status')
+      .then(response => response.json())
+      .then(status => {
+        this.updateFtpStatusUI(status);
+      })
+      .catch(error => {
+        console.error('Error fetching FTP status:', error);
+      });
+  }
+
+  fetchFtpSettings() {
+    fetch('/api/ftp/settings')
+      .then(response => response.json())
+      .then(settings => {
+        this.updateFtpSettingsUI(settings);
+      })
+      .catch(error => {
+        console.error('Error fetching FTP settings:', error);
+      });
+  }
+
+  updateFtpSettingsUI(settings) {
+    if (this.ftpEnabledCheckbox) {
+      this.ftpEnabledCheckbox.checked = settings.enabled || false;
+    }
+    if (this.ftpPortInput && settings.port) {
+      this.ftpPortInput.value = settings.port;
+    }
+    if (this.ftpUsernameInput && settings.username) {
+      this.ftpUsernameInput.value = settings.username;
+    }
+    if (this.ftpPasswordInput && settings.password) {
+      this.ftpPasswordInput.value = settings.password;
+    }
+  }
+
+  updateFtpStatusUI(status) {
+    if (this.ftpStatusBadge) {
+      if (status.running) {
+        this.ftpStatusBadge.className = 'status-badge status-running';
+        this.ftpStatusBadge.setAttribute('data-i18n', 'ftp.status_running');
+        this.ftpStatusBadge.textContent = window.i18n?.t('ftp.status_running') || 'Running';
+      } else {
+        this.ftpStatusBadge.className = 'status-badge status-stopped';
+        this.ftpStatusBadge.setAttribute('data-i18n', 'ftp.status_stopped');
+        this.ftpStatusBadge.textContent = window.i18n?.t('ftp.status_stopped') || 'Stopped';
+      }
+    }
+
+    if (this.ftpEnabledCheckbox) {
+      this.ftpEnabledCheckbox.checked = status.enabled || false;
+    }
+
+    if (this.ftpConnectionInfo) {
+      this.ftpConnectionInfo.style.display = status.running ? 'block' : 'none';
+    }
+
+    if (this.ftpAddress && status.port) {
+      this.ftpAddress.textContent = `ftp://localhost:${status.port}`;
+    }
+
+    if (this.ftpConnections) {
+      this.ftpConnections.textContent = status.connections || 0;
+    }
+
+    if (this.ftpTotalUploads) {
+      this.ftpTotalUploads.textContent = status.totalUploads || 0;
+    }
+  }
+
+  initializeFtp() {
+    this.fetchFtpSettings();
+    this.fetchFtpStatus();
   }
 
   getSettings() {

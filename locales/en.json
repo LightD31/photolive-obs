@@ -22,6 +22,7 @@
     "folder_settings": "Folder Settings",
     "watermark_settings": "Watermark Settings",
     "advanced_settings": "Advanced Settings",
+    "ftp_settings": "FTP Server",
     "instructions": "Instructions"
   },
   "previews": {
@@ -145,5 +146,17 @@
   "languages": {
     "en": "English",
     "fr": "Français"
+  },
+  "ftp": {
+    "enable": "Enable FTP Server",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password",
+    "status_running": "Running",
+    "status_stopped": "Stopped",
+    "connections": "Connections",
+    "total_uploads": "Total uploads",
+    "info_text": "Enable the built-in FTP server to allow direct image uploads. Files are detected instantly when the transfer completes.",
+    "address": "FTP Address"
   }
 }

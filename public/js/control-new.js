@@ -170,6 +170,8 @@ class PhotoLiveControl {
 
     requestInitialData() {
         this.loadInitialData();
+        // Load FTP settings and status
+        this.settingsManager.initializeFtp();
     }
 
     async loadInitialData() {
