@@ -71,7 +71,13 @@
   "transitions": {
     "none": "Aucune",
     "fade": "Fondu",
-    "slide": "Glissement"
+    "slide": "Glissement",
+    "zoom": "Zoom",
+    "flip": "Retournement",
+    "blur": "Flou",
+    "wipe": "Balayage",
+    "rotate": "Rotation",
+    "shrink": "Rétrécissement"
   },
   "watermark": {
     "types": {

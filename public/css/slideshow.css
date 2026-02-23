@@ -75,6 +75,35 @@ body.transparent {
     transition: transform var(--transition-duration, 1s) ease-in-out, opacity 0.1s ease-in-out;
 }
 
+.slide-image.transition-zoom {
+    transition: transform var(--transition-duration, 1s) ease-in-out, opacity var(--transition-duration, 1s) ease-in-out;
+}
+
+.slide-image.transition-flip {
+    transition: transform var(--transition-duration, 1s) ease-in-out, opacity 0.01s linear;
+    backface-visibility: hidden;
+}
+
+.slide-image.transition-blur {
+    transition: filter var(--transition-duration, 1s) ease-in-out, opacity var(--transition-duration, 1s) ease-in-out;
+}
+
+.slide-image.transition-wipe {
+    transition: clip-path var(--transition-duration, 1s) ease-in-out;
+}
+
+.slide-image.transition-rotate {
+    transition: transform var(--transition-duration, 1s) ease-in-out, opacity var(--transition-duration, 1s) ease-in-out;
+}
+
+.slide-image.transition-shrink {
+    transition: transform var(--transition-duration, 1s) ease-in-out, opacity var(--transition-duration, 1s) ease-in-out;
+}
+
+#image-container.perspective {
+    perspective: 1200px;
+}
+
 /* Filtres */
 .filter-none {
     filter: none;

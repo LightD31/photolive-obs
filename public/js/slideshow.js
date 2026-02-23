@@ -256,6 +256,24 @@ class PhotoLiveSlideshow {
             case 'slide':
                 this.slideTransition(imagePath, direction);
                 break;
+            case 'zoom':
+                this.zoomTransition(imagePath);
+                break;
+            case 'flip':
+                this.flipTransition(imagePath);
+                break;
+            case 'blur':
+                this.blurTransition(imagePath);
+                break;
+            case 'wipe':
+                this.wipeTransition(imagePath, direction);
+                break;
+            case 'rotate':
+                this.rotateTransition(imagePath);
+                break;
+            case 'shrink':
+                this.shrinkTransition(imagePath);
+                break;
             default:
                 this.displayImageDirectly(imagePath);
         }
@@ -298,6 +316,262 @@ class PhotoLiveSlideshow {
         };
         img.onerror = () => {
             console.error('Error loading image for fade transition:', imagePath);
+            this.displayImageDirectly(imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    zoomTransition(imagePath) {
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+
+        const img = new Image();
+        img.onload = () => {
+            // Current element on top during zoom-out
+            currentElement.classList.add('z-front');
+            nextElement.classList.remove('z-front');
+            nextElement.classList.add('z-back');
+
+            // Prepare next image behind, starting scaled down and invisible
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
+            nextElement.style.opacity = '0';
+            nextElement.style.transform = 'scale(0.5)';
+            nextElement.style.visibility = 'visible';
+
+            // Apply transition classes
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-zoom z-front`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-zoom z-back`;
+
+            // Animate: current zooms out and fades, next zooms in and appears
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    currentElement.style.transform = 'scale(1.5)';
+                    currentElement.style.opacity = '0';
+                    nextElement.style.transform = 'scale(1)';
+                    nextElement.style.opacity = '1';
+                });
+            });
+
+            setTimeout(() => {
+                this.completeTransition(currentElement, nextElement);
+            }, this.settings.transitionDuration || 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for zoom transition:', imagePath);
+            this.displayImageDirectly(imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    flipTransition(imagePath) {
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+        const container = document.getElementById('image-container');
+
+        const img = new Image();
+        img.onload = () => {
+            container.classList.add('perspective');
+
+            currentElement.classList.add('z-front');
+            nextElement.classList.remove('z-front');
+            nextElement.classList.add('z-back');
+
+            // Next image starts rotated 180° and hidden
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
+            nextElement.style.transform = 'rotateY(-180deg)';
+            nextElement.style.opacity = '0';
+            nextElement.style.visibility = 'visible';
+
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-flip z-front`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-flip z-back`;
+
+            const halfDuration = (this.settings.transitionDuration || 1000) / 2;
+
+            // First half: rotate current to 90°
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    currentElement.style.transform = 'rotateY(90deg)';
+                });
+            });
+
+            // At halfway, hide current and show next rotating from -90° to 0°
+            setTimeout(() => {
+                currentElement.style.opacity = '0';
+                nextElement.style.opacity = '1';
+                nextElement.style.transform = 'rotateY(0deg)';
+            }, halfDuration);
+
+            setTimeout(() => {
+                container.classList.remove('perspective');
+                this.completeTransition(currentElement, nextElement);
+            }, this.settings.transitionDuration || 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for flip transition:', imagePath);
+            this.displayImageDirectly(imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    blurTransition(imagePath) {
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+
+        const img = new Image();
+        img.onload = () => {
+            currentElement.classList.add('z-front');
+            nextElement.classList.remove('z-front');
+            nextElement.classList.add('z-back');
+
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
+            nextElement.style.opacity = '0';
+            nextElement.style.filter = 'blur(20px)';
+            nextElement.style.transform = '';
+            nextElement.style.visibility = 'visible';
+
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-blur z-front`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-blur z-back`;
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Current blurs out and fades
+                    currentElement.style.filter = 'blur(20px)';
+                    currentElement.style.opacity = '0';
+                    // Next unblurs and appears
+                    nextElement.style.filter = '';
+                    nextElement.style.opacity = '1';
+                });
+            });
+
+            setTimeout(() => {
+                currentElement.style.filter = '';
+                this.completeTransition(currentElement, nextElement);
+            }, this.settings.transitionDuration || 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for blur transition:', imagePath);
+            this.displayImageDirectly(imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    wipeTransition(imagePath, direction = 1) {
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+
+        const img = new Image();
+        img.onload = () => {
+            // Next image goes on top for the wipe reveal
+            nextElement.classList.add('z-front');
+            currentElement.classList.remove('z-front');
+            currentElement.classList.add('z-back');
+
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-wipe z-front`;
+            nextElement.style.opacity = '1';
+            nextElement.style.transform = '';
+            nextElement.style.visibility = 'visible';
+            // Start fully clipped (hidden)
+            if (direction > 0) {
+                nextElement.style.clipPath = 'inset(0 100% 0 0)';
+            } else {
+                nextElement.style.clipPath = 'inset(0 0 0 100%)';
+            }
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Reveal fully
+                    nextElement.style.clipPath = 'inset(0 0 0 0)';
+                });
+            });
+
+            setTimeout(() => {
+                nextElement.style.clipPath = '';
+                this.completeTransition(currentElement, nextElement);
+            }, this.settings.transitionDuration || 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for wipe transition:', imagePath);
+            this.displayImageDirectly(imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    rotateTransition(imagePath) {
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+
+        const img = new Image();
+        img.onload = () => {
+            currentElement.classList.add('z-front');
+            nextElement.classList.remove('z-front');
+            nextElement.classList.add('z-back');
+
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
+            nextElement.style.opacity = '0';
+            nextElement.style.transform = 'rotate(-180deg) scale(0.5)';
+            nextElement.style.visibility = 'visible';
+
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-rotate z-front`;
+            nextElement.className = `slide-image filter-${this.settings.filter} transition-rotate z-back`;
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    currentElement.style.transform = 'rotate(180deg) scale(0.5)';
+                    currentElement.style.opacity = '0';
+                    nextElement.style.transform = 'rotate(0deg) scale(1)';
+                    nextElement.style.opacity = '1';
+                });
+            });
+
+            setTimeout(() => {
+                this.completeTransition(currentElement, nextElement);
+            }, this.settings.transitionDuration || 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for rotate transition:', imagePath);
+            this.displayImageDirectly(imagePath);
+        };
+        img.src = imagePath;
+    }
+
+    shrinkTransition(imagePath) {
+        const currentElement = this.getVisibleImageElement();
+        const nextElement = this.getHiddenImageElement();
+
+        const img = new Image();
+        img.onload = () => {
+            // Next image behind, already visible at full size
+            nextElement.classList.add('z-back');
+            currentElement.classList.remove('z-back');
+            currentElement.classList.add('z-front');
+
+            nextElement.src = imagePath;
+            nextElement.className = `slide-image filter-${this.settings.filter} z-back`;
+            nextElement.style.opacity = '1';
+            nextElement.style.transform = '';
+            nextElement.style.visibility = 'visible';
+
+            currentElement.className = `slide-image filter-${this.settings.filter} transition-shrink z-front`;
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Current shrinks to center and fades, revealing next behind
+                    currentElement.style.transform = 'scale(0)';
+                    currentElement.style.opacity = '0';
+                });
+            });
+
+            setTimeout(() => {
+                this.completeTransition(currentElement, nextElement);
+            }, this.settings.transitionDuration || 1000);
+        };
+        img.onerror = () => {
+            console.error('Error loading image for shrink transition:', imagePath);
             this.displayImageDirectly(imagePath);
         };
         img.src = imagePath;

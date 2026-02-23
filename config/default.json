@@ -20,7 +20,13 @@
     "transitions": [
       { "id": "none", "name": "None", "duration": 0 },
       { "id": "fade", "name": "Fade", "duration": 1000 },
-      { "id": "slide", "name": "Slide", "duration": 1000 }
+      { "id": "slide", "name": "Slide", "duration": 1000 },
+      { "id": "zoom", "name": "Zoom", "duration": 1000 },
+      { "id": "flip", "name": "Flip", "duration": 1000 },
+      { "id": "blur", "name": "Blur", "duration": 1000 },
+      { "id": "wipe", "name": "Wipe", "duration": 1000 },
+      { "id": "rotate", "name": "Rotate", "duration": 1000 },
+      { "id": "shrink", "name": "Shrink", "duration": 1000 }
     ],
     "filters": [
       { "id": "none", "name": "None" },
