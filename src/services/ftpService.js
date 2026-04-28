@@ -91,7 +91,13 @@ class FtpService extends EventEmitter {
       });
 
       this.ftpServer.on('client-error', ({ connection, context, error }) => {
-        this.logger.error(`FTP client error (${connection?.ip || 'unknown'}): ${error.message}`);
+        // ECONNRESET is normal when a client disconnects without QUIT
+        const benignCodes = ['ECONNRESET', 'ECONNABORTED', 'EPIPE', 'ETIMEDOUT'];
+        if (benignCodes.includes(error.code)) {
+          this.logger.debug(`FTP client disconnected (${connection?.ip || 'unknown'}): ${error.code}`);
+        } else {
+          this.logger.warn(`FTP client error (${connection?.ip || 'unknown'}): ${error.message}`);
+        }
       });
 
       await this.ftpServer.listen();
