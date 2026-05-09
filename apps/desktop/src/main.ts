@@ -84,7 +84,11 @@ async function bootApp(): Promise<void> {
   let settings: ReturnType<typeof loadOrInitSettings>;
   try {
     settings = loadOrInitSettings(dataDir);
-    bootlog('settings loaded', { freshlyCreated: settings.freshlyCreated, port: settings.settings.network.port });
+    bootlog('settings loaded', {
+      freshlyCreated: settings.freshlyCreated,
+      port: settings.settings.network.port,
+      migratedFromEnv: settings.migratedFromEnv ?? null,
+    });
   } catch (err) {
     bootlog('loadOrInitSettings failed', { err: (err as Error).message });
     dialog.showErrorBox(
@@ -93,6 +97,18 @@ async function bootApp(): Promise<void> {
     );
     app.exit(1);
     return;
+  }
+
+  if (settings.freshlyCreated && settings.migratedFromEnv) {
+    // One-time, non-blocking notice: legacy v0.1 install detected and imported.
+    setImmediate(() => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Photolive — settings imported',
+        message: 'Imported existing photolive configuration',
+        detail: `Read your previous .env at ${settings.migratedFromEnv} and folded its values into ${settings.path}. You can edit them in Settings.`,
+      });
+    });
   }
 
   bootlog('loading @photolive/server');
