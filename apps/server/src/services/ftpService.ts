@@ -114,6 +114,11 @@ export class FtpService {
     logger.info('ftp server stopped');
   }
 
+  async restart(): Promise<void> {
+    await this.stop();
+    await this.start();
+  }
+
   isRunning(): boolean {
     return this.running;
   }

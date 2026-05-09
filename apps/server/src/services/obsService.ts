@@ -61,6 +61,11 @@ export class ObsService {
     this.connected = false;
     this.client = null;
   }
+
+  async restart(): Promise<void> {
+    await this.disconnect();
+    await this.connect();
+  }
 }
 
 export const obsService = new ObsService();
