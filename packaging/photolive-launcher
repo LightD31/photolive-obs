@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/photolive"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/photolive"
+ENV_FILE="$CONFIG_DIR/photolive.env"
+EXAMPLE_ENV="/usr/share/photolive/photolive.env.example"
+
+mkdir -p "$DATA_DIR" "$CONFIG_DIR"
+
+if [ ! -f "$ENV_FILE" ]; then
+  TOKEN=$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 40)
+  cp "$EXAMPLE_ENV" "$ENV_FILE"
+  sed -i "s|PHOTOLIVE_AUTH_TOKEN=change-me|PHOTOLIVE_AUTH_TOKEN=$TOKEN|" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+  echo "First run: generated auth token and wrote $ENV_FILE"
+fi
+
+# The server's config loader walks up from cwd looking for a .env file.
+ln -sf "$ENV_FILE" "$DATA_DIR/.env"
+
+cd "$DATA_DIR"
+
+PORT=$(grep -E '^PORT=' "$ENV_FILE" | cut -d= -f2 | tr -d '[:space:]')
+PORT="${PORT:-3001}"
+
+cat <<EOF
+Photolive starting.
+  Data dir: $DATA_DIR
+  Config:   $ENV_FILE
+  Open:     http://localhost:$PORT/control
+
+Press Ctrl+C to stop.
+EOF
+
+exec /opt/photolive/photolive
