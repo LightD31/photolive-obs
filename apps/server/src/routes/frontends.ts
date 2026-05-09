@@ -14,8 +14,21 @@ import { logger } from '../logger.js';
  * SPA fallback: any unknown path that's neither an API/WS/rendition is served the
  * appropriate index.html so client-side routing works on a deep link.
  */
+// Find the directory containing apps/web-control by walking up from `start`.
+// Robust to: tsx in dev, esbuild-bundled main.js in prod, and pkg snapshot fs.
+function findFrontendRoot(start: string): string {
+  let dir = start;
+  for (let i = 0; i < 20; i++) {
+    if (existsSync(resolve(dir, 'apps', 'web-control'))) return dir;
+    const parent = resolve(dir, '..');
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return start;
+}
+
 export async function frontendRoutes(app: FastifyInstance): Promise<void> {
-  const repoRoot = resolve(import.meta.dirname, '..', '..', '..', '..');
+  const repoRoot = findFrontendRoot(import.meta.dirname);
   const controlDist = resolve(repoRoot, 'apps', 'web-control', 'dist');
   const slideshowDist = resolve(repoRoot, 'apps', 'web-slideshow', 'dist');
 

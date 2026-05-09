@@ -6,9 +6,6 @@
     "assets": [
       "apps/web-control/dist/**/*",
       "apps/web-slideshow/dist/**/*"
-    ],
-    "scripts": [
-      "apps/server/dist/**/*.js"
     ]
   }
 }

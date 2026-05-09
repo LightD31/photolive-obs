@@ -32,8 +32,16 @@ jobs:
       - name: Install dependencies (hoisted)
         run: pnpm install --frozen-lockfile
 
-      - name: Build server + web apps
-        run: pnpm build
+      - name: Build web apps
+        run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
+
+      - name: Bundle server with esbuild
+        run: |
+          pnpm dlx esbuild apps/server/src/main.ts \
+            --bundle --platform=node --format=esm --target=node22 \
+            --packages=external \
+            --alias:@photolive/shared=./packages/shared/src/index.ts \
+            --outfile=apps/server/dist/main.js
 
       - name: Install @yao-pkg/pkg
         run: pnpm add -g @yao-pkg/pkg@^6
@@ -97,8 +105,16 @@ jobs:
       - name: Install dependencies (hoisted)
         run: pnpm install --frozen-lockfile
 
-      - name: Build server + web apps
-        run: pnpm build
+      - name: Build web apps
+        run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
+
+      - name: Bundle server with esbuild
+        run: |
+          pnpm dlx esbuild apps/server/src/main.ts \
+            --bundle --platform=node --format=esm --target=node22 \
+            --packages=external \
+            --alias:@photolive/shared=./packages/shared/src/index.ts \
+            --outfile=apps/server/dist/main.js
 
       - name: Install @yao-pkg/pkg
         run: pnpm add -g @yao-pkg/pkg@^6
