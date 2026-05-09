@@ -81,8 +81,7 @@ export class SlideshowService {
     const idx = queue.findIndex((img) => img.id === this.currentImageId);
     if (idx <= 0) return;
     this.currentImageId = queue[idx - 1]?.id ?? this.currentImageId;
-    this.nextImageId =
-      this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
+    this.nextImageId = this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
     this.broadcastAdvanced();
     this.scheduleNextRotation();
   }
@@ -94,8 +93,7 @@ export class SlideshowService {
     if (!img || img.status !== 'approved') return;
     this.currentImageId = imageId;
     const queue = imageService.approvedQueue(active.id);
-    this.nextImageId =
-      this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
+    this.nextImageId = this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
     this.broadcastAdvanced();
     this.scheduleNextRotation();
   }
@@ -145,8 +143,7 @@ export class SlideshowService {
       nextId = this.pickRandom(queue, this.currentImageId);
     }
     this.currentImageId = nextId;
-    this.nextImageId =
-      this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
+    this.nextImageId = this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
     this.broadcastAdvanced();
   }
 

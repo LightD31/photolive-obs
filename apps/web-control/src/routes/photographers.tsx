@@ -204,11 +204,16 @@ function CameraFtpSettings({
   return (
     <div className="space-y-3">
       <div className="rounded border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-400">
-        On the camera: <span className="text-zinc-300">Network → FTP Transfer Func. → Server Setting → Server 1</span>
+        On the camera:{' '}
+        <span className="text-zinc-300">
+          Network → FTP Transfer Func. → Server Setting → Server 1
+        </span>
       </div>
       <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
         <dt className="text-zinc-500">Display Name</dt>
-        <dd className="font-mono text-zinc-50">PhotoLive <span className="text-zinc-500 italic">(any label)</span></dd>
+        <dd className="font-mono text-zinc-50">
+          PhotoLive <span className="text-zinc-500 italic">(any label)</span>
+        </dd>
 
         <dt className="text-zinc-500">Host Name</dt>
         <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
@@ -248,7 +253,8 @@ function CameraFtpSettings({
         <dd className="font-mono text-zinc-50">On</dd>
       </dl>
       <p className="text-xs text-zinc-400">
-        Then enable <span className="text-zinc-300">Network → FTP Transfer Func. → FTP Function: On</span>.
+        Then enable{' '}
+        <span className="text-zinc-300">Network → FTP Transfer Func. → FTP Function: On</span>.
       </p>
     </div>
   );

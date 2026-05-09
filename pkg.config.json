@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "bin": "apps/server/dist/main.js",
   "pkg": {
-    "assets": [
-      "apps/web-control/dist/**/*",
-      "apps/web-slideshow/dist/**/*"
-    ]
+    "assets": ["apps/web-control/dist/**/*", "apps/web-slideshow/dist/**/*"]
   }
 }

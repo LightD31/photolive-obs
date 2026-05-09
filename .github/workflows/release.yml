@@ -36,6 +36,7 @@ jobs:
         run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
 
       - name: Bundle server with esbuild
+        shell: bash
         run: |
           pnpm dlx esbuild apps/server/src/main.ts \
             --bundle --platform=node --format=esm --target=node22 \
@@ -109,6 +110,7 @@ jobs:
         run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
 
       - name: Bundle server with esbuild
+        shell: bash
         run: |
           pnpm dlx esbuild apps/server/src/main.ts \
             --bundle --platform=node --format=esm --target=node22 \
