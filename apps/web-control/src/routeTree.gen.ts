@@ -14,6 +14,7 @@ import { Route as QueueRouteImport } from './routes/queue'
 import { Route as PhotographersRouteImport } from './routes/photographers'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as EventSettingsRouteImport } from './routes/event-settings'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -42,6 +43,11 @@ const EventsRoute = EventsRouteImport.update({
   path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventSettingsRoute = EventSettingsRouteImport.update({
+  id: '/event-settings',
+  path: '/event-settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuditRoute = AuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -56,6 +62,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/event-settings': typeof EventSettingsRoute
   '/events': typeof EventsRoute
   '/live': typeof LiveRoute
   '/photographers': typeof PhotographersRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/event-settings': typeof EventSettingsRoute
   '/events': typeof EventsRoute
   '/live': typeof LiveRoute
   '/photographers': typeof PhotographersRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/event-settings': typeof EventSettingsRoute
   '/events': typeof EventsRoute
   '/live': typeof LiveRoute
   '/photographers': typeof PhotographersRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/audit'
+    | '/event-settings'
     | '/events'
     | '/live'
     | '/photographers'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/audit'
+    | '/event-settings'
     | '/events'
     | '/live'
     | '/photographers'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/audit'
+    | '/event-settings'
     | '/events'
     | '/live'
     | '/photographers'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
+  EventSettingsRoute: typeof EventSettingsRoute
   EventsRoute: typeof EventsRoute
   LiveRoute: typeof LiveRoute
   PhotographersRoute: typeof PhotographersRoute
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/event-settings': {
+      id: '/event-settings'
+      path: '/event-settings'
+      fullPath: '/event-settings'
+      preLoaderRoute: typeof EventSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/audit': {
       id: '/audit'
       path: '/audit'
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
+  EventSettingsRoute: EventSettingsRoute,
   EventsRoute: EventsRoute,
   LiveRoute: LiveRoute,
   PhotographersRoute: PhotographersRoute,

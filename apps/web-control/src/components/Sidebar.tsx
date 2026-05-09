@@ -2,13 +2,23 @@ import { Button } from '@/components/ui/button';
 import { clearToken } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { CalendarDays, FileText, ListVideo, LogOut, Play, Settings, Users } from 'lucide-react';
+import {
+  CalendarDays,
+  FileText,
+  ListVideo,
+  LogOut,
+  Play,
+  Settings,
+  SlidersHorizontal,
+  Users,
+} from 'lucide-react';
 
 const NAV = [
   { to: '/events', label: 'Events', icon: CalendarDays },
   { to: '/photographers', label: 'Photographers', icon: Users },
   { to: '/queue', label: 'Queue', icon: ListVideo },
   { to: '/live', label: 'Live', icon: Play },
+  { to: '/event-settings', label: 'Event settings', icon: SlidersHorizontal },
   { to: '/settings', label: 'Settings', icon: Settings },
   { to: '/audit', label: 'Audit', icon: FileText },
 ] as const;

@@ -1,14 +1,30 @@
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { clearToken, getToken, setToken } from '@/lib/auth';
+import { getBootstrap } from '@/lib/electron';
 import * as React from 'react';
 
 export function LoginGate({ children }: { children: React.ReactNode }): JSX.Element {
+  // First-paint precedence:
+  //   1. localStorage (returning user, possibly across reloads)
+  //   2. Electron preload bootstrap (window.photolive.bootstrap.token)
+  //      — fresh launch where the desktop app generated/owns the token
+  //   3. show the manual entry form (browser tab w/ unfamiliar token)
+  // Once we resolve from (2), persist to localStorage so subsequent reloads
+  // skip the bootstrap path and the token survives if Electron quits.
+  React.useEffect(() => {
+    if (getToken()) return;
+    const boot = getBootstrap();
+    if (boot?.token) setToken(boot.token);
+  }, []);
+
   // 'checking' on mount when a stored token exists — verify it before letting children render.
   // Otherwise a rotated/stale token would silently 401 every API call.
-  const [status, setStatus] = React.useState<'checking' | 'ok' | 'needs-token'>(() =>
-    getToken() ? 'checking' : 'needs-token',
-  );
+  const [status, setStatus] = React.useState<'checking' | 'ok' | 'needs-token'>(() => {
+    if (getToken()) return 'checking';
+    if (getBootstrap()?.token) return 'checking';
+    return 'needs-token';
+  });
   const [value, setValue] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

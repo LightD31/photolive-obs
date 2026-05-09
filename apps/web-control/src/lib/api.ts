@@ -1,4 +1,6 @@
 import type {
+  AppSettingsFile,
+  AppSettingsPatch,
   AuditLogEntry,
   EventDto,
   ImageDto,
@@ -8,6 +10,24 @@ import type {
   SettingsDto,
 } from '@photolive/shared';
 import { clearToken, getToken } from './auth';
+
+export type AppSettingsResponse = {
+  settings: AppSettingsFile;
+  mutable: boolean;
+  dataDir: string;
+  settingsPath: string | null;
+};
+
+export type AppSettingsPutResponse = {
+  settings: AppSettingsFile;
+  reload: { requiresRestart: boolean; reasons: string[] };
+};
+
+export type RotateTokenResponse = {
+  settings: AppSettingsFile;
+  newToken: string;
+  reload: { requiresRestart: boolean; reasons: string[] };
+};
 
 class ApiError extends Error {
   constructor(
@@ -160,6 +180,19 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(patch),
       }).then((r) => r.settings),
+  },
+  appSettings: {
+    get: (revealToken = false) =>
+      request<AppSettingsResponse>(
+        `/api/app-settings${revealToken ? '?revealToken=1' : ''}`,
+      ),
+    update: (patch: AppSettingsPatch) =>
+      request<AppSettingsPutResponse>('/api/app-settings', {
+        method: 'PUT',
+        body: JSON.stringify(patch),
+      }),
+    rotateToken: () =>
+      request<RotateTokenResponse>('/api/app-settings/rotate-token', { method: 'POST' }),
   },
 };
 
