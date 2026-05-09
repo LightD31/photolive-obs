@@ -1,99 +1,60 @@
-# PhotoLive OBS
+# PhotoLive
 
-> 🤖 **Vibe Coded**: This project was built with AI assistance and may contain experimental patterns or unconventional approaches.
+Real-time event photography slideshow. Cameras (Sony A7IV) FTP into a local server; the server renders a slideshow page that displays on any browser-capable screen — PC HDMI, Chromecast/Apple TV, OBS browser source.
 
-A Node.js photo slideshow app for OBS Studio. Watches folders, shows images, has a web control interface.
+## What it does
 
-> ⚠️ **Local Use Only**: Built for local streaming setups. Don't put this on the internet without security review.
+A team of photographers shoots a live event. Each camera's "Auto FTP" pushes JPEGs to this server. The server hashes/dedups, extracts EXIF, generates display + thumbnail renditions via Sharp, and broadcasts an `image.added` event over WebSocket. An audience-facing slideshow page picks up new images and rotates through them with a configurable transition. An operator drives the control panel from a laptop or iPad: caption images live, drag-to-reorder the upcoming queue, approve images before the audience sees them (in approval mode), and see camera-to-screen latency in real time.
 
-## Features
+## Stack
 
-- Watches photo folders and auto-updates slideshow
-- Web control interface with image grid
-- Visual filters and transitions
-- Watermarks (text or image)
-- WebSocket sync between control and display
-- Keyboard shortcuts
-- English/French interface
-- Works on Windows, macOS, Linux
+- **Server**: Node 22, TypeScript (strict), Fastify, `@fastify/websocket`, better-sqlite3 + Drizzle, Sharp + exifr inside a piscina worker pool, ftp-srv with multi-user auth, Pino, Zod
+- **Web**: Vite, React 19, TanStack Router/Query, Zustand, Tailwind 4, shadcn-ui-derived primitives, Lucide icons, react-i18next
+- **Tooling**: pnpm workspaces, Biome, Vitest, Playwright
 
-## Setup
+## Quick start
 
-Need Node.js 14+.
+Requires Node 22 and pnpm 9 (`corepack enable` will activate pnpm if needed).
 
 ```bash
-git clone https://github.com/LightD31/photolive-obs.git
-cd photolive-obs
-npm install
-npm start
+pnpm install
+cp .env.example .env       # set PHOTOLIVE_AUTH_TOKEN
+pnpm db:migrate
+pnpm dev                   # server + both web apps
 ```
 
-URLs:
+Then:
 
-- Slideshow: `http://localhost:3001`
-- Control: `http://localhost:3001/control`
+- **Audience slideshow**: <http://localhost:3001/>
+- **Operator control panel**: <http://localhost:3002/>
 
-## Usage
+## Workspace layout
 
-### OBS Setup
-
-1. Add Browser Source
-2. URL: `http://localhost:3001`
-3. Set your resolution
-
-### Photos
-
-- Put images in `./photos/` folder
-- Supports: JPG, PNG, GIF, BMP, TIFF, WebP
-- Auto-detects new images
-
-### Controls
-
-- Control page: `http://localhost:3001/control`
-- Arrow keys or space for navigation
-- P to pause/play
-
-## Tech Stack
-
-- Node.js + Express
-- Socket.IO for real-time updates
-- Chokidar for file watching
-- EXIFR for image metadata
-- Vanilla JS frontend
-
-## Configuration
-
-Environment variables:
-
-- `PORT` - Server port (default: 3001)
-- `LOG_LEVEL` - ERROR, WARN, INFO, DEBUG
-- `ALLOWED_ORIGINS` - CORS origins
-
-Config file: `config/default.json`
-
-## Troubleshooting
-
-**App won't start:**
-
-- Check Node.js version (need 14+)
-- Try `npm run clean && npm install`
-- Check if port 3001 is free
-
-**Images not showing:**
-
-- Check `photos/` folder exists
-- Verify image formats are supported
-- Look at console for errors
-
-**OBS not working:**
-
-- Test URL in browser first
-- Check OBS browser source settings
-- Try refreshing the source
-
-## Development
-
-```bash
-npm run test:logging  # Test log levels
-LOG_LEVEL=DEBUG npm start  # Debug mode
 ```
+apps/
+  server/         # Fastify + DB + ingest pipeline
+  web-control/    # React operator UI
+  web-slideshow/  # React audience-facing display (Chromecast-friendly)
+packages/
+  shared/         # Types, WS event payloads, Zod schemas (server + client)
+data/             # gitignored: SQLite DB, photos, renditions
+```
+
+## Camera setup (Sony A7IV)
+
+1. In the operator UI, open **Photographers** for the active event and add a row.
+2. The server issues an FTP user/pass and shows a QR code with `ftp://user:pass@host:port`.
+3. Configure the A7IV's "Auto FTP" with these credentials. Photos taken on that body are attributed to that photographer in the DB and (optionally) on the slideshow overlay.
+4. Recommended: in the camera's "Setting the image size to be transferred for JPEG/HEIF images" menu, pick `Small` for sub-second upload latency. The server still generates display + thumb renditions; a 2 MP source is plenty for 1080p audience screens.
+
+## Curation modes
+
+Per event, set one of:
+
+- `auto` — every ingested image enters the slideshow.
+- `auto-skip-blurry` — images with `sharpness_score` below a threshold are auto-excluded; one-click re-include.
+- `approval` — every image lands in a pending tray; operator approves before the audience sees it.
+
+## License
+
+Private.

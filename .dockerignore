@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+data
+photos
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+.git
+.github
+.vscode
+.claude
+playwright-report
+test-results
+coverage

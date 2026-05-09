@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/* The sober, professional palette: zinc surfaces + a single blue-500 accent. */
+@theme {
+  --font-sans: "Inter var", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --radius-input: 0.25rem; /* 4px */
+  --radius-card: 0.375rem; /* 6px */
+
+  --color-accent: oklch(0.62 0.19 263); /* blue-500 */
+  --color-accent-hover: oklch(0.56 0.2 263); /* blue-600 */
+  --color-danger: oklch(0.62 0.22 27); /* red-500 */
+  --color-warning: oklch(0.74 0.18 70); /* amber-500 */
+  --color-success: oklch(0.7 0.15 162); /* emerald-500 */
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    font-feature-settings: "cv02" on, "cv03" on, "cv04" on, "cv11" on;
+  }
+  body {
+    @apply bg-zinc-950 text-zinc-50 antialiased;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Tabular numerals for any data column */
+  .tnum,
+  td.num,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Reset focus rings to a sober blue-500 outline */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-0;
+  }
+
+  /* Light theme overrides — toggled by setting <html class="light"> instead of "dark" */
+  html.light {
+    color-scheme: light;
+  }
+  html.light body {
+    @apply bg-white text-zinc-900;
+  }
+}
+
+@layer utilities {
+  /* A slim, restrained scrollbar. No chrome, no decoration. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.zinc.700") transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: theme("colors.zinc.700");
+    border-radius: 4px;
+  }
+}

@@ -1,0 +1,33 @@
+services:
+  photolive:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: photolive:local
+    container_name: photolive
+    restart: unless-stopped
+    ports:
+      - '3001:3001' # HTTP + WS + slideshow + control bundles
+      - '2121:2121' # FTP control
+      - '50000-50100:50000-50100' # FTP passive data
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOST: 0.0.0.0
+      PHOTOLIVE_AUTH_TOKEN: ${PHOTOLIVE_AUTH_TOKEN:-changeme-please}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3001}
+      DATABASE_PATH: /data/photolive.sqlite
+      PHOTOS_ROOT: /data/photos
+      RENDITIONS_ROOT: /data/renditions
+      FTP_HOST: 0.0.0.0
+      FTP_PORT: 2121
+      FTP_PASV_URL: ${FTP_PASV_URL:-127.0.0.1}
+      FTP_PASV_MIN: 50000
+      FTP_PASV_MAX: 50100
+      OBS_WEBSOCKET_URL: ${OBS_WEBSOCKET_URL:-}
+      OBS_WEBSOCKET_PASSWORD: ${OBS_WEBSOCKET_PASSWORD:-}
+    volumes:
+      - photolive-data:/data
+
+volumes:
+  photolive-data:
