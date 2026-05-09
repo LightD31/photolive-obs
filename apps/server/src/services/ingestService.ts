@@ -1,11 +1,13 @@
 import { unlink } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { cpus } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ImageDto, ImageStatus } from '@photolive/shared';
 import { and, eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// @ts-expect-error piscina ships CJS `export = Piscina`; default-import works
+// at runtime under Node's interop but TS's verbatimModuleSyntax can't model it.
+import Piscina from 'piscina';
 import { bus } from '../bus.js';
 import { db } from '../db/index.js';
 import { images, photographers as photographersTbl } from '../db/schema.js';
@@ -19,16 +21,10 @@ import { settingsService } from './settingsService.js';
 import { slideshowService } from './slideshowService.js';
 import { wsService } from './wsService.js';
 
-// piscina ships CJS-style export = Piscina; createRequire bypasses the type interop quirk.
-const require = createRequire(import.meta.url);
-const Piscina = require('piscina') as new (opts: {
-  filename: string;
-  maxThreads?: number;
-}) => {
+type PiscinaPool = {
   run(input: unknown): Promise<unknown>;
   destroy(): Promise<void>;
 };
-type PiscinaPool = InstanceType<typeof Piscina>;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

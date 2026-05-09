@@ -9,13 +9,12 @@ permissions:
   contents: write
 
 env:
-  # pkg's static tracer cannot follow pnpm's symlinked node_modules,
-  # so force a hoisted layout for release builds only.
   NPM_CONFIG_NODE_LINKER: hoisted
+  NODE_VERSION: v22.11.0
 
 jobs:
   build-windows:
-    name: Build Windows .exe
+    name: Build Windows .zip
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -35,56 +34,56 @@ jobs:
       - name: Build web apps
         run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
 
-      - name: Bundle server with esbuild
+      - name: Bundle server with esbuild (deps external)
         shell: bash
         env:
           BANNER: "import {createRequire as __cr} from 'node:module';const require=__cr(import.meta.url);"
         run: |
-          for entry in main src/workers/ingest.worker; do
-            case "$entry" in
-              main) src=apps/server/src/main.ts; out=apps/server/dist/main.js ;;
-              *)    src=apps/server/$entry.ts; out=apps/server/dist/$(basename $entry).js ;;
-            esac
-            pnpm dlx esbuild "$src" \
+          mkdir -p packaging/staging
+          for entry in apps/server/src/main.ts apps/server/src/workers/ingest.worker.ts; do
+            out=packaging/staging/$(basename "$entry" .ts).js
+            pnpm dlx esbuild "$entry" \
               --bundle --platform=node --format=esm --target=node22 \
-              --external:sharp --external:better-sqlite3 \
+              --packages=external \
               --alias:@photolive/shared=./packages/shared/src/index.ts \
               --banner:js="$BANNER" \
               --outfile="$out"
           done
-          # Drizzle migrations need to ship next to main.js so auto-migrate finds them.
-          cp -r apps/server/drizzle apps/server/dist/drizzle
-          ls -la apps/server/dist/
+          cp -r apps/server/drizzle packaging/staging/drizzle
 
-      - name: Install @yao-pkg/pkg
-        run: pnpm add -g @yao-pkg/pkg@^6
-
-      - name: Build Windows executable
+      - name: Materialise prod node_modules (pnpm deploy)
         shell: bash
         run: |
-          mkdir -p packaging/staging
-          pkg pkg.config.json \
-            --targets node22-win-x64 \
-            --output packaging/staging/photolive.exe \
-            --compress GZip \
-            --no-bytecode --public --public-packages "*"
-          ls -la packaging/staging/
+          pnpm --filter @photolive/server deploy --prod /tmp/server-deploy
+          # Take only node_modules + package.json; the bundle replaces the source.
+          cp -RL /tmp/server-deploy/node_modules packaging/staging/node_modules
+          cp /tmp/server-deploy/package.json packaging/staging/package.json
 
-      - name: Stage extra files
+      - name: Stage Node runtime
+        shell: bash
+        run: |
+          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-win-x64.zip" -o /tmp/node.zip
+          unzip -q /tmp/node.zip -d /tmp/
+          cp "/tmp/node-${NODE_VERSION}-win-x64/node.exe" packaging/staging/node.exe
+
+      - name: Stage launcher and config
         shell: bash
         run: |
           cp packaging/photolive.env.example packaging/staging/.env.example
+          cat > packaging/staging/photolive.bat <<'BAT'
+          @echo off
+          setlocal
+          set "DIR=%~dp0"
+          "%DIR%node.exe" "%DIR%main.js" %*
+          BAT
           cat > packaging/staging/README.txt <<'EOF'
-          Photolive — portable Windows build
-          ===================================
+          Photolive — Windows portable build
+          ==================================
+          1. Copy .env.example to .env and set PHOTOLIVE_AUTH_TOKEN.
+          2. Double-click photolive.bat (or run it from a terminal).
+          3. Open http://localhost:3001/control in your browser.
 
-          1. Copy .env.example to .env and fill in PHOTOLIVE_AUTH_TOKEN.
-          2. Open a terminal in this folder and run: photolive.exe
-          3. Open a browser at http://localhost:3001 (slideshow) or
-             http://localhost:3001/control (operator UI).
-
-          Data (sqlite db, photos, renditions) is stored under ./data/
-          relative to wherever you launched the executable from.
+          Data lives under ./data/ next to photolive.bat.
           EOF
 
       - name: Zip the staging folder
@@ -123,43 +122,36 @@ jobs:
         run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
 
       - name: Bundle server with esbuild
-        shell: bash
         env:
           BANNER: "import {createRequire as __cr} from 'node:module';const require=__cr(import.meta.url);"
         run: |
-          for entry in main src/workers/ingest.worker; do
-            case "$entry" in
-              main) src=apps/server/src/main.ts; out=apps/server/dist/main.js ;;
-              *)    src=apps/server/$entry.ts; out=apps/server/dist/$(basename $entry).js ;;
-            esac
-            pnpm dlx esbuild "$src" \
+          mkdir -p packaging/staging
+          for entry in apps/server/src/main.ts apps/server/src/workers/ingest.worker.ts; do
+            out=packaging/staging/$(basename "$entry" .ts).js
+            pnpm dlx esbuild "$entry" \
               --bundle --platform=node --format=esm --target=node22 \
               --external:sharp --external:better-sqlite3 \
               --alias:@photolive/shared=./packages/shared/src/index.ts \
               --banner:js="$BANNER" \
               --outfile="$out"
           done
-          # Drizzle migrations need to ship next to main.js so auto-migrate finds them.
-          cp -r apps/server/drizzle apps/server/dist/drizzle
-          ls -la apps/server/dist/
+          cp -r apps/server/drizzle packaging/staging/drizzle
 
-      - name: Install @yao-pkg/pkg
-        run: pnpm add -g @yao-pkg/pkg@^6
-
-      - name: Build Linux executable
+      - name: Stage Node runtime
         run: |
-          mkdir -p packaging/staging
-          pkg pkg.config.json \
-            --targets node22-linux-x64 \
-            --output packaging/staging/photolive \
-            --compress GZip \
-            --no-bytecode --public --public-packages "*"
+          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" -o /tmp/node.tar.xz
+          tar -xJf /tmp/node.tar.xz -C /tmp
+          cp "/tmp/node-${NODE_VERSION}-linux-x64/bin/node" packaging/staging/node
+          chmod +x packaging/staging/node
+
+      - name: Stage entrypoint script
+        run: |
+          cat > packaging/staging/photolive <<'EOF'
+          #!/bin/bash
+          DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+          exec "$DIR/node" "$DIR/main.js" "$@"
+          EOF
           chmod +x packaging/staging/photolive
-          ls -la packaging/staging/
-
-      - name: Stage extra files
-        run: |
-          cp packaging/photolive.env.example packaging/staging/photolive.env.example
 
       - name: Install nfpm
         run: |
@@ -171,7 +163,6 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
         run: |
-          # Strip leading "v" from tag for semver-clean version.
           export VERSION="${VERSION#v}"
           cd packaging
           nfpm package --config nfpm.yaml --packager rpm --target ../

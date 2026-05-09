@@ -1,23 +1,20 @@
 import { mkdir } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+// @ts-expect-error ftp-srv ships CJS `export = FtpSrv`; the default-import shape
+// works at runtime under Node's ESM/CJS interop but TS's verbatimModuleSyntax
+// can't model it.
+import FtpSrv from 'ftp-srv';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { eventService } from './eventService.js';
 import { photographerService } from './photographerService.js';
 import { wsService } from './wsService.js';
 
-// ftp-srv ships CJS-style `export = FtpSrv` which doesn't play nicely with our
-// ESM + verbatimModuleSyntax setup. Use createRequire to load it as a value.
-const require = createRequire(import.meta.url);
-const FtpSrv = require('ftp-srv') as new (
-  opts: Record<string, unknown>,
-) => {
+type FtpServerInstance = {
   on(event: string, handler: (...args: unknown[]) => void): void;
   listen(): Promise<void>;
   close(): Promise<void>;
 };
-type FtpServerInstance = InstanceType<typeof FtpSrv>;
 
 /**
  * Multi-user FTP server. Each photographer's A7IV authenticates with their
