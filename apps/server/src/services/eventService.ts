@@ -1,10 +1,11 @@
-import { mkdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, rmSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { DisplayMode, EventDto } from '@photolive/shared';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { config } from '../config.js';
 import { db } from '../db/index.js';
-import { events } from '../db/schema.js';
+import { events, auditLog, images, photographers, settings } from '../db/schema.js';
 import { logger } from '../logger.js';
 import { auditService } from './auditService.js';
 
@@ -122,6 +123,56 @@ export class EventService {
       .run();
     auditService.log({ eventId: id, actor: 'operator', action: 'event.archived' });
     return this.get(id);
+  }
+
+  unarchive(id: string): EventDto | null {
+    const existing = db.select().from(events).where(eq(events.id, id)).get();
+    if (!existing) return null;
+    db.update(events).set({ archivedAt: null }).where(eq(events.id, id)).run();
+    auditService.log({ eventId: id, actor: 'operator', action: 'event.unarchived' });
+    return this.get(id);
+  }
+
+  delete(id: string): boolean {
+    const existing = db.select().from(events).where(eq(events.id, id)).get();
+    if (!existing) return false;
+
+    // Audit BEFORE the cascade so the entry survives one transaction beat — but
+    // we'll wipe its audit_log rows in the same tx, so log to stderr instead.
+    logger.info(
+      { eventId: id, name: existing.name, photosDir: existing.photosDir },
+      'event hard-deleted',
+    );
+
+    db.transaction((tx) => {
+      tx.delete(images).where(eq(images.eventId, id)).run();
+      tx.delete(photographers).where(eq(photographers.eventId, id)).run();
+      tx.delete(settings).where(eq(settings.eventId, id)).run();
+      tx.delete(auditLog).where(eq(auditLog.eventId, id)).run();
+      tx.delete(events).where(eq(events.id, id)).run();
+    });
+
+    // Filesystem cleanup. We only remove photosDir if no surviving event still
+    // references it (operators sometimes share a single drop folder across events).
+    const stillUsed = db
+      .select({ id: events.id })
+      .from(events)
+      .where(and(eq(events.photosDir, existing.photosDir), ne(events.id, id)))
+      .get();
+    if (!stillUsed) {
+      try {
+        rmSync(existing.photosDir, { recursive: true, force: true });
+      } catch (err) {
+        logger.warn({ err, dir: existing.photosDir }, 'failed to remove photos dir');
+      }
+    }
+    try {
+      rmSync(join(config.renditionsRoot, id), { recursive: true, force: true });
+    } catch (err) {
+      logger.warn({ err, eventId: id }, 'failed to remove renditions dir');
+    }
+
+    return true;
   }
 }
 

@@ -7,7 +7,7 @@ import type {
   PhotographerWithSecretDto,
   SettingsDto,
 } from '@photolive/shared';
-import { getToken } from './auth';
+import { clearToken, getToken } from './auth';
 
 class ApiError extends Error {
   constructor(
@@ -25,7 +25,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(init.body != null ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
@@ -36,6 +36,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       body = await res.json();
     } catch {
       /* ignore */
+    }
+    // Stale token: drop it and bounce back to LoginGate so the user can re-enter.
+    if (res.status === 401 && getToken()) {
+      clearToken();
+      window.location.reload();
     }
     throw new ApiError(`API ${res.status}`, res.status, body);
   }
@@ -66,6 +71,11 @@ export const api = {
       request<{ event: EventDto }>(`/api/events/${id}/archive`, { method: 'POST' }).then(
         (r) => r.event,
       ),
+    unarchive: (id: string) =>
+      request<{ event: EventDto }>(`/api/events/${id}/unarchive`, { method: 'POST' }).then(
+        (r) => r.event,
+      ),
+    delete: (id: string) => request<{ ok: boolean }>(`/api/events/${id}`, { method: 'DELETE' }),
     audit: (id: string, limit = 200) =>
       request<{ entries: AuditLogEntry[] }>(`/api/events/${id}/audit?limit=${limit}`).then(
         (r) => r.entries,
@@ -138,6 +148,9 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ imageIds }),
       }),
+  },
+  network: {
+    info: () => request<{ ftpHost: string; ftpPort: number }>('/api/network-info'),
   },
   settings: {
     get: (eventId: string) =>

@@ -21,9 +21,10 @@ import {
 } from '@/components/ui/select';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import type { EventDto } from '@photolive/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { Archive, Plus, Power } from 'lucide-react';
+import { Archive, ArchiveRestore, Plus, Power, Trash2 } from 'lucide-react';
 import * as React from 'react';
 
 export const Route = createFileRoute('/events')({
@@ -34,6 +35,7 @@ function EventsPage(): JSX.Element {
   const qc = useQueryClient();
   const events = useQuery({ queryKey: ['events'], queryFn: api.events.list });
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState<EventDto | null>(null);
 
   const activate = useMutation({
     mutationFn: (id: string) => api.events.activate(id),
@@ -41,6 +43,10 @@ function EventsPage(): JSX.Element {
   });
   const archive = useMutation({
     mutationFn: (id: string) => api.events.archive(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['events'] }),
+  });
+  const unarchive = useMutation({
+    mutationFn: (id: string) => api.events.unarchive(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['events'] }),
   });
 
@@ -102,7 +108,7 @@ function EventsPage(): JSX.Element {
                             Activate
                           </Button>
                         )}
-                        {!event.archivedAt && (
+                        {!event.archivedAt ? (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -111,7 +117,25 @@ function EventsPage(): JSX.Element {
                             <Archive className="h-3 w-3" />
                             Archive
                           </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => unarchive.mutate(event.id)}
+                            title="Restore from archive (does not activate)"
+                          >
+                            <ArchiveRestore className="h-3 w-3" />
+                            Unarchive
+                          </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setConfirmDelete(event)}
+                          title="Delete permanently"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </TD>
                   </TR>
@@ -133,7 +157,83 @@ function EventsPage(): JSX.Element {
       </div>
 
       <CreateEventDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <DeleteEventDialog event={confirmDelete} onOpenChange={() => setConfirmDelete(null)} />
     </>
+  );
+}
+
+function DeleteEventDialog({
+  event,
+  onOpenChange,
+}: {
+  event: EventDto | null;
+  onOpenChange: (open: boolean) => void;
+}): JSX.Element | null {
+  const qc = useQueryClient();
+  const [confirmText, setConfirmText] = React.useState('');
+
+  React.useEffect(() => {
+    if (!event) setConfirmText('');
+  }, [event]);
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api.events.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['events'] });
+      qc.invalidateQueries({ queryKey: ['active-event'] });
+      onOpenChange(false);
+    },
+  });
+
+  if (!event) return null;
+  const matches = confirmText === event.slug;
+
+  return (
+    <Dialog open={Boolean(event)} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete event permanently?</DialogTitle>
+          <DialogDescription>
+            This removes <strong>{event.name}</strong> and all its photographers, images, settings,
+            and audit history. The photos directory and rendered thumbnails on disk are also
+            deleted. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="confirm-slug">
+            Type the slug <span className="font-mono text-zinc-300">{event.slug}</span> to confirm
+          </Label>
+          <Input
+            id="confirm-slug"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={event.slug}
+            className="font-mono"
+            autoFocus
+          />
+        </div>
+        {remove.error ? (
+          <p className="text-xs text-red-400">
+            {remove.error instanceof Error ? remove.error.message : 'Delete failed'}
+          </p>
+        ) : null}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={!matches || remove.isPending}
+            onClick={() => remove.mutate(event.id)}
+          >
+            {remove.isPending ? 'Deleting…' : 'Delete permanently'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

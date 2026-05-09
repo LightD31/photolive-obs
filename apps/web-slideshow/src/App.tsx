@@ -32,6 +32,8 @@ interface Connection {
   attempts: number;
 }
 
+type AuthStatus = 'ok' | 'missing-token' | 'invalid-token';
+
 export function App(): JSX.Element {
   const [event, setEvent] = React.useState<EventDto | null>(null);
   const [settings, setSettings] = React.useState<SettingsDto>(DEFAULT_SETTINGS);
@@ -39,21 +41,31 @@ export function App(): JSX.Element {
   const [conn, setConn] = React.useState<Connection>({ state: 'connecting', attempts: 0 });
   const [{ current, prev }, setSlide] = React.useState<SlideState>({ current: null, prev: null });
   const [imageMap, setImageMap] = React.useState<Map<string, ImageDto>>(new Map());
+  const [authStatus, setAuthStatus] = React.useState<AuthStatus>('ok');
   const wsRef = React.useRef<WebSocket | null>(null);
 
   const token = getQueryToken() ?? '';
 
   // Bootstrap: fetch active event + settings via REST, then open WS.
   React.useEffect(() => {
+    if (!token) {
+      setAuthStatus('missing-token');
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const eventRes = await fetch('/api/events/active', { headers });
+        if (eventRes.status === 401) {
+          if (!cancelled) setAuthStatus('invalid-token');
+          return;
+        }
         if (!eventRes.ok) {
           if (!cancelled) setConn({ state: 'closed', attempts: 0 });
           return;
         }
+        if (!cancelled) setAuthStatus('ok');
         const eventBody = (await eventRes.json()) as { event: EventDto | null };
         const ev = eventBody.event;
         if (!ev) {
@@ -91,6 +103,7 @@ export function App(): JSX.Element {
 
   // WebSocket
   React.useEffect(() => {
+    if (authStatus !== 'ok') return;
     let intentional = false;
     let attempts = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -179,7 +192,18 @@ export function App(): JSX.Element {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       wsRef.current?.close();
     };
-  }, [token]);
+  }, [token, authStatus]);
+
+  // Toggle the transparent-background class on <html> so OBS Browser Source
+  // can composite the slideshow over the scene below.
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (settings.transparentBackground) {
+      root.classList.add('pl-transparent');
+      return () => root.classList.remove('pl-transparent');
+    }
+    root.classList.remove('pl-transparent');
+  }, [settings.transparentBackground]);
 
   // When the current image id changes, animate it in.
   React.useEffect(() => {
@@ -190,12 +214,17 @@ export function App(): JSX.Element {
     setSlide((s) => (s.current?.id === next.id ? s : { current: next, prev: s.current }));
   }, [slideshow?.currentImageId, imageMap]);
 
+  if (authStatus !== 'ok') {
+    return <AuthError status={authStatus} />;
+  }
   if (!event) {
     return <ConnectionState conn={conn} message="Waiting for active event…" />;
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black text-zinc-50">
+    <div
+      className={`relative h-full w-full overflow-hidden text-zinc-50 ${settings.transparentBackground ? '' : 'bg-black'}`}
+    >
       <SlideLayer
         image={prev}
         transition={settings.transition}
@@ -310,6 +339,27 @@ function TimeAgo({ iso }: { iso: string }): JSX.Element {
   else if (ms < 3_600_000) text = `${Math.floor(ms / 60_000)} min ago`;
   else text = `${Math.floor(ms / 3_600_000)} h ago`;
   return <div className="absolute bottom-6 right-6 font-mono text-xs text-zinc-400">{text}</div>;
+}
+
+function AuthError({ status }: { status: 'missing-token' | 'invalid-token' }): JSX.Element {
+  const exampleUrl = `${window.location.origin}/?token=YOUR_TOKEN`;
+  const heading = status === 'missing-token' ? 'Token required' : 'Token rejected';
+  const detail =
+    status === 'missing-token'
+      ? 'Open the slideshow with a ?token=... query parameter. The value is your PHOTOLIVE_AUTH_TOKEN from the server .env.'
+      : 'The token in the URL was rejected by the server. Check that it matches PHOTOLIVE_AUTH_TOKEN in the server .env.';
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-black p-8 text-zinc-300">
+      <div className="flex max-w-xl flex-col gap-4">
+        <div className="font-mono text-xs uppercase tracking-wider text-zinc-500">photolive</div>
+        <h1 className="text-2xl font-semibold text-zinc-50">{heading}</h1>
+        <p className="text-sm leading-relaxed text-zinc-400">{detail}</p>
+        <div className="rounded border border-zinc-800 bg-zinc-900/60 px-3 py-2 font-mono text-xs text-zinc-300">
+          {exampleUrl}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ConnectionState({

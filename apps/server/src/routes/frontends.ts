@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import fastifyStatic from '@fastify/static';
 import type { FastifyInstance } from 'fastify';
@@ -31,13 +31,19 @@ export async function frontendRoutes(app: FastifyInstance): Promise<void> {
       if (request.url.startsWith('/ws')) return reply.code(404).send({ error: 'not found' });
       if (request.url.startsWith('/renditions/'))
         return reply.code(404).send({ error: 'not found' });
+      // Browser auto-requests these; we don't ship them. 204 keeps the console clean.
+      if (request.url === '/favicon.ico' || request.url === '/robots.txt') {
+        return reply.code(204).send();
+      }
       // Serve control SPA index for /control/*, slideshow index otherwise.
       const indexDir = request.url.startsWith('/control')
         ? controlDist
         : existsSync(slideshowDist)
           ? slideshowDist
           : controlDist;
-      return reply.sendFile('index.html', indexDir);
+      const indexPath = resolve(indexDir, 'index.html');
+      if (!existsSync(indexPath)) return reply.code(404).send({ error: 'not found' });
+      return reply.type('text/html').send(readFileSync(indexPath));
     });
     logger.info({ controlDist }, 'serving web-control bundle at /control/');
   } else {

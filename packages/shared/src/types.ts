@@ -59,6 +59,7 @@ export interface SettingsDto {
   showTimeAgo: boolean;
   showBranding: boolean;
   blurThreshold: number;
+  transparentBackground: boolean;
 }
 
 export const DEFAULT_SETTINGS: SettingsDto = {
@@ -70,6 +71,7 @@ export const DEFAULT_SETTINGS: SettingsDto = {
   showTimeAgo: false,
   showBranding: false,
   blurThreshold: 100,
+  transparentBackground: false,
 };
 
 export interface SlideshowState {

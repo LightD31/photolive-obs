@@ -201,6 +201,19 @@ function SettingsForm({
 
           <section className="space-y-4">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              OBS / compositing
+            </h2>
+
+            <ToggleField
+              label="Transparent background"
+              hint="Drops the black backdrop so an OBS Browser Source can composite the slideshow over the scene below. Letterboxing around portrait images becomes transparent too."
+              checked={draft.transparentBackground}
+              onChange={(v) => setDraft({ ...draft, transparentBackground: v })}
+            />
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Quality
             </h2>
 
@@ -250,22 +263,27 @@ function Field({
 
 function ToggleField({
   label,
+  hint,
   checked,
   onChange,
 }: {
   label: string;
+  hint?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
 }): JSX.Element {
   return (
-    <label className="flex cursor-pointer items-center gap-3 text-sm">
+    <label className="flex cursor-pointer items-start gap-3 text-sm">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-2 focus:ring-blue-500"
+        className="mt-0.5 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-2 focus:ring-blue-500"
       />
-      <span className="text-zinc-300">{label}</span>
+      <span className="flex flex-col gap-0.5">
+        <span className="text-zinc-300">{label}</span>
+        {hint ? <FieldHint>{hint}</FieldHint> : null}
+      </span>
     </label>
   );
 }

@@ -1,15 +1,49 @@
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
-import { getToken, setToken } from '@/lib/auth';
+import { clearToken, getToken, setToken } from '@/lib/auth';
 import * as React from 'react';
 
 export function LoginGate({ children }: { children: React.ReactNode }): JSX.Element {
-  const [hasToken, setHasToken] = React.useState(() => Boolean(getToken()));
+  // 'checking' on mount when a stored token exists — verify it before letting children render.
+  // Otherwise a rotated/stale token would silently 401 every API call.
+  const [status, setStatus] = React.useState<'checking' | 'ok' | 'needs-token'>(() =>
+    getToken() ? 'checking' : 'needs-token',
+  );
   const [value, setValue] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  if (hasToken) return <>{children}</>;
+  React.useEffect(() => {
+    if (status !== 'checking') return;
+    const token = getToken();
+    if (!token) {
+      setStatus('needs-token');
+      return;
+    }
+    fetch('/api/events', { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (res.ok) {
+          setStatus('ok');
+        } else if (res.status === 401) {
+          clearToken();
+          setStatus('needs-token');
+        } else {
+          // Server unreachable / 5xx — let the child app render and surface the error itself
+          // rather than blocking on the gate.
+          setStatus('ok');
+        }
+      })
+      .catch(() => setStatus('ok'));
+  }, [status]);
+
+  if (status === 'checking') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-sm text-zinc-500">
+        Checking session…
+      </div>
+    );
+  }
+  if (status === 'ok') return <>{children}</>;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-6">
@@ -27,7 +61,7 @@ export function LoginGate({ children }: { children: React.ReactNode }): JSX.Elem
           setSubmitting(false);
           if (res.ok) {
             setToken(value);
-            setHasToken(true);
+            setStatus('ok');
           } else if (res.status === 401) {
             setError('Token rejected');
           } else {

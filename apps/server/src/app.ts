@@ -9,6 +9,7 @@ import { eventRoutes } from './routes/events.js';
 import { frontendRoutes } from './routes/frontends.js';
 import { healthRoutes } from './routes/health.js';
 import { imageRoutes } from './routes/images.js';
+import { networkRoutes } from './routes/network.js';
 import { photographerRoutes } from './routes/photographers.js';
 import { renditionRoutes } from './routes/renditions.js';
 import { settingsRoutes } from './routes/settings.js';
@@ -49,6 +50,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(eventRoutes);
   await app.register(photographerRoutes);
   await app.register(imageRoutes);
+  await app.register(networkRoutes);
   await app.register(settingsRoutes);
   await app.register(wsRoutes);
   await app.register(frontendRoutes);

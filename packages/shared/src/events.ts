@@ -3,6 +3,7 @@ import type { EventDto, ImageDto, PhotographerDto, SettingsDto, SlideshowState }
 export type ServerEventMap = {
   'event.activated': { event: EventDto };
   'event.updated': { event: EventDto };
+  'event.deleted': { eventId: string };
   'photographer.added': { photographer: PhotographerDto };
   'photographer.updated': { photographer: PhotographerDto };
   'photographer.removed': { photographerId: string };

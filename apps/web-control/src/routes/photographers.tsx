@@ -14,10 +14,10 @@ import {
 import { Input, Label } from '@/components/ui/input';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
-import type { PhotographerWithSecretDto } from '@photolive/shared';
+import type { PhotographerDto, PhotographerWithSecretDto } from '@photolive/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Copy, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import * as React from 'react';
 
@@ -28,7 +28,6 @@ export const Route = createFileRoute('/photographers')({
 const COLOR_PRESETS = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ec4899', '#14b8a6'];
 
 function PhotographersPage(): JSX.Element {
-  const qc = useQueryClient();
   const activeEvent = useQuery({ queryKey: ['active-event'], queryFn: api.events.active });
   const photographers = useQuery({
     queryKey: ['photographers', activeEvent.data?.id],
@@ -37,11 +36,9 @@ function PhotographersPage(): JSX.Element {
   });
   const [createOpen, setCreateOpen] = React.useState(false);
   const [secretView, setSecretView] = React.useState<PhotographerWithSecretDto | null>(null);
+  const [infoView, setInfoView] = React.useState<PhotographerDto | null>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState<PhotographerDto | null>(null);
 
-  const remove = useMutation({
-    mutationFn: (id: string) => api.photographers.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['photographers'] }),
-  });
   const rotate = useMutation({
     mutationFn: (id: string) => api.photographers.rotatePassword(id),
     onSuccess: (next) => setSecretView(next),
@@ -112,8 +109,18 @@ function PhotographersPage(): JSX.Element {
                         <Button
                           size="sm"
                           variant="ghost"
+                          onClick={() => setInfoView(p)}
+                          title="Show FTP info (host / username, no password)"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Info
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={rotate.isPending}
                           onClick={() => rotate.mutate(p.id)}
-                          title="Rotate password"
+                          title="Generate a new FTP password (invalidates the old one)"
                         >
                           <RefreshCw className="h-3 w-3" />
                           Rotate
@@ -121,8 +128,8 @@ function PhotographersPage(): JSX.Element {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => remove.mutate(p.id)}
-                          title="Delete"
+                          onClick={() => setConfirmDelete(p)}
+                          title="Delete photographer"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -146,6 +153,12 @@ function PhotographersPage(): JSX.Element {
         )}
       </div>
 
+      {rotate.error ? (
+        <div className="px-6 pb-2 text-xs text-red-400">
+          Rotate failed: {rotate.error instanceof Error ? rotate.error.message : 'unknown error'}
+        </div>
+      ) : null}
+
       <CreatePhotographerDialog
         open={createOpen}
         eventId={activeEvent.data?.id ?? null}
@@ -153,7 +166,179 @@ function PhotographersPage(): JSX.Element {
         onCreated={(p) => setSecretView(p)}
       />
       <SecretRevealDialog photographer={secretView} onOpenChange={() => setSecretView(null)} />
+      <FtpInfoDialog photographer={infoView} onOpenChange={() => setInfoView(null)} />
+      <DeletePhotographerDialog
+        photographer={confirmDelete}
+        onOpenChange={() => setConfirmDelete(null)}
+      />
     </>
+  );
+}
+
+function useFtpHost(): { host: string; port: number } {
+  const info = useQuery({
+    queryKey: ['network-info'],
+    queryFn: api.network.info,
+    staleTime: 5 * 60 * 1000,
+  });
+  return {
+    host: info.data?.ftpHost ?? window.location.hostname,
+    port: info.data?.ftpPort ?? 2121,
+  };
+}
+
+function CameraFtpSettings({
+  host,
+  port,
+  username,
+  password,
+}: {
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+}): JSX.Element {
+  // Sony Alpha menu path: Network -> FTP Transfer Func. -> Server Setting -> Server [N].
+  // The A7 IV doesn't support active-mode FTP, so passive must be on. We don't
+  // serve TLS, so Secure Protocol must be Off.
+  return (
+    <div className="space-y-3">
+      <div className="rounded border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-400">
+        On the camera: <span className="text-zinc-300">Network → FTP Transfer Func. → Server Setting → Server 1</span>
+      </div>
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
+        <dt className="text-zinc-500">Display Name</dt>
+        <dd className="font-mono text-zinc-50">PhotoLive <span className="text-zinc-500 italic">(any label)</span></dd>
+
+        <dt className="text-zinc-500">Host Name</dt>
+        <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
+          {host}
+          <CopyButton value={host} />
+        </dd>
+
+        <dt className="text-zinc-500">Secure Protocol</dt>
+        <dd className="font-mono text-zinc-50">Off</dd>
+
+        <dt className="text-zinc-500">Port</dt>
+        <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
+          {port}
+          <CopyButton value={String(port)} />
+        </dd>
+
+        <dt className="text-zinc-500">Specify Directory</dt>
+        <dd className="font-mono text-zinc-500 italic">leave empty</dd>
+
+        <dt className="text-zinc-500">User</dt>
+        <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
+          {username}
+          <CopyButton value={username} />
+        </dd>
+
+        <dt className="text-zinc-500">Password</dt>
+        {password ? (
+          <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
+            {password}
+            <CopyButton value={password} />
+          </dd>
+        ) : (
+          <dd className="text-zinc-500 italic">not retrievable — rotate to issue a new one</dd>
+        )}
+
+        <dt className="text-zinc-500">Passive Mode</dt>
+        <dd className="font-mono text-zinc-50">On</dd>
+      </dl>
+      <p className="text-xs text-zinc-400">
+        Then enable <span className="text-zinc-300">Network → FTP Transfer Func. → FTP Function: On</span>.
+      </p>
+    </div>
+  );
+}
+
+function FtpInfoDialog({
+  photographer,
+  onOpenChange,
+}: {
+  photographer: PhotographerDto | null;
+  onOpenChange: (open: boolean) => void;
+}): JSX.Element | null {
+  const { host, port } = useFtpHost();
+  if (!photographer) return null;
+  return (
+    <Dialog open={Boolean(photographer)} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>FTP info for {photographer.displayName}</DialogTitle>
+          <DialogDescription>
+            The password is hashed on the server and can't be retrieved. If you need to share
+            credentials again, click <strong>Rotate</strong> to generate a new password.
+          </DialogDescription>
+        </DialogHeader>
+        <CameraFtpSettings host={host} port={port} username={photographer.ftpUsername} />
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="primary">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeletePhotographerDialog({
+  photographer,
+  onOpenChange,
+}: {
+  photographer: PhotographerDto | null;
+  onOpenChange: (open: boolean) => void;
+}): JSX.Element | null {
+  const qc = useQueryClient();
+  const remove = useMutation({
+    mutationFn: (id: string) => api.photographers.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['photographers'] });
+      onOpenChange(false);
+    },
+  });
+
+  React.useEffect(() => {
+    if (!photographer) remove.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photographer]);
+
+  if (!photographer) return null;
+
+  return (
+    <Dialog open={Boolean(photographer)} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete photographer?</DialogTitle>
+          <DialogDescription>
+            <strong>{photographer.displayName}</strong> will be removed and their FTP credentials
+            invalidated. Photos they already uploaded stay attributed to them historically.
+          </DialogDescription>
+        </DialogHeader>
+        {remove.error ? (
+          <p className="text-xs text-red-400">
+            {remove.error instanceof Error ? remove.error.message : 'Delete failed'}
+          </p>
+        ) : null}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={remove.isPending}
+            onClick={() => remove.mutate(photographer.id)}
+          >
+            {remove.isPending ? 'Deleting…' : 'Delete'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -258,18 +443,18 @@ function SecretRevealDialog({
 }): JSX.Element | null {
   const [qr, setQr] = React.useState<string | null>(null);
   const open = Boolean(photographer);
+  const { host, port } = useFtpHost();
 
   React.useEffect(() => {
     if (!photographer) {
       setQr(null);
       return;
     }
-    const host = window.location.hostname;
-    const url = `ftp://${photographer.ftpUsername}:${photographer.ftpPassword}@${host}:2121`;
+    const url = `ftp://${photographer.ftpUsername}:${photographer.ftpPassword}@${host}:${port}`;
     QRCode.toDataURL(url, { margin: 1, width: 192, color: { dark: '#fafafa', light: '#09090b' } })
       .then(setQr)
       .catch(() => setQr(null));
-  }, [photographer]);
+  }, [photographer, host, port]);
 
   if (!photographer) return null;
 
@@ -283,20 +468,12 @@ function SecretRevealDialog({
             camera.
           </DialogDescription>
         </DialogHeader>
-        <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-zinc-500">Host</dt>
-          <dd className="font-mono text-zinc-50">{window.location.hostname}:2121</dd>
-          <dt className="text-zinc-500">Username</dt>
-          <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
-            {photographer.ftpUsername}
-            <CopyButton value={photographer.ftpUsername} />
-          </dd>
-          <dt className="text-zinc-500">Password</dt>
-          <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
-            {photographer.ftpPassword}
-            <CopyButton value={photographer.ftpPassword} />
-          </dd>
-        </dl>
+        <CameraFtpSettings
+          host={host}
+          port={port}
+          username={photographer.ftpUsername}
+          password={photographer.ftpPassword}
+        />
         {qr ? (
           <div className="flex justify-center pt-2">
             <img

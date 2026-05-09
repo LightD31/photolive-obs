@@ -52,4 +52,23 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
     if (!event) return reply.code(404).send({ error: 'not found' });
     return { event };
   });
+
+  app.post<{ Params: { id: string } }>('/api/events/:id/unarchive', async (req, reply) => {
+    const event = eventService.unarchive(req.params.id);
+    if (!event) return reply.code(404).send({ error: 'not found' });
+    return { event };
+  });
+
+  app.delete<{ Params: { id: string } }>('/api/events/:id', async (req, reply) => {
+    const wasActive = eventService.get(req.params.id)?.isActive ?? false;
+    const ok = eventService.delete(req.params.id);
+    if (!ok) return reply.code(404).send({ error: 'not found' });
+    // If we just deleted the active event, the watcher and slideshow need to drop their state.
+    if (wasActive) {
+      await fileWatcherService.watchActiveEvent();
+      slideshowService.reload();
+    }
+    wsService.broadcast('event.deleted', { eventId: req.params.id });
+    return { ok: true };
+  });
 }

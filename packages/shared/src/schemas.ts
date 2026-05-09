@@ -52,6 +52,7 @@ export const settingsUpdateSchema = z
     showTimeAgo: z.boolean(),
     showBranding: z.boolean(),
     blurThreshold: z.number().min(0).max(10_000),
+    transparentBackground: z.boolean(),
   })
   .partial();
 

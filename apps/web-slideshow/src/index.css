@@ -16,6 +16,14 @@ body,
   overflow: hidden;
 }
 
+/* Transparent mode: lets the OBS Browser Source composite the slideshow over
+   the scene below. Toggled by the `transparentBackground` setting. */
+html.pl-transparent,
+html.pl-transparent body,
+html.pl-transparent #root {
+  background: transparent;
+}
+
 /* Slideshow transitions — pure CSS, hardware-accelerated, Chromecast-safe. */
 @keyframes pl-fade-in {
   from {

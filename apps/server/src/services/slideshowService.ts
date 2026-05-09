@@ -9,8 +9,9 @@ import { wsService } from './wsService.js';
  * Slideshow service. One-event-active-at-a-time state machine.
  *
  * - Holds the current/next image in memory; the persistent queue is in the DB.
+ * - Auto-rotation picks images at random (uniform, excluding the current one).
  * - On image.ingested (auto / auto-skip-blurry modes), the new image is prioritised
- *   to be the next one shown.
+ *   to be the next one shown, overriding the random pick.
  * - In approval mode, ingest writes pending rows but doesn't touch the queue;
  *   only operator approval moves an image into the queue.
  */
@@ -30,8 +31,8 @@ export class SlideshowService {
       return;
     }
     const queue = imageService.approvedQueue(active.id);
-    this.currentImageId = queue[0]?.id ?? null;
-    this.nextImageId = queue[1]?.id ?? null;
+    this.currentImageId = this.pickRandom(queue, null);
+    this.nextImageId = this.pickRandom(queue, this.currentImageId);
     this.scheduleNextRotation();
     this.broadcastState();
     this.broadcastAdvanced();
@@ -80,7 +81,8 @@ export class SlideshowService {
     const idx = queue.findIndex((img) => img.id === this.currentImageId);
     if (idx <= 0) return;
     this.currentImageId = queue[idx - 1]?.id ?? this.currentImageId;
-    this.nextImageId = queue[idx]?.id ?? null;
+    this.nextImageId =
+      this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
     this.broadcastAdvanced();
     this.scheduleNextRotation();
   }
@@ -92,8 +94,8 @@ export class SlideshowService {
     if (!img || img.status !== 'approved') return;
     this.currentImageId = imageId;
     const queue = imageService.approvedQueue(active.id);
-    const idx = queue.findIndex((q) => q.id === imageId);
-    this.nextImageId = idx >= 0 ? (queue[idx + 1]?.id ?? null) : null;
+    this.nextImageId =
+      this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
     this.broadcastAdvanced();
     this.scheduleNextRotation();
   }
@@ -135,15 +137,24 @@ export class SlideshowService {
     }
 
     const queue = imageService.approvedQueue(active.id);
+    // Honor the precomputed preview so the frontend's preload matches what plays next.
+    if (!nextId && this.nextImageId && queue.some((q) => q.id === this.nextImageId)) {
+      nextId = this.nextImageId;
+    }
     if (!nextId) {
-      const idx = queue.findIndex((q) => q.id === this.currentImageId);
-      nextId = queue[(idx + 1) % Math.max(queue.length, 1)]?.id ?? queue[0]?.id ?? null;
+      nextId = this.pickRandom(queue, this.currentImageId);
     }
     this.currentImageId = nextId;
-    const idx = queue.findIndex((q) => q.id === this.currentImageId);
     this.nextImageId =
-      idx >= 0 ? (queue[idx + 1]?.id ?? queue[0]?.id ?? null) : (queue[0]?.id ?? null);
+      this.prioritizedQueue[0] ?? this.pickRandom(queue, this.currentImageId);
     this.broadcastAdvanced();
+  }
+
+  private pickRandom(queue: { id: string }[], excludeId: string | null): string | null {
+    if (queue.length === 0) return null;
+    const candidates = excludeId ? queue.filter((q) => q.id !== excludeId) : queue;
+    const pool = candidates.length > 0 ? candidates : queue;
+    return pool[Math.floor(Math.random() * pool.length)]?.id ?? null;
   }
 
   private scheduleNextRotation(): void {
