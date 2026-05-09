@@ -18,13 +18,13 @@ jobs:
     name: Build Windows .exe
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9.15.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -82,7 +82,7 @@ jobs:
           Compress-Archive -Path packaging/staging/* -DestinationPath $zipName
           Get-ChildItem $zipName
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: windows-zip
           path: photolive-*-windows-x64.zip
@@ -92,13 +92,13 @@ jobs:
     name: Build Linux .rpm
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9.15.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -151,7 +151,7 @@ jobs:
           nfpm package --config nfpm.yaml --packager rpm --target ../
           ls -la ../*.rpm
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: linux-rpm
           path: '*.rpm'
@@ -162,7 +162,7 @@ jobs:
     needs: [build-windows, build-linux]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: dist
           merge-multiple: true
