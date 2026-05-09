@@ -12,6 +12,6 @@
       "@photolive/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["dist", "node_modules", "tests"]
 }

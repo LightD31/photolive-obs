@@ -1,0 +1,37 @@
+# Phase-3 minimal config — Linux AppImage only, fastest target to iterate on.
+# Phase 4 adds Windows (NSIS + ZIP) and Linux (RPM + DEB) and the
+# @electron/rebuild beforeBuild hook for native modules (sharp, better-sqlite3).
+appId: io.photolive.app
+productName: Photolive
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - dist/**/*
+  - package.json
+
+# Web bundles + drizzle migrations + the server's compiled JS get packed as
+# extraResources so they sit on disk (not inside app.asar) and findFrontendRoot
+# / migration loaders can read them with normal fs calls.
+extraResources:
+  - from: ../web-control/dist
+    to: web-control/dist
+  - from: ../web-slideshow/dist
+    to: web-slideshow/dist
+  - from: ../server/drizzle
+    to: server/drizzle
+  - from: ../server/dist
+    to: server/dist
+
+asarUnpack:
+  - node_modules/sharp/**
+  - node_modules/better-sqlite3/**
+
+# Phase 4 will replace this with a programmatic @electron/rebuild call.
+npmRebuild: true
+
+linux:
+  target:
+    - AppImage
+  category: AudioVideo

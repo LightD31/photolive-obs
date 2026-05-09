@@ -5,6 +5,18 @@ import { type AppSettingsFile } from '@photolive/shared';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { requireAuth } from './auth.js';
 import { type Config, config, setConfig } from './config.js';
+
+// Re-export the bits the Electron host needs so it imports them through the
+// public package entry rather than reaching into ./dist subpaths.
+export {
+  buildConfigFromEnv,
+  buildConfigFromFile,
+  ConfigValidationError,
+  parseSettingsFile,
+  setConfig,
+} from './config.js';
+export type { AppSettingsFile } from '@photolive/shared';
+export type { Config } from './config.js';
 import { initDb } from './db/index.js';
 import { initLogger, logger } from './logger.js';
 import { appSettingsRoutes } from './routes/appSettings.js';
@@ -110,15 +122,27 @@ export async function startServer(opts: StartServerOptions): Promise<StartedServ
     current: opts.initialSettings ?? null,
   });
 
-  // Run migrations if a drizzle folder is reachable (best-effort).
+  // Run migrations if a drizzle folder is reachable. We probe several
+  // candidate locations because the same `app.js` is loaded from a few
+  // different layouts: dev (tsx, src/), CLI prod (dist/ next to drizzle/),
+  // and Electron (process.resourcesPath/server/drizzle via extraResources).
   try {
     const { migrate } = await import('drizzle-orm/better-sqlite3/migrator');
     const { existsSync } = await import('node:fs');
     const { resolve } = await import('node:path');
-    const candidates = [
+    const candidates: string[] = [
       resolve(import.meta.dirname, 'drizzle'),
       resolve(import.meta.dirname, '..', 'drizzle'),
+      resolve(import.meta.dirname, '..', '..', 'drizzle'),
+      resolve(import.meta.dirname, '..', '..', '..', 'drizzle'),
+      resolve(import.meta.dirname, '..', '..', '..', '..', 'drizzle'),
     ];
+    // Electron injects `process.resourcesPath` for files packed via
+    // `extraResources`. Outside Electron it's undefined — we feature-detect.
+    const resourcesPath = (process as { resourcesPath?: string }).resourcesPath;
+    if (resourcesPath) {
+      candidates.unshift(resolve(resourcesPath, 'server', 'drizzle'));
+    }
     const folder = candidates.find(existsSync);
     if (folder) {
       migrate(db, { migrationsFolder: folder });

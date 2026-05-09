@@ -1,9 +1,13 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-// @ts-expect-error ftp-srv ships CJS `export = FtpSrv`; the default-import shape
-// works at runtime under Node's ESM/CJS interop but TS's verbatimModuleSyntax
-// can't model it.
-import FtpSrv from 'ftp-srv';
+// ftp-srv ships CJS `export = FtpSrv`. Under Node's ESM/CJS interop the
+// default import gives the constructor at runtime, but TS with NodeNext +
+// verbatimModuleSyntax models it as a non-constructable namespace; we
+// fall back to `.default` (the actual constructor on some bundlers) and
+// cast through `any` to express what runtime reality is.
+import FtpSrvImport from 'ftp-srv';
+// biome-ignore lint/suspicious/noExplicitAny: see comment above.
+const FtpSrv: any = (FtpSrvImport as any).default ?? FtpSrvImport;
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { eventService } from './eventService.js';

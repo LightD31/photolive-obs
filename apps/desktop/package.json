@@ -1,0 +1,25 @@
+{
+  "name": "@photolive/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "build:deps": "pnpm --filter @photolive/shared --filter @photolive/server build",
+    "dev": "pnpm build:deps && pnpm build && electron .",
+    "start": "electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@photolive/server": "workspace:*",
+    "@photolive/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@types/node": "^22.10.5",
+    "electron": "^33.2.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.0"
+  }
+}

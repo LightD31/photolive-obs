@@ -5,9 +5,11 @@ import { fileURLToPath } from 'node:url';
 import type { ImageDto, ImageStatus } from '@photolive/shared';
 import { and, eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-// @ts-expect-error piscina ships CJS `export = Piscina`; default-import works
-// at runtime under Node's interop but TS's verbatimModuleSyntax can't model it.
-import Piscina from 'piscina';
+// piscina ships CJS `export = Piscina`. See ftpService.ts for the same
+// dance — default + .default fallback, cast through `any`.
+import PiscinaImport from 'piscina';
+// biome-ignore lint/suspicious/noExplicitAny: see ftpService.ts.
+const Piscina: any = (PiscinaImport as any).default ?? PiscinaImport;
 import { bus } from '../bus.js';
 import { db } from '../db/index.js';
 import { images, photographers as photographersTbl } from '../db/schema.js';
@@ -37,11 +39,11 @@ export class IngestService {
   private pool: PiscinaPool;
 
   constructor() {
-    // In dev (tsx) we run .ts from src/services and the worker lives in src/workers.
-    // In bundled prod, main.js and ingest.worker.js are siblings in dist/.
-    const workerPath = __filename.endsWith('.ts')
-      ? join(__dirname, '..', 'workers', 'ingest.worker.ts')
-      : join(__dirname, 'ingest.worker.js');
+    // Sibling layout: services/<self> and workers/<worker> live alongside under
+    // src/ (dev) or dist/ (tsc prod). In Electron builds the dir is unpacked
+    // outside app.asar so Worker can fs.read the .js file.
+    const workerExt = __filename.endsWith('.ts') ? '.ts' : '.js';
+    const workerPath = join(__dirname, '..', 'workers', `ingest.worker${workerExt}`);
     const cpuCount = cpus().length;
     this.pool = new Piscina({
       filename: workerPath,
