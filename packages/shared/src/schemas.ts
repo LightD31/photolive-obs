@@ -1,5 +1,89 @@
 import { z } from 'zod';
 
+// App-level settings persisted to <dataDir>/settings.json (Electron) or
+// piped in via --settings <path> (server CLI). All fields except authToken
+// are optional; nulls in `storage` mean "derive from dataDir".
+export const appSettingsFileSchema = z.object({
+  schemaVersion: z.literal(1).default(1),
+  authToken: z.string().min(16),
+  logLevel: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  network: z
+    .object({
+      port: z.number().int().min(1).max(65_535).default(3001),
+      host: z.string().default('0.0.0.0'),
+      allowedOrigins: z.array(z.string()).default([]),
+    })
+    .default({}),
+  storage: z
+    .object({
+      dataDir: z.string().nullable().default(null),
+      databasePath: z.string().nullable().default(null),
+      photosRoot: z.string().nullable().default(null),
+      renditionsRoot: z.string().nullable().default(null),
+    })
+    .default({}),
+  ftp: z
+    .object({
+      host: z.string().default('0.0.0.0'),
+      port: z.number().int().min(1).max(65_535).default(2121),
+      pasvUrl: z.string().default('127.0.0.1'),
+      pasvMin: z.number().int().min(1).max(65_535).default(50_000),
+      pasvMax: z.number().int().min(1).max(65_535).default(50_100),
+    })
+    .default({}),
+  obs: z
+    .object({
+      url: z.string().default(''),
+      password: z.string().default(''),
+    })
+    .default({}),
+});
+
+export type AppSettingsFile = z.infer<typeof appSettingsFileSchema>;
+
+// Patch shape used by PUT /api/app-settings (deep partial of the file schema,
+// with authToken still required to set explicitly — we have a separate
+// rotate-token endpoint for that).
+export const appSettingsPatchSchema = z.object({
+  logLevel: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).optional(),
+  network: z
+    .object({
+      port: z.number().int().min(1).max(65_535).optional(),
+      host: z.string().optional(),
+      allowedOrigins: z.array(z.string()).optional(),
+    })
+    .partial()
+    .optional(),
+  storage: z
+    .object({
+      dataDir: z.string().nullable().optional(),
+      databasePath: z.string().nullable().optional(),
+      photosRoot: z.string().nullable().optional(),
+      renditionsRoot: z.string().nullable().optional(),
+    })
+    .partial()
+    .optional(),
+  ftp: z
+    .object({
+      host: z.string().optional(),
+      port: z.number().int().min(1).max(65_535).optional(),
+      pasvUrl: z.string().optional(),
+      pasvMin: z.number().int().min(1).max(65_535).optional(),
+      pasvMax: z.number().int().min(1).max(65_535).optional(),
+    })
+    .partial()
+    .optional(),
+  obs: z
+    .object({
+      url: z.string().optional(),
+      password: z.string().optional(),
+    })
+    .partial()
+    .optional(),
+});
+
+export type AppSettingsPatch = z.infer<typeof appSettingsPatchSchema>;
+
 export const displayModeSchema = z.enum(['auto', 'auto-skip-blurry', 'approval']);
 export const imageStatusSchema = z.enum(['pending', 'approved', 'excluded', 'auto-skipped']);
 export const transitionSchema = z.enum(['none', 'fade', 'slide-blur']);

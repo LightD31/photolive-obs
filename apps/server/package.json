@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "gen-token": "tsx src/scripts/gen-token.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
