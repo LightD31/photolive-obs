@@ -41,9 +41,11 @@ export class IngestService {
   private pool: PiscinaPool;
 
   constructor() {
-    // Resolve the worker file. In dev (tsx) we run .ts directly; in prod we run .js from dist.
-    const workerExt = __filename.endsWith('.ts') ? '.ts' : '.js';
-    const workerPath = join(__dirname, '..', 'workers', `ingest.worker${workerExt}`);
+    // In dev (tsx) we run .ts from src/services and the worker lives in src/workers.
+    // In bundled prod, main.js and ingest.worker.js are siblings in dist/.
+    const workerPath = __filename.endsWith('.ts')
+      ? join(__dirname, '..', 'workers', 'ingest.worker.ts')
+      : join(__dirname, 'ingest.worker.js');
     const cpuCount = cpus().length;
     this.pool = new Piscina({
       filename: workerPath,

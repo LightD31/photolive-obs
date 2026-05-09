@@ -37,12 +37,24 @@ jobs:
 
       - name: Bundle server with esbuild
         shell: bash
+        env:
+          BANNER: "import {createRequire as __cr} from 'node:module';import {fileURLToPath as __fu} from 'node:url';import {dirname as __dn} from 'node:path';const require=__cr(import.meta.url);const __filename=__fu(import.meta.url);const __dirname=__dn(__filename);"
         run: |
-          pnpm dlx esbuild apps/server/src/main.ts \
-            --bundle --platform=node --format=esm --target=node22 \
-            --packages=external \
-            --alias:@photolive/shared=./packages/shared/src/index.ts \
-            --outfile=apps/server/dist/main.js
+          for entry in main src/workers/ingest.worker; do
+            case "$entry" in
+              main) src=apps/server/src/main.ts; out=apps/server/dist/main.js ;;
+              *)    src=apps/server/$entry.ts; out=apps/server/dist/$(basename $entry).js ;;
+            esac
+            pnpm dlx esbuild "$src" \
+              --bundle --platform=node --format=esm --target=node22 \
+              --external:sharp --external:better-sqlite3 \
+              --alias:@photolive/shared=./packages/shared/src/index.ts \
+              --banner:js="$BANNER" \
+              --outfile="$out"
+          done
+          # Drizzle migrations need to ship next to main.js so auto-migrate finds them.
+          cp -r apps/server/drizzle apps/server/dist/drizzle
+          ls -la apps/server/dist/
 
       - name: Install @yao-pkg/pkg
         run: pnpm add -g @yao-pkg/pkg@^6
@@ -111,12 +123,24 @@ jobs:
 
       - name: Bundle server with esbuild
         shell: bash
+        env:
+          BANNER: "import {createRequire as __cr} from 'node:module';import {fileURLToPath as __fu} from 'node:url';import {dirname as __dn} from 'node:path';const require=__cr(import.meta.url);const __filename=__fu(import.meta.url);const __dirname=__dn(__filename);"
         run: |
-          pnpm dlx esbuild apps/server/src/main.ts \
-            --bundle --platform=node --format=esm --target=node22 \
-            --packages=external \
-            --alias:@photolive/shared=./packages/shared/src/index.ts \
-            --outfile=apps/server/dist/main.js
+          for entry in main src/workers/ingest.worker; do
+            case "$entry" in
+              main) src=apps/server/src/main.ts; out=apps/server/dist/main.js ;;
+              *)    src=apps/server/$entry.ts; out=apps/server/dist/$(basename $entry).js ;;
+            esac
+            pnpm dlx esbuild "$src" \
+              --bundle --platform=node --format=esm --target=node22 \
+              --external:sharp --external:better-sqlite3 \
+              --alias:@photolive/shared=./packages/shared/src/index.ts \
+              --banner:js="$BANNER" \
+              --outfile="$out"
+          done
+          # Drizzle migrations need to ship next to main.js so auto-migrate finds them.
+          cp -r apps/server/drizzle apps/server/dist/drizzle
+          ls -la apps/server/dist/
 
       - name: Install @yao-pkg/pkg
         run: pnpm add -g @yao-pkg/pkg@^6

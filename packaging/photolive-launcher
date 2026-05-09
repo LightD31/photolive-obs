@@ -33,4 +33,15 @@ Photolive starting.
 Press Ctrl+C to stop.
 EOF
 
-exec /opt/photolive/photolive
+set +e
+NODE_ENV=production /opt/photolive/photolive
+STATUS=$?
+set -e
+
+if [ "$STATUS" -ne 0 ] && [ "$STATUS" -ne 130 ] && [ "$STATUS" -ne 143 ]; then
+  echo
+  echo "Photolive exited unexpectedly (status $STATUS)."
+  echo "See messages above for the cause."
+  read -rp "Press Enter to close this window..." _
+fi
+exit "$STATUS"

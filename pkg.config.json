@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "bin": "apps/server/dist/main.js",
   "pkg": {
-    "assets": ["apps/web-control/dist/**/*", "apps/web-slideshow/dist/**/*"]
+    "scripts": ["apps/server/dist/ingest.worker.js"],
+    "assets": [
+      "apps/web-control/dist/**/*",
+      "apps/web-slideshow/dist/**/*",
+      "apps/server/dist/drizzle/**/*"
+    ]
   }
 }

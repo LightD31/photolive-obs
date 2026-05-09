@@ -1,5 +1,9 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { buildApp } from './app.js';
 import { config } from './config.js';
+import { db } from './db/index.js';
 import { logger } from './logger.js';
 import { fileWatcherService } from './services/fileWatcherService.js';
 import { ftpService } from './services/ftpService.js';
@@ -7,7 +11,25 @@ import { ingestService } from './services/ingestService.js';
 import { obsService } from './services/obsService.js';
 import { slideshowService } from './services/slideshowService.js';
 
+// Locate the drizzle folder. Bundled prod ships it next to main.js (dist/drizzle);
+// dev runs from src/, so the folder is one level up at apps/server/drizzle.
+function findMigrationsFolder(): string | null {
+  const candidates = [
+    resolve(import.meta.dirname, 'drizzle'),
+    resolve(import.meta.dirname, '..', 'drizzle'),
+  ];
+  return candidates.find(existsSync) ?? null;
+}
+
 async function main(): Promise<void> {
+  const migrationsFolder = findMigrationsFolder();
+  if (migrationsFolder) {
+    migrate(db, { migrationsFolder });
+    logger.info({ migrationsFolder }, 'database migrations applied');
+  } else {
+    logger.warn('no drizzle migrations folder found; assuming schema already exists');
+  }
+
   const app = await buildApp();
   await app.listen({ port: config.port, host: config.host });
   logger.info({ port: config.port, host: config.host }, 'http server listening');
