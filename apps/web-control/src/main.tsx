@@ -24,6 +24,8 @@ const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   context: { queryClient },
+  // BASE_URL is '/control/' in prod (set in vite.config) and '/' in dev.
+  basepath: import.meta.env.BASE_URL.replace(/\/$/, '') || '/',
 });
 
 declare module '@tanstack/react-router' {
