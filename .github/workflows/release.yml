@@ -54,17 +54,17 @@ jobs:
       - name: Materialise prod node_modules (pnpm deploy)
         shell: bash
         run: |
-          pnpm --filter @photolive/server deploy --prod ${{ runner.temp }}/server-deploy
+          pnpm --filter @photolive/server deploy --prod ./server-deploy
           # Take only node_modules + package.json; the bundle replaces the source.
-          cp -RL ${{ runner.temp }}/server-deploy/node_modules packaging/staging/node_modules
-          cp ${{ runner.temp }}/server-deploy/package.json packaging/staging/package.json
+          cp -RL ./server-deploy/node_modules packaging/staging/node_modules
+          cp ./server-deploy/package.json packaging/staging/package.json
 
       - name: Stage Node runtime
         shell: bash
         run: |
-          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-win-x64.zip" -o ${{ runner.temp }}/node.zip
-          unzip -q ${{ runner.temp }}/node.zip -d ${{ runner.temp }}/
-          cp "${{ runner.temp }}/node-${NODE_VERSION}-win-x64/node.exe" packaging/staging/node.exe
+          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-win-x64.zip" -o ./node-runtime.zip
+          unzip -q ./node-runtime.zip -d ./
+          cp "./node-${NODE_VERSION}-win-x64/node.exe" packaging/staging/node.exe
 
       - name: Stage launcher and config
         shell: bash
@@ -139,15 +139,15 @@ jobs:
 
       - name: Materialise prod node_modules (pnpm deploy)
         run: |
-          pnpm --filter @photolive/server deploy --prod ${{ runner.temp }}/server-deploy
-          cp -RL ${{ runner.temp }}/server-deploy/node_modules packaging/staging/node_modules
-          cp ${{ runner.temp }}/server-deploy/package.json packaging/staging/package.json
+          pnpm --filter @photolive/server deploy --prod ./server-deploy
+          cp -RL ./server-deploy/node_modules packaging/staging/node_modules
+          cp ./server-deploy/package.json packaging/staging/package.json
 
       - name: Stage Node runtime
         run: |
-          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" -o ${{ runner.temp }}/node.tar.xz
-          tar -xJf ${{ runner.temp }}/node.tar.xz -C ${{ runner.temp }}
-          cp "${{ runner.temp }}/node-${NODE_VERSION}-linux-x64/bin/node" packaging/staging/node
+          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" -o ./node-runtime.tar.xz
+          tar -xJf ./node-runtime.tar.xz -C ./
+          cp "./node-${NODE_VERSION}-linux-x64/bin/node" packaging/staging/node
           chmod +x packaging/staging/node
 
       - name: Stage entrypoint script
