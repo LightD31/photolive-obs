@@ -38,7 +38,7 @@ jobs:
       - name: Bundle server with esbuild
         shell: bash
         env:
-          BANNER: "import {createRequire as __cr} from 'node:module';import {fileURLToPath as __fu} from 'node:url';import {dirname as __dn} from 'node:path';const require=__cr(import.meta.url);const __filename=__fu(import.meta.url);const __dirname=__dn(__filename);"
+          BANNER: "import {createRequire as __cr} from 'node:module';const require=__cr(import.meta.url);"
         run: |
           for entry in main src/workers/ingest.worker; do
             case "$entry" in
@@ -66,7 +66,8 @@ jobs:
           pkg pkg.config.json \
             --targets node22-win-x64 \
             --output packaging/staging/photolive.exe \
-            --compress GZip
+            --compress GZip \
+            --no-bytecode --public --public-packages "*"
           ls -la packaging/staging/
 
       - name: Stage extra files
@@ -124,7 +125,7 @@ jobs:
       - name: Bundle server with esbuild
         shell: bash
         env:
-          BANNER: "import {createRequire as __cr} from 'node:module';import {fileURLToPath as __fu} from 'node:url';import {dirname as __dn} from 'node:path';const require=__cr(import.meta.url);const __filename=__fu(import.meta.url);const __dirname=__dn(__filename);"
+          BANNER: "import {createRequire as __cr} from 'node:module';const require=__cr(import.meta.url);"
         run: |
           for entry in main src/workers/ingest.worker; do
             case "$entry" in
@@ -151,7 +152,8 @@ jobs:
           pkg pkg.config.json \
             --targets node22-linux-x64 \
             --output packaging/staging/photolive \
-            --compress GZip
+            --compress GZip \
+            --no-bytecode --public --public-packages "*"
           chmod +x packaging/staging/photolive
           ls -la packaging/staging/
 
