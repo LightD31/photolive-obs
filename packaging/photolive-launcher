@@ -26,9 +26,10 @@ PORT="${PORT:-3001}"
 
 cat <<EOF
 Photolive starting.
-  Data dir: $DATA_DIR
-  Config:   $ENV_FILE
-  Open:     http://localhost:$PORT/control
+  Data dir:  $DATA_DIR
+  Config:    $ENV_FILE
+  Control:   http://localhost:$PORT/
+  Slideshow: http://localhost:$PORT/slideshow/  (use this URL in OBS)
 
 Press Ctrl+C to stop.
 EOF
