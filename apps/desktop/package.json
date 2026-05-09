@@ -5,20 +5,26 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "build:deps": "pnpm --filter @photolive/shared --filter @photolive/server build",
+    "build:deps": "pnpm --filter @photolive/shared --filter @photolive/web-control --filter @photolive/web-slideshow --filter @photolive/server build",
+    "stage": "node scripts/stage.cjs",
+    "build:all": "pnpm build:deps && pnpm build && pnpm stage",
     "dev": "pnpm build:deps && pnpm build && electron .",
     "start": "electron .",
+    "rebuild-native": "electron-rebuild -m ../server -f",
+    "package": "pnpm build:all && electron-builder",
+    "package:linux": "pnpm build:all && electron-builder --linux AppImage rpm deb --x64",
+    "package:win": "pnpm build:all && electron-builder --win nsis zip --x64",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
-  "dependencies": {
-    "@photolive/server": "workspace:*",
-    "@photolive/shared": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
+    "@photolive/server": "workspace:*",
+    "@photolive/shared": "workspace:*",
     "@types/node": "^22.10.5",
     "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
     "typescript": "^5.8.2",
     "vitest": "^3.0.0"
   }

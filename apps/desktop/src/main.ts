@@ -21,10 +21,25 @@ function bootlog(msg: string, extra?: unknown): void {
 // `@photolive/server` is ESM; under Electron 33's bundled Node 20 the static
 // `import` interop choked on transitive CJS deps. Loading via dynamic
 // `import()` from a CJS entry sidesteps the preparse path.
+//
+// In dev we resolve via the workspace symlink. In packaged builds the
+// workspace symlink doesn't exist — `scripts/stage.cjs` materialises a
+// self-contained `apps/desktop/server-runtime/` (with prod node_modules
+// already electron-rebuilt) which electron-builder packs alongside dist/.
+// We load by absolute path off `__dirname` (Electron transparently routes
+// asar / asar.unpacked paths through its module resolver).
 type ServerApi = typeof import('@photolive/server', { with: { 'resolution-mode': 'import' } });
 let ServerLib: ServerApi | null = null;
 async function loadServer(): Promise<ServerApi> {
-  if (!ServerLib) ServerLib = await import('@photolive/server');
+  if (ServerLib) return ServerLib;
+  if (app.isPackaged) {
+    // server-runtime ships as extraResources (outside the asar) so its
+    // node_modules and any *.node binaries are real filesystem paths.
+    const entry = join(process.resourcesPath, 'server-runtime', 'dist', 'app.js');
+    ServerLib = (await import(entry)) as ServerApi;
+  } else {
+    ServerLib = await import('@photolive/server');
+  }
   return ServerLib;
 }
 

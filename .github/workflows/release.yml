@@ -10,11 +10,10 @@ permissions:
 
 env:
   NPM_CONFIG_NODE_LINKER: hoisted
-  NODE_VERSION: v22.11.0
 
 jobs:
-  build-windows:
-    name: Build Windows .zip
+  build-desktop-windows:
+    name: Build Windows installers
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -31,84 +30,30 @@ jobs:
       - name: Install dependencies (hoisted)
         run: pnpm install --frozen-lockfile
 
-      - name: Build web apps
-        run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
+      - name: Build web bundles, shared, server, desktop
+        run: pnpm --filter @photolive/desktop build:all
 
-      - name: Bundle server with esbuild (deps external)
-        shell: bash
+      - name: Package Windows (NSIS + portable zip)
         env:
-          BANNER: "import {createRequire as __cr} from 'node:module';const require=__cr(import.meta.url);"
-        run: |
-          mkdir -p packaging/staging
-          for entry in apps/server/src/main.ts apps/server/src/workers/ingest.worker.ts; do
-            out=packaging/staging/$(basename "$entry" .ts).js
-            pnpm dlx esbuild "$entry" \
-              --bundle --platform=node --format=esm --target=node22 \
-              --packages=external \
-              --alias:@photolive/shared=./packages/shared/src/index.ts \
-              --banner:js="$BANNER" \
-              --outfile="$out"
-          done
-          cp -r apps/server/drizzle packaging/staging/drizzle
-          # Web assets: findFrontendRoot walks up from main.js looking for apps/web-control,
-          # so place them at /opt/photolive/apps/web-{control,slideshow}/dist after install.
-          mkdir -p packaging/staging/apps/web-control packaging/staging/apps/web-slideshow
-          cp -r apps/web-control/dist packaging/staging/apps/web-control/dist
-          cp -r apps/web-slideshow/dist packaging/staging/apps/web-slideshow/dist
-
-      - name: Materialise prod node_modules (pnpm deploy)
-        shell: bash
-        run: |
-          pnpm --filter @photolive/server deploy --prod ./server-deploy
-          # Take only node_modules + package.json; the bundle replaces the source.
-          cp -RL ./server-deploy/node_modules packaging/staging/node_modules
-          cp ./server-deploy/package.json packaging/staging/package.json
-
-      - name: Stage Node runtime
-        shell: bash
-        run: |
-          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-win-x64.zip" -o ./node-runtime.zip
-          unzip -q ./node-runtime.zip -d ./
-          cp "./node-${NODE_VERSION}-win-x64/node.exe" packaging/staging/node.exe
-
-      - name: Stage launcher and config
-        shell: bash
-        run: |
-          cp packaging/photolive.env.example packaging/staging/.env.example
-          cat > packaging/staging/photolive.bat <<'BAT'
-          @echo off
-          setlocal
-          set "DIR=%~dp0"
-          "%DIR%node.exe" "%DIR%main.js" %*
-          BAT
-          cat > packaging/staging/README.txt <<'EOF'
-          Photolive — Windows portable build
-          ==================================
-          1. Copy .env.example to .env and set PHOTOLIVE_AUTH_TOKEN.
-          2. Double-click photolive.bat (or run it from a terminal).
-          3. Open http://localhost:3001/ in your browser (control UI).
-             Slideshow URL for OBS: http://localhost:3001/slideshow/
-
-          Data lives under ./data/ next to photolive.bat.
-          EOF
-
-      - name: Zip the staging folder
-        shell: pwsh
-        run: |
-          $version = "${{ github.ref_name }}".TrimStart("v")
-          $zipName = "photolive-$version-windows-x64.zip"
-          Compress-Archive -Path packaging/staging/* -DestinationPath $zipName
-          Get-ChildItem $zipName
+          # electron-builder uploads draft releases on its own when GH_TOKEN
+          # is set; we publish via softprops/action-gh-release in a later job
+          # to keep all artifacts together.
+          GH_TOKEN: ''
+        run: pnpm --filter @photolive/desktop package:win
 
       - uses: actions/upload-artifact@v5
         with:
-          name: windows-zip
-          path: photolive-*-windows-x64.zip
+          name: windows
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.zip
           if-no-files-found: error
 
-  build-linux:
-    name: Build Linux .rpm
-    runs-on: ubuntu-latest
+  build-desktop-linux:
+    name: Build Linux artifacts
+    # ubuntu-22.04 keeps glibc baseline compatible with older RHEL/CentOS hosts;
+    # AppImages built on ubuntu-latest can fail to launch on those.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
 
@@ -121,79 +66,35 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
+      - name: Install OS deps for AppImage / RPM / DEB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libfuse2 rpm dpkg
+
       - name: Install dependencies (hoisted)
         run: pnpm install --frozen-lockfile
 
-      - name: Build web apps
-        run: pnpm --filter @photolive/web-control --filter @photolive/web-slideshow run build
+      - name: Build web bundles, shared, server, desktop
+        run: pnpm --filter @photolive/desktop build:all
 
-      - name: Bundle server with esbuild (deps external)
+      - name: Package Linux (AppImage + RPM + DEB)
         env:
-          BANNER: "import {createRequire as __cr} from 'node:module';const require=__cr(import.meta.url);"
-        run: |
-          mkdir -p packaging/staging
-          for entry in apps/server/src/main.ts apps/server/src/workers/ingest.worker.ts; do
-            out=packaging/staging/$(basename "$entry" .ts).js
-            pnpm dlx esbuild "$entry" \
-              --bundle --platform=node --format=esm --target=node22 \
-              --packages=external \
-              --alias:@photolive/shared=./packages/shared/src/index.ts \
-              --banner:js="$BANNER" \
-              --outfile="$out"
-          done
-          cp -r apps/server/drizzle packaging/staging/drizzle
-          # Web assets: findFrontendRoot walks up from main.js looking for apps/web-control,
-          # so place them at /opt/photolive/apps/web-{control,slideshow}/dist after install.
-          mkdir -p packaging/staging/apps/web-control packaging/staging/apps/web-slideshow
-          cp -r apps/web-control/dist packaging/staging/apps/web-control/dist
-          cp -r apps/web-slideshow/dist packaging/staging/apps/web-slideshow/dist
-
-      - name: Materialise prod node_modules (pnpm deploy)
-        run: |
-          pnpm --filter @photolive/server deploy --prod ./server-deploy
-          cp -RL ./server-deploy/node_modules packaging/staging/node_modules
-          cp ./server-deploy/package.json packaging/staging/package.json
-
-      - name: Stage Node runtime
-        run: |
-          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" -o ./node-runtime.tar.xz
-          tar -xJf ./node-runtime.tar.xz -C ./
-          cp "./node-${NODE_VERSION}-linux-x64/bin/node" packaging/staging/node
-          chmod +x packaging/staging/node
-
-      - name: Stage entrypoint script
-        run: |
-          cat > packaging/staging/photolive <<'EOF'
-          #!/bin/bash
-          DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-          exec "$DIR/node" "$DIR/main.js" "$@"
-          EOF
-          chmod +x packaging/staging/photolive
-
-      - name: Install nfpm
-        run: |
-          curl -sSL "https://github.com/goreleaser/nfpm/releases/download/v2.41.3/nfpm_2.41.3_Linux_x86_64.tar.gz" \
-            | sudo tar -xz -C /usr/local/bin nfpm
-          nfpm --version
-
-      - name: Build RPM
-        env:
-          VERSION: ${{ github.ref_name }}
-        run: |
-          export VERSION="${VERSION#v}"
-          cd packaging
-          nfpm package --config nfpm.yaml --packager rpm --target ../
-          ls -la ../*.rpm
+          GH_TOKEN: ''
+        run: pnpm --filter @photolive/desktop package:linux
 
       - uses: actions/upload-artifact@v5
         with:
-          name: linux-rpm
-          path: '*.rpm'
+          name: linux
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.rpm
+            apps/desktop/release/*.deb
           if-no-files-found: error
 
   release:
     name: Publish GitHub Release
-    needs: [build-windows, build-linux]
+    needs: [build-desktop-windows, build-desktop-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v5
@@ -208,8 +109,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            dist/*.exe
             dist/*.zip
+            dist/*.AppImage
             dist/*.rpm
+            dist/*.deb
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true

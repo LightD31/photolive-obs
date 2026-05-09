@@ -1,37 +1,78 @@
-# Phase-3 minimal config — Linux AppImage only, fastest target to iterate on.
-# Phase 4 adds Windows (NSIS + ZIP) and Linux (RPM + DEB) and the
-# @electron/rebuild beforeBuild hook for native modules (sharp, better-sqlite3).
 appId: io.photolive.app
 productName: Photolive
+copyright: © Photolive contributors
+
 directories:
   output: release
   buildResources: resources
 
+# Asar holds only the desktop's compiled main + preload — small, fast to load.
 files:
   - dist/**/*
   - package.json
+  - '!**/data/**'
+  - '!**/*.sqlite'
+  - '!**/*.sqlite-shm'
+  - '!**/*.sqlite-wal'
+  - '!**/*.ts'
+  - '!**/*.ts.map'
+  - '!**/*.tsbuildinfo'
+  - '!**/tsconfig*.json'
+  - '!**/tests/**'
+  - '!**/__tests__/**'
+  - '!**/*.test.*'
 
-# Web bundles + drizzle migrations + the server's compiled JS get packed as
-# extraResources so they sit on disk (not inside app.asar) and findFrontendRoot
-# / migration loaders can read them with normal fs calls.
+# Everything that needs to live on disk (outside the asar) ships as
+# extraResources. The Node native modules under server-runtime/node_modules
+# can't go inside an asar (dlopen needs real filesystem paths), and the web
+# bundles need to be readable by `@fastify/static` which uses normal fs calls.
+#
+# Layout under <app>/resources/:
+#   server-runtime/dist/app.js           server's compiled JS, loaded by main
+#   server-runtime/node_modules/...      prod deps (better-sqlite3, sharp, ...)
+#   server-runtime/drizzle/              SQL migrations
+#   apps/web-control/dist/               operator UI bundle
+#   apps/web-slideshow/dist/             slideshow bundle (OBS browser source)
 extraResources:
+  - from: server-runtime
+    to: server-runtime
   - from: ../web-control/dist
-    to: web-control/dist
+    to: apps/web-control/dist
   - from: ../web-slideshow/dist
-    to: web-slideshow/dist
-  - from: ../server/drizzle
-    to: server/drizzle
-  - from: ../server/dist
-    to: server/dist
+    to: apps/web-slideshow/dist
 
-asarUnpack:
-  - node_modules/sharp/**
-  - node_modules/better-sqlite3/**
+# Native modules already rebuilt by scripts/stage.cjs. We don't ask
+# electron-builder to do it again.
+npmRebuild: false
+buildDependenciesFromSource: false
 
-# Phase 4 will replace this with a programmatic @electron/rebuild call.
-npmRebuild: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+  icon: resources/icon.ico
+  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false # writable install dir → "next-to-exe" data dir works
+  shortcutName: Photolive
+  artifactName: ${productName}-${version}-setup.${ext}
 
 linux:
   target:
     - AppImage
+    - rpm
+    - deb
   category: AudioVideo
+  icon: resources/icon.png
+  desktop:
+    Name: Photolive
+    Comment: Live photo slideshow with OBS integration
+    Categories: AudioVideo;Photography;
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+forceCodeSigning: false
