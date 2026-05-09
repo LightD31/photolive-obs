@@ -50,6 +50,11 @@ jobs:
               --outfile="$out"
           done
           cp -r apps/server/drizzle packaging/staging/drizzle
+          # Web assets: findFrontendRoot walks up from main.js looking for apps/web-control,
+          # so place them at /opt/photolive/apps/web-{control,slideshow}/dist after install.
+          mkdir -p packaging/staging/apps/web-control packaging/staging/apps/web-slideshow
+          cp -r apps/web-control/dist packaging/staging/apps/web-control/dist
+          cp -r apps/web-slideshow/dist packaging/staging/apps/web-slideshow/dist
 
       - name: Materialise prod node_modules (pnpm deploy)
         shell: bash
@@ -136,6 +141,11 @@ jobs:
               --outfile="$out"
           done
           cp -r apps/server/drizzle packaging/staging/drizzle
+          # Web assets: findFrontendRoot walks up from main.js looking for apps/web-control,
+          # so place them at /opt/photolive/apps/web-{control,slideshow}/dist after install.
+          mkdir -p packaging/staging/apps/web-control packaging/staging/apps/web-slideshow
+          cp -r apps/web-control/dist packaging/staging/apps/web-control/dist
+          cp -r apps/web-slideshow/dist packaging/staging/apps/web-slideshow/dist
 
       - name: Materialise prod node_modules (pnpm deploy)
         run: |
