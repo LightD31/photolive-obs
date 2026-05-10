@@ -69,6 +69,13 @@ linux:
     - deb
   category: AudioVideo
   icon: resources/icon.png
+  maintainer: Photolive contributors <noreply@photolive.invalid>
+  vendor: Photolive
+  synopsis: Live event photography slideshow with OBS integration
+  description: |
+    Photolive ingests JPEGs from photographers' cameras (FTP), generates
+    display + thumbnail renditions, and broadcasts them to a slideshow
+    page consumable by OBS as a browser source.
   desktop:
     Name: Photolive
     Comment: Live photo slideshow with OBS integration

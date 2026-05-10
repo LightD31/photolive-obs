@@ -2,6 +2,12 @@
   "name": "@photolive/desktop",
   "version": "0.1.0",
   "private": true,
+  "description": "Photolive desktop app — live event photography slideshow with OBS integration",
+  "homepage": "https://github.com/LightD31/photolive-obs",
+  "author": {
+    "name": "Photolive contributors",
+    "email": "noreply@photolive.invalid"
+  },
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
