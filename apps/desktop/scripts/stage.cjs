@@ -44,16 +44,19 @@ console.log(`copied drizzle migrations -> ${drizzleDst}`);
 // 3. Rebuild native modules against Electron's Node ABI. We do this here
 //    so server-runtime is fully Electron-ready before electron-builder
 //    starts packing — avoiding a separate beforeBuild hook race.
-const electronRebuildBin = path.join(
-  desktopRoot,
-  'node_modules',
-  '.bin',
-  'electron-rebuild',
-);
-if (fs.existsSync(electronRebuildBin)) {
-  sh(`"${electronRebuildBin}" -m "${serverRuntime}" -f`, { cwd: desktopRoot });
-} else {
-  console.warn('[stage] electron-rebuild not found; native modules may have wrong ABI');
+const rebuildCandidates = [
+  // pnpm isolated layout (default)
+  path.join(desktopRoot, 'node_modules', '.bin', 'electron-rebuild'),
+  // pnpm hoisted layout (NPM_CONFIG_NODE_LINKER=hoisted) or workspace-root install
+  path.join(repoRoot, 'node_modules', '.bin', 'electron-rebuild'),
+];
+const electronRebuildBin = rebuildCandidates.find((p) => fs.existsSync(p));
+if (!electronRebuildBin) {
+  throw new Error(
+    `[stage] electron-rebuild not found in any of:\n  ${rebuildCandidates.join('\n  ')}\n` +
+      'Did you run pnpm install? Native modules will have the wrong ABI without rebuild.',
+  );
 }
+sh(`"${electronRebuildBin}" -m "${serverRuntime}" -f`, { cwd: desktopRoot });
 
 console.log('\n[stage] done. server-runtime ready under apps/desktop/server-runtime/');

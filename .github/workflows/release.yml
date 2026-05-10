@@ -8,8 +8,10 @@ on:
 permissions:
   contents: write
 
-env:
-  NPM_CONFIG_NODE_LINKER: hoisted
+# Use pnpm's default isolated linker. electron-builder needs `electron`
+# in apps/desktop/node_modules to compute the runtime version, and stage.cjs
+# needs apps/desktop/node_modules/.bin/electron-rebuild — both broken under
+# the hoisted layout we used for the old esbuild + nfpm pipeline.
 
 jobs:
   build-desktop-windows:
