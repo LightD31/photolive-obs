@@ -6,7 +6,6 @@ import { resolve } from 'node:path';
 // fall back to `.default` (the actual constructor on some bundlers) and
 // cast through `any` to express what runtime reality is.
 import FtpSrvImport from 'ftp-srv';
-// biome-ignore lint/suspicious/noExplicitAny: see comment above.
 const FtpSrv: any = (FtpSrvImport as any).default ?? FtpSrvImport;
 import { config } from '../config.js';
 import { logger } from '../logger.js';

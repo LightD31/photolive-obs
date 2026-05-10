@@ -1,6 +1,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { type AppSettingsFile, type AppSettingsPatch, appSettingsFileSchema } from '@photolive/shared';
+import {
+  type AppSettingsFile,
+  type AppSettingsPatch,
+  appSettingsFileSchema,
+} from '@photolive/shared';
 
 /**
  * Owns the settings.json on disk and exposes typed read/patch/rotate.
@@ -85,7 +89,9 @@ export class SettingsStore {
 
 export class SettingsImmutableError extends Error {
   constructor() {
-    super('settings cannot be mutated: server bootstrapped from environment, edit .env and restart instead');
+    super(
+      'settings cannot be mutated: server bootstrapped from environment, edit .env and restart instead',
+    );
     this.name = 'SettingsImmutableError';
   }
 }

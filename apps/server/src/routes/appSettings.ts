@@ -47,7 +47,10 @@ export async function appSettingsRoutes(app: FastifyInstance): Promise<void> {
     const reload = await serverLifecycle.reload(
       buildConfigFromFile(next, settingsStore.getDataDir()),
     );
-    logger.info({ requiresRestart: reload.requiresRestart, reasons: reload.reasons }, 'app settings updated');
+    logger.info(
+      { requiresRestart: reload.requiresRestart, reasons: reload.reasons },
+      'app settings updated',
+    );
 
     return {
       settings: redact(next, false),

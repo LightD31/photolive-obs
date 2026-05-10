@@ -2,9 +2,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { startServer } from './app.js';
 import {
+  ConfigValidationError,
   buildConfigFromEnv,
   buildConfigFromFile,
-  ConfigValidationError,
   loadDotenv,
   parseSettingsFile,
 } from './config.js';

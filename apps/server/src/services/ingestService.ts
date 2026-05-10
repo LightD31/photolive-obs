@@ -8,7 +8,6 @@ import { nanoid } from 'nanoid';
 // piscina ships CJS `export = Piscina`. See ftpService.ts for the same
 // dance — default + .default fallback, cast through `any`.
 import PiscinaImport from 'piscina';
-// biome-ignore lint/suspicious/noExplicitAny: see ftpService.ts.
 const Piscina: any = (PiscinaImport as any).default ?? PiscinaImport;
 import { bus } from '../bus.js';
 import { db } from '../db/index.js';

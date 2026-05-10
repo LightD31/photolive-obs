@@ -1,6 +1,6 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog } from 'electron';
+import { BrowserWindow, app, dialog } from 'electron';
 import { resolveDataDir } from './bootstrap/dataDir.js';
 import { loadOrInitSettings } from './bootstrap/settings.js';
 import { registerAppIpc } from './ipc/app.js';
@@ -91,10 +91,7 @@ async function bootApp(): Promise<void> {
     });
   } catch (err) {
     bootlog('loadOrInitSettings failed', { err: (err as Error).message });
-    dialog.showErrorBox(
-      'Photolive',
-      `Failed to load settings.json.\n\n${(err as Error).message}`,
-    );
+    dialog.showErrorBox('Photolive', `Failed to load settings.json.\n\n${(err as Error).message}`);
     app.exit(1);
     return;
   }
@@ -207,9 +204,6 @@ app.on('before-quit', async (event) => {
 });
 
 bootApp().catch((err) => {
-  dialog.showErrorBox(
-    'Photolive',
-    `Fatal startup error.\n\n${(err as Error).message ?? err}`,
-  );
+  dialog.showErrorBox('Photolive', `Fatal startup error.\n\n${(err as Error).message ?? err}`);
   app.exit(1);
 });

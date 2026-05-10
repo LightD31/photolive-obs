@@ -1,7 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { AppSettingsFile } from '@photolive/shared' with { 'resolution-mode': 'import' };
+type AppSettingsFile = import('@photolive/shared', {
+  with: { 'resolution-mode': 'import' },
+}).AppSettingsFile;
 
 /**
  * Returns the parsed settings.json at <dataDir>/settings.json, creating it
@@ -108,10 +110,7 @@ function parseEnvFile(content: string): Record<string, string> {
     if (eq < 0) continue;
     const key = line.slice(0, eq).trim();
     let val = line.slice(eq + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
       val = val.slice(1, -1);
     }
     out[key] = val;

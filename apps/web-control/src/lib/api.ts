@@ -183,9 +183,7 @@ export const api = {
   },
   appSettings: {
     get: (revealToken = false) =>
-      request<AppSettingsResponse>(
-        `/api/app-settings${revealToken ? '?revealToken=1' : ''}`,
-      ),
+      request<AppSettingsResponse>(`/api/app-settings${revealToken ? '?revealToken=1' : ''}`),
     update: (patch: AppSettingsPatch) =>
       request<AppSettingsPutResponse>('/api/app-settings', {
         method: 'PUT',

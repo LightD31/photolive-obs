@@ -53,8 +53,7 @@ const rebuildCandidates = [
 const electronRebuildBin = rebuildCandidates.find((p) => fs.existsSync(p));
 if (!electronRebuildBin) {
   throw new Error(
-    `[stage] electron-rebuild not found in any of:\n  ${rebuildCandidates.join('\n  ')}\n` +
-      'Did you run pnpm install? Native modules will have the wrong ABI without rebuild.',
+    `[stage] electron-rebuild not found in any of:\n  ${rebuildCandidates.join('\n  ')}\nDid you run pnpm install? Native modules will have the wrong ABI without rebuild.`,
   );
 }
 sh(`"${electronRebuildBin}" -m "${serverRuntime}" -f`, { cwd: desktopRoot });

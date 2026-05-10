@@ -11,13 +11,7 @@ import {
 } from '@/components/ui/select';
 import { api } from '@/lib/api';
 import { setToken } from '@/lib/auth';
-import {
-  isElectron,
-  openLogs,
-  pickFolder,
-  relaunch,
-  revealDataDir,
-} from '@/lib/electron';
+import { isElectron, openLogs, pickFolder, relaunch, revealDataDir } from '@/lib/electron';
 import { cn } from '@/lib/utils';
 import type { AppSettingsFile, AppSettingsPatch } from '@photolive/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -68,7 +62,10 @@ function SettingsForm({
 }): JSX.Element {
   const qc = useQueryClient();
   const [draft, setDraft] = React.useState<AppSettingsFile>(data.settings);
-  const [reload, setReload] = React.useState<{ requiresRestart: boolean; reasons: string[] } | null>(null);
+  const [reload, setReload] = React.useState<{
+    requiresRestart: boolean;
+    reasons: string[];
+  } | null>(null);
   const [savedAt, setSavedAt] = React.useState<number | null>(null);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(data.settings);
@@ -123,8 +120,8 @@ function SettingsForm({
 
           {!inElectron && mutable ? (
             <Banner intent="info">
-              You're viewing this page in a browser tab. App-level settings can only be mutated
-              from the Photolive desktop app. View-only here.
+              You're viewing this page in a browser tab. App-level settings can only be mutated from
+              the Photolive desktop app. View-only here.
             </Banner>
           ) : null}
 
@@ -245,7 +242,9 @@ function SectionGeneral({
         <Field
           label="settings.json"
           control={
-            <code className="rounded bg-zinc-900 px-2 py-1 text-xs text-zinc-300">{settingsPath}</code>
+            <code className="rounded bg-zinc-900 px-2 py-1 text-xs text-zinc-300">
+              {settingsPath}
+            </code>
           }
         />
       ) : null}
@@ -365,7 +364,7 @@ function SectionStorage({
     <Section title="Storage" badge="Restart required">
       <Field
         label="Data directory override"
-        hint='Leave blank to auto-detect (next to the app exe, falling back to userData).'
+        hint="Leave blank to auto-detect (next to the app exe, falling back to userData)."
         control={
           <PathInput
             value={draft.storage.dataDir ?? ''}
@@ -431,9 +430,7 @@ function SectionFtp({
           <Input
             value={draft.ftp.host}
             disabled={!editable}
-            onChange={(e) =>
-              setDraft({ ...draft, ftp: { ...draft.ftp, host: e.target.value } })
-            }
+            onChange={(e) => setDraft({ ...draft, ftp: { ...draft.ftp, host: e.target.value } })}
             className="w-40 font-mono"
           />
         }
@@ -461,9 +458,7 @@ function SectionFtp({
           <Input
             value={draft.ftp.pasvUrl}
             disabled={!editable}
-            onChange={(e) =>
-              setDraft({ ...draft, ftp: { ...draft.ftp, pasvUrl: e.target.value } })
-            }
+            onChange={(e) => setDraft({ ...draft, ftp: { ...draft.ftp, pasvUrl: e.target.value } })}
             className="w-48 font-mono"
           />
         }
@@ -517,7 +512,7 @@ function SectionObs({
     <Section title="OBS WebSocket">
       <Field
         label="WebSocket URL"
-        hint='From OBS: Tools → WebSocket Server Settings. Leave empty to disable the integration.'
+        hint="From OBS: Tools → WebSocket Server Settings. Leave empty to disable the integration."
         control={
           <Input
             type="text"
@@ -623,7 +618,9 @@ function SectionAuth({
         control={
           confirmingRotate ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-300">Rotate now? Existing sessions will drop.</span>
+              <span className="text-xs text-zinc-300">
+                Rotate now? Existing sessions will drop.
+              </span>
               <Button
                 variant="primary"
                 size="sm"
@@ -718,12 +715,7 @@ function PathInput({
         className="w-full max-w-md font-mono text-xs"
       />
       {onPick ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => void onPick()}
-          disabled={disabled}
-        >
+        <Button variant="ghost" size="sm" onClick={() => void onPick()} disabled={disabled}>
           <FolderOpen className="h-3.5 w-3.5" />
           Browse
         </Button>

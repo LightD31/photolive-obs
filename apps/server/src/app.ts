@@ -1,7 +1,7 @@
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import websocket from '@fastify/websocket';
-import { type AppSettingsFile } from '@photolive/shared';
+import type { AppSettingsFile } from '@photolive/shared';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { requireAuth } from './auth.js';
 import { type Config, config, setConfig } from './config.js';
