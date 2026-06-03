@@ -14,6 +14,7 @@
 const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { flatten } = require('./flatten-modules.cjs');
 
 const desktopRoot = path.resolve(__dirname, '..');
 const serverRuntime = path.join(desktopRoot, 'server-runtime');
@@ -29,45 +30,34 @@ if (fs.existsSync(serverRuntime)) {
 }
 
 // 1. pnpm deploy -- materialises @photolive/server with a prod node_modules
-//    under server-runtime/. Run from the repo root.
-//
-//    Force the *hoisted* node-linker for the deployed tree. With pnpm's
-//    default isolated linker, transitive deps live under node_modules/.pnpm/
-//    and are reached via symlinks (e.g. chokidar -> readdirp). electron-builder
-//    dereferences symlinks when copying extraResources, so chokidar lands as a
-//    real dir but its sibling readdirp symlink is lost -> runtime crash
-//    "Cannot find package 'readdirp'". A hoisted (flat, npm-style) layout puts
-//    every dep at the top level as a real directory with no symlinks to break.
-//    Scoped to this subprocess only — apps/desktop/node_modules (where
-//    electron-builder finds Electron) keeps the repo's isolated linker.
+//    under server-runtime/. Run from the repo root. pnpm always uses its
+//    isolated layout here (a .pnpm virtual store reached via symlinks on Linux
+//    and junctions on Windows); deploy has no option to emit a hoisted tree.
 sh(`pnpm --filter @photolive/server deploy --prod "${serverRuntime}"`, {
   cwd: repoRoot,
-  env: { ...process.env, NPM_CONFIG_NODE_LINKER: 'hoisted' },
 });
 
-// 1b. Fail fast if the deploy didn't actually hoist. A leftover .pnpm virtual
-//     store means the isolated linker was used and transitive deps are still
-//     symlink-only — the packaged app would crash at runtime once
-//     electron-builder dereferences those symlinks. Catching it here turns a
-//     "user installs and clicks, then it crashes" loop into a CI failure.
+// 1b. Flatten the isolated tree into real directories. electron-builder
+//     dereferences the top-level links when copying server-runtime as
+//     extraResources, which would strand transitive deps that only live under
+//     .pnpm (e.g. chokidar -> readdirp) -> runtime "Cannot find package"
+//     crash. A flat npm-style tree of real dirs survives the copy and resolves
+//     on every platform. See flatten-modules.cjs.
 const nodeModules = path.join(serverRuntime, 'node_modules');
+flatten(nodeModules);
+
+// 1c. Fail fast if anything didn't flatten. A surviving .pnpm store or a
+//     missing transitive dep means the packaged app would crash at runtime —
+//     catch it here instead of after a user installs and clicks.
 if (fs.existsSync(path.join(nodeModules, '.pnpm'))) {
-  throw new Error(
-    '[stage] server-runtime/node_modules/.pnpm exists — deploy ignored ' +
-      'NPM_CONFIG_NODE_LINKER=hoisted. Transitive deps (e.g. readdirp) would be ' +
-      'symlink-only and break once electron-builder copies extraResources.',
-  );
+  throw new Error('[stage] node_modules/.pnpm still present after flatten — tree is not flat');
 }
-// Spot-check a transitive dep that previously went missing (chokidar -> readdirp).
 for (const dep of ['readdirp']) {
   if (!fs.existsSync(path.join(nodeModules, dep, 'package.json'))) {
-    throw new Error(
-      `[stage] expected hoisted transitive dependency "${dep}" not found at ` +
-        `${path.join(nodeModules, dep)} — the runtime would fail to resolve it.`,
-    );
+    throw new Error(`[stage] expected transitive dependency "${dep}" missing after flatten`);
   }
 }
-console.log('[stage] verified flat (hoisted) node_modules — no .pnpm store, readdirp present');
+console.log('[stage] flattened server-runtime/node_modules — no .pnpm, transitive deps hoisted');
 
 // 2. Drizzle migrations live next to the source, not the dist — copy them
 //    into the runtime so app.ts's findMigrationsFolder candidates hit.

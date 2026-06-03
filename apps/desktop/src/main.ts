@@ -205,7 +205,7 @@ app.on('before-quit', (event) => {
   bootlog('shutting down server before quit');
   void serverHandle
     .shutdown()
-    .catch((err) => bootlog('server shutdown failed', { err: (err as Error).message }))
+    .catch((err: unknown) => bootlog('server shutdown failed', { err: (err as Error).message }))
     .finally(() => {
       serverHandle = null;
       app.quit();
