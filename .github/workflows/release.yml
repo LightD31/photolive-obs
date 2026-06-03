@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies (hoisted)
         run: pnpm install --frozen-lockfile
 
+      - name: Sync desktop version to release tag
+        run: node apps/desktop/scripts/set-version.cjs "${{ github.ref_name }}"
+
       - name: Build web bundles, shared, server, desktop
         run: pnpm --filter @photolive/desktop build:all
 
@@ -76,6 +79,9 @@ jobs:
 
       - name: Install dependencies (hoisted)
         run: pnpm install --frozen-lockfile
+
+      - name: Sync desktop version to release tag
+        run: node apps/desktop/scripts/set-version.cjs "${{ github.ref_name }}"
 
       - name: Build web bundles, shared, server, desktop
         run: pnpm --filter @photolive/desktop build:all

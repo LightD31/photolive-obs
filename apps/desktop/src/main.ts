@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { BrowserWindow, app, dialog } from 'electron';
+import { BrowserWindow, app, dialog, shell } from 'electron';
 import { resolveDataDir } from './bootstrap/dataDir.js';
 import { loadOrInitSettings } from './bootstrap/settings.js';
 import { registerAppIpc } from './ipc/app.js';
@@ -67,6 +67,10 @@ async function bootApp(): Promise<void> {
 
   await app.whenReady();
   bootlog('app ready');
+
+  // Windows groups taskbar entries and routes notifications by AppUserModelID;
+  // align it with the electron-builder appId so both behave correctly.
+  if (process.platform === 'win32') app.setAppUserModelId('io.photolive.app');
 
   let dataDir: string;
   let dataDirSource: string;
@@ -173,7 +177,9 @@ async function bootApp(): Promise<void> {
   });
 
   app.on('window-all-closed', () => {
-    void shutdown();
+    // Single-window server app: closing the window quits. app.quit() routes
+    // through the `before-quit` handler below, which shuts the server down.
+    app.quit();
   });
 
   app.on('activate', () => {
@@ -187,24 +193,60 @@ async function bootApp(): Promise<void> {
   });
 }
 
-async function shutdown(): Promise<void> {
-  if (serverHandle) {
-    try {
-      await serverHandle.shutdown();
-    } catch {
-      /* swallow — we're quitting */
-    }
-    serverHandle = null;
-  }
-  app.quit();
-}
-
-app.on('before-quit', async (event) => {
-  if (!serverHandle) return;
+// Single teardown path. Any quit trigger (window-all-closed, menu, OS signal)
+// fires `before-quit`; we hold it open once to stop the embedded server
+// cleanly, then let the quit proceed. The `isQuitting` guard makes a second
+// before-quit (from our own app.quit()) fall straight through.
+let isQuitting = false;
+app.on('before-quit', (event) => {
+  if (isQuitting || !serverHandle) return;
   event.preventDefault();
-  await serverHandle.shutdown();
-  serverHandle = null;
-  app.exit(0);
+  isQuitting = true;
+  bootlog('shutting down server before quit');
+  void serverHandle
+    .shutdown()
+    .catch((err) => bootlog('server shutdown failed', { err: (err as Error).message }))
+    .finally(() => {
+      serverHandle = null;
+      app.quit();
+    });
+});
+
+// Surface main-process failures into the same log the error dialogs reference,
+// instead of letting them disappear silently in a packaged build.
+process.on('uncaughtException', (err) => {
+  bootlog('uncaughtException', { err: err.message, stack: err.stack });
+});
+process.on('unhandledRejection', (reason) => {
+  bootlog('unhandledRejection', { reason: String(reason) });
+});
+app.on('render-process-gone', (_event, _webContents, details) => {
+  bootlog('render-process-gone', details);
+});
+app.on('child-process-gone', (_event, details) => {
+  bootlog('child-process-gone', details);
+});
+
+// Defense in depth (Electron security checklist #13/#14): keep renderers pinned
+// to the local server origin and hand any external link to the user's real
+// browser rather than spawning an unconfigured Electron window.
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event, url) => {
+    let host: string | null = null;
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      /* unparseable URL — treat as foreign and block below */
+    }
+    if (host !== '127.0.0.1' && host !== 'localhost') {
+      event.preventDefault();
+      if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    }
+  });
 });
 
 bootApp().catch((err) => {
