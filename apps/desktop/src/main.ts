@@ -1,5 +1,6 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { BrowserWindow, app, dialog } from 'electron';
 import { resolveDataDir } from './bootstrap/dataDir.js';
 import { loadOrInitSettings } from './bootstrap/settings.js';
@@ -36,7 +37,10 @@ async function loadServer(): Promise<ServerApi> {
     // server-runtime ships as extraResources (outside the asar) so its
     // node_modules and any *.node binaries are real filesystem paths.
     const entry = join(process.resourcesPath, 'server-runtime', 'dist', 'app.js');
-    ServerLib = (await import(entry)) as ServerApi;
+    // On Windows an absolute path like `c:\...\app.js` makes the ESM loader
+    // read `c:` as a URL scheme ("Received protocol 'c:'"). Convert to a
+    // proper file:// URL so dynamic import() resolves on every platform.
+    ServerLib = (await import(pathToFileURL(entry).href)) as ServerApi;
   } else {
     ServerLib = await import('@photolive/server');
   }
