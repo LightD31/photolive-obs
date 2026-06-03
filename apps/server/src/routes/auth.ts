@@ -34,21 +34,21 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
+  // First-run admin creation. Open while zero accounts exist — the server
+  // generates everything (no token for the operator to copy); it closes with
+  // 409 the moment an account exists. The desktop auto-login secret is a
+  // separate concern (see /api/auth/bootstrap + authRuntime).
   app.post('/api/auth/setup', async (request, reply) => {
     const parsed = setupSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     if (userService.count() > 0) {
       return reply.code(409).send({ error: 'setup already completed' });
     }
-    if (!authRuntime.isValidSetupSecret(parsed.data.secret)) {
-      return reply.code(403).send({ error: 'invalid setup secret' });
-    }
     const user = userService.create({
       username: parsed.data.username,
       password: parsed.data.password,
       role: 'admin',
     });
-    authRuntime.clearSetupToken();
     const session = sessionService.create(user.id);
     setSessionCookie(request, reply, session.id);
     logger.info({ username: user.username }, 'admin account created (first-run setup)');

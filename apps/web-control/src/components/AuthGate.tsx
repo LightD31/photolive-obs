@@ -1,13 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
-import {
-  bootstrapLogin,
-  fetchStatus,
-  login,
-  onUnauthorized,
-  setup,
-  setupSecretFromContext,
-} from '@/lib/auth';
+import { bootstrapLogin, fetchStatus, login, onUnauthorized, setup } from '@/lib/auth';
 import { isElectron } from '@/lib/electron';
 import * as React from 'react';
 
@@ -129,20 +122,16 @@ function LoginForm({ onDone }: { onDone: () => void }): JSX.Element {
 }
 
 function SetupForm({ onDone }: { onDone: () => void }): JSX.Element {
-  const ctxSecret = React.useMemo(() => setupSecretFromContext(), []);
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [secret, setSecret] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const effectiveSecret = ctxSecret ?? secret;
-
   const submit = async (): Promise<void> => {
-    if (!username || !password || !effectiveSecret) return;
+    if (!username || !password) return;
     setSubmitting(true);
     setError(null);
-    const res = await setup(username, password, effectiveSecret);
+    const res = await setup(username, password);
     setSubmitting(false);
     if (res.ok) onDone();
     else setError(res.error ?? 'Setup failed');
@@ -171,21 +160,11 @@ function SetupForm({ onDone }: { onDone: () => void }): JSX.Element {
         hint="At least 8 characters."
         onEnter={submit}
       />
-      {ctxSecret ? null : (
-        <Field
-          id="secret"
-          label="Setup token"
-          value={secret}
-          onChange={setSecret}
-          hint="Shown in the server log on first start (or open the setup link it printed)."
-          onEnter={submit}
-        />
-      )}
       {error ? <p className="text-xs text-red-400">{error}</p> : null}
       <Button
         variant="primary"
         type="submit"
-        disabled={submitting || !username || !password || !effectiveSecret}
+        disabled={submitting || !username || !password}
         onClick={submit}
       >
         {submitting ? 'Creating…' : 'Create account'}

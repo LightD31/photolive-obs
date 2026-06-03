@@ -163,15 +163,13 @@ export const loginSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>;
 
 /**
- * First-run admin creation. `secret` authorizes the request so a freshly
- * launched server bound to 0.0.0.0 can't be hijacked before the owner sets up:
- * it must equal the Electron bootstrap secret (desktop) or the one-time setup
- * token the server logs on first boot (standalone/docker).
+ * First-run admin creation. Open while no accounts exist (the server generates
+ * everything; the operator is never asked for a token), and refused once an
+ * account exists — see routes/auth.ts.
  */
 export const setupSchema = z.object({
   username: usernameSchema,
   password: passwordSchema,
-  secret: z.string().min(1),
 });
 export type SetupInput = z.infer<typeof setupSchema>;
 

@@ -177,16 +177,13 @@ export async function startServer(opts: StartServerOptions): Promise<StartedServ
     throw err;
   }
 
-  // Auth bootstrap (requires migrated schema): drop stale sessions and decide
-  // whether first-run setup is needed.
+  // Auth bootstrap (requires migrated schema): drop stale sessions and wire the
+  // desktop auto-login secret.
   sessionService.sweepExpired();
-  const needsSetup = userService.count() === 0;
-  authRuntime.init({ localAuthSecret: opts.localAuthSecret, needsSetup });
-  const setupToken = authRuntime.getSetupToken();
-  if (setupToken) {
+  authRuntime.init({ localAuthSecret: opts.localAuthSecret });
+  if (userService.count() === 0) {
     logger.warn(
-      { setupUrl: `http://127.0.0.1:${opts.config.port}/?setup=${setupToken}` },
-      'first-run setup required — open the control panel and create the admin account using this one-time setup token (or the setupUrl below)',
+      'no operator accounts yet — open the control panel to create the admin account (first-run setup is open until one exists)',
     );
   }
 

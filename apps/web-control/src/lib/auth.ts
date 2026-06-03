@@ -58,20 +58,12 @@ export async function login(
 export async function setup(
   username: string,
   password: string,
-  secret: string,
 ): Promise<{ ok: boolean; user?: UserDto; error?: string }> {
   const { ok, status, data } = await postJson<{ user?: UserDto }>('/api/auth/setup', {
     username,
     password,
-    secret,
   });
   if (ok && data?.user) return { ok: true, user: data.user };
-  if (status === 403)
-    return {
-      ok: false,
-      error:
-        'Setup secret rejected — open from the desktop app or use the setup link/token from the server log.',
-    };
   if (status === 409) return { ok: false, error: 'An account already exists. Reload and sign in.' };
   return { ok: false, error: 'Could not create the account' };
 }
@@ -94,12 +86,4 @@ export async function bootstrapLogin(): Promise<'authed' | 'setup' | 'unavailabl
 
 export async function logout(): Promise<void> {
   await postJson('/api/auth/logout', undefined);
-}
-
-/** Setup secret to pre-fill: the Electron bootstrap secret, or a `?setup=` token. */
-export function setupSecretFromContext(): string | null {
-  const fromElectron = getBootstrap()?.localAuthSecret;
-  if (fromElectron) return fromElectron;
-  const fromQuery = new URLSearchParams(window.location.search).get('setup');
-  return fromQuery && fromQuery.length > 0 ? fromQuery : null;
 }
