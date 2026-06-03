@@ -18,7 +18,8 @@ declare global {
   // Present only when the page is running inside the Electron host;
   // absent in a plain browser (including the OBS browser source).
   interface PhotoliveBootstrap {
-    token: string;
+    /** Per-launch local-owner secret used for silent desktop auto-login + first-run setup. */
+    localAuthSecret: string;
     dataDir: string;
     resolvedDataDirSource: 'override' | 'next-to-exe' | 'userData' | 'dev';
     serverUrl: string;

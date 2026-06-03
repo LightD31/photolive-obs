@@ -144,6 +144,37 @@ export const captionSchema = z.object({
   text: z.string().max(280),
 });
 
+// -- Operator auth -----------------------------------------------------------
+
+/** Usernames are case-insensitive; the server lowercases before storing/looking up. */
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(3, 'at least 3 characters')
+  .max(64)
+  .regex(/^[a-zA-Z0-9._-]+$/, 'letters, digits, dot, underscore, hyphen only');
+
+export const passwordSchema = z.string().min(8, 'at least 8 characters').max(256);
+
+export const loginSchema = z.object({
+  username: usernameSchema,
+  password: z.string().min(1),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+/**
+ * First-run admin creation. `secret` authorizes the request so a freshly
+ * launched server bound to 0.0.0.0 can't be hijacked before the owner sets up:
+ * it must equal the Electron bootstrap secret (desktop) or the one-time setup
+ * token the server logs on first boot (standalone/docker).
+ */
+export const setupSchema = z.object({
+  username: usernameSchema,
+  password: passwordSchema,
+  secret: z.string().min(1),
+});
+export type SetupInput = z.infer<typeof setupSchema>;
+
 export const wsCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('slideshow.next'), payload: z.object({}).default({}) }),
   z.object({ type: z.literal('slideshow.prev'), payload: z.object({}).default({}) }),

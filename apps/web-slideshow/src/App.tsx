@@ -346,8 +346,8 @@ function AuthError({ status }: { status: 'missing-token' | 'invalid-token' }): J
   const heading = status === 'missing-token' ? 'Token required' : 'Token rejected';
   const detail =
     status === 'missing-token'
-      ? 'Open the slideshow with a ?token=... query parameter. The value is your PHOTOLIVE_AUTH_TOKEN from the server .env.'
-      : 'The token in the URL was rejected by the server. Check that it matches PHOTOLIVE_AUTH_TOKEN in the server .env.';
+      ? 'Open the slideshow with a ?token=... query parameter. Find the value in the control panel under Settings → Display token.'
+      : 'The token in the URL was rejected by the server. Check it matches the current value under Settings → Display token (it may have been rotated).';
   return (
     <div className="flex h-full w-full items-center justify-center bg-black p-8 text-zinc-300">
       <div className="flex max-w-xl flex-col gap-4">

@@ -1,5 +1,4 @@
 import type { ClientCommandMap, ServerEventMap } from '@photolive/shared';
-import { getToken } from './auth';
 
 type Listener<K extends keyof ServerEventMap> = (payload: ServerEventMap[K]) => void;
 
@@ -12,9 +11,10 @@ export class WsClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(role: 'control' | 'slideshow' = 'control') {
-    const token = getToken() ?? '';
+    // control role authenticates via the session cookie, which the browser
+    // sends automatically on the same-origin WS upgrade — no token in the URL.
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    this.url = `${protocol}//${window.location.host}/ws?role=${role}&token=${encodeURIComponent(token)}`;
+    this.url = `${protocol}//${window.location.host}/ws?role=${role}`;
   }
 
   connect(): void {

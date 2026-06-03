@@ -9,6 +9,41 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
+/**
+ * Operator accounts for the control panel. Distinct from `photographers`
+ * (which authenticate against FTP only). `username` is stored lowercased and
+ * unique; `passwordHash` is bcrypt. Today every user is role 'admin'.
+ */
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  role: text('role', { enum: ['admin'] })
+    .notNull()
+    .default('admin'),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+/**
+ * Server-side operator sessions. The primary key is the opaque high-entropy
+ * token delivered to the browser as the `photolive_session` httpOnly cookie.
+ * Rows are validated on each request and swept once expired.
+ */
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text('expires_at').notNull(),
+    lastSeenAt: text('last_seen_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => ({
+    userIdx: index('sessions_user_idx').on(t.userId),
+    expiresIdx: index('sessions_expires_idx').on(t.expiresAt),
+  }),
+);
+
 export const events = sqliteTable('events', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -104,6 +139,10 @@ export const auditLog = sqliteTable(
   }),
 );
 
+export type UserRow = typeof users.$inferSelect;
+export type NewUserRow = typeof users.$inferInsert;
+export type SessionRow = typeof sessions.$inferSelect;
+export type NewSessionRow = typeof sessions.$inferInsert;
 export type EventRow = typeof events.$inferSelect;
 export type NewEventRow = typeof events.$inferInsert;
 export type PhotographerRow = typeof photographers.$inferSelect;

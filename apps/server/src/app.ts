@@ -1,9 +1,10 @@
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import websocket from '@fastify/websocket';
 import type { AppSettingsFile } from '@photolive/shared';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { requireAuth } from './auth.js';
+import { authenticate, isDisplayAllowed, isPublicAuthRoute } from './auth.js';
 import { type Config, config, setConfig } from './config.js';
 
 // Re-export the bits the Electron host needs so it imports them through the
@@ -20,6 +21,7 @@ export type { Config } from './config.js';
 import { initDb } from './db/index.js';
 import { initLogger, logger } from './logger.js';
 import { appSettingsRoutes } from './routes/appSettings.js';
+import { authRoutes } from './routes/auth.js';
 import { eventRoutes } from './routes/events.js';
 import { frontendRoutes } from './routes/frontends.js';
 import { healthRoutes } from './routes/health.js';
@@ -29,13 +31,16 @@ import { photographerRoutes } from './routes/photographers.js';
 import { renditionRoutes } from './routes/renditions.js';
 import { settingsRoutes } from './routes/settings.js';
 import { wsRoutes } from './routes/ws.js';
+import { authRuntime } from './services/authRuntime.js';
 import { fileWatcherService } from './services/fileWatcherService.js';
 import { ftpService } from './services/ftpService.js';
 import { ingestService } from './services/ingestService.js';
 import { obsService } from './services/obsService.js';
 import { type ReloadResult, serverLifecycle } from './services/serverLifecycle.js';
+import { sessionService } from './services/sessionService.js';
 import { settingsStore } from './services/settingsStore.js';
 import { slideshowService } from './services/slideshowService.js';
+import { userService } from './services/userService.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -51,6 +56,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(sensible);
+  await app.register(cookie);
   await app.register(cors, {
     origin: config.allowedOrigins.length === 0 ? true : config.allowedOrigins,
     credentials: true,
@@ -59,15 +65,25 @@ export async function buildApp(): Promise<FastifyInstance> {
     options: { maxPayload: 1_048_576 },
   });
 
-  // Auth on /api/* routes only — renditions and the WS upgrade authenticate themselves.
+  // Auth on /api/* routes only — renditions and the WS upgrade authenticate
+  // themselves. An operator session (cookie) grants full access; the display
+  // token grants only the read-only slideshow allowlist (isDisplayAllowed).
   app.addHook('onRequest', async (request, reply) => {
-    if (request.url.startsWith('/api/')) {
-      await requireAuth(request, reply);
+    if (!request.url.startsWith('/api/')) return;
+    if (isPublicAuthRoute(request)) return;
+    const ctx = authenticate(request);
+    if (!ctx) {
+      return reply.code(401).send({ error: 'unauthorized' });
     }
+    if (!('operator' in ctx) && !isDisplayAllowed(request.method, request.url)) {
+      return reply.code(403).send({ error: 'forbidden' });
+    }
+    request.authCtx = ctx;
   });
 
   // Routes
   await app.register(healthRoutes);
+  await app.register(authRoutes);
   await app.register(renditionRoutes);
   await app.register(eventRoutes);
   await app.register(photographerRoutes);
@@ -93,6 +109,12 @@ export type StartServerOptions = {
   settingsPath: string | null;
   /** Already-parsed file contents, if known. Optional — store will read on demand. */
   initialSettings?: AppSettingsFile | null;
+  /**
+   * Per-launch local-owner secret supplied by the Electron host. Authorizes
+   * first-run setup and the desktop's silent auto-login. Omitted for the
+   * standalone CLI/docker path, where the server mints a one-time setup token.
+   */
+  localAuthSecret?: string | null;
 };
 
 export type StartedServer = {
@@ -153,6 +175,19 @@ export async function startServer(opts: StartServerOptions): Promise<StartedServ
   } catch (err) {
     logger.error({ err }, 'failed to run migrations');
     throw err;
+  }
+
+  // Auth bootstrap (requires migrated schema): drop stale sessions and decide
+  // whether first-run setup is needed.
+  sessionService.sweepExpired();
+  const needsSetup = userService.count() === 0;
+  authRuntime.init({ localAuthSecret: opts.localAuthSecret, needsSetup });
+  const setupToken = authRuntime.getSetupToken();
+  if (setupToken) {
+    logger.warn(
+      { setupUrl: `http://127.0.0.1:${opts.config.port}/?setup=${setupToken}` },
+      'first-run setup required — open the control panel and create the admin account using this one-time setup token (or the setupUrl below)',
+    );
   }
 
   const app = await buildApp();

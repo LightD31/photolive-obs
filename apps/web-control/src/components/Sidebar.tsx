@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
-import { clearToken } from '@/lib/auth';
+import { logout } from '@/lib/auth';
+import { isElectron } from '@/lib/electron';
 import { cn } from '@/lib/utils';
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
@@ -56,20 +57,24 @@ export function Sidebar(): JSX.Element {
           })}
         </ul>
       </nav>
-      <div className="border-t border-zinc-800 p-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start"
-          onClick={() => {
-            clearToken();
-            window.location.reload();
-          }}
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Sign out
-        </Button>
-      </div>
+      {isElectron() ? null : (
+        // The desktop owner is auto-logged-in each launch, so a sign-out there
+        // would just re-authenticate on reload — only show it in the browser.
+        <div className="border-t border-zinc-800 p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+            onClick={async () => {
+              await logout();
+              window.location.reload();
+            }}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </Button>
+        </div>
+      )}
     </aside>
   );
 }

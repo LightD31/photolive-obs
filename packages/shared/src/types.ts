@@ -50,6 +50,26 @@ export interface ImageDto {
   seenCount: number;
 }
 
+export type UserRole = 'admin';
+
+export interface UserDto {
+  id: string;
+  username: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+/**
+ * Result of GET /api/auth/status — drives the web-control AuthGate.
+ * `setupRequired` is true on a fresh install (no users yet); the renderer
+ * then shows the create-admin wizard instead of the login form.
+ */
+export interface AuthStatusDto {
+  setupRequired: boolean;
+  authenticated: boolean;
+  user: UserDto | null;
+}
+
 export interface SettingsDto {
   intervalMs: number;
   transition: Transition;

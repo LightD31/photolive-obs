@@ -1,11 +1,14 @@
 import { wsCommandSchema } from '@photolive/shared';
 import type { FastifyInstance } from 'fastify';
 import { nanoid } from 'nanoid';
+import { sessionCookie } from '../auth.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
+import { timingSafeEq } from '../services/authRuntime.js';
 import { eventService } from '../services/eventService.js';
 import { imageService } from '../services/imageService.js';
 import { ingestService } from '../services/ingestService.js';
+import { sessionService } from '../services/sessionService.js';
 import { settingsService } from '../services/settingsService.js';
 import { slideshowService } from '../services/slideshowService.js';
 import { wsService } from '../services/wsService.js';
@@ -22,12 +25,19 @@ import { wsService } from '../services/wsService.js';
 export async function wsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/ws', { websocket: true }, (socket, request) => {
     const url = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`);
-    const token = url.searchParams.get('token');
-    if (token !== config.authToken) {
+    const role = url.searchParams.get('role') === 'slideshow' ? 'slideshow' : 'control';
+
+    // slideshow: view-only display token via ?token= (OBS/Chromecast can't hold
+    // a cookie). control: operator session cookie sent on the upgrade request.
+    if (role === 'slideshow') {
+      if (!timingSafeEq(url.searchParams.get('token') ?? '', config.authToken)) {
+        socket.close(1008, 'unauthorized');
+        return;
+      }
+    } else if (!sessionService.validate(sessionCookie(request))) {
       socket.close(1008, 'unauthorized');
       return;
     }
-    const role = url.searchParams.get('role') === 'slideshow' ? 'slideshow' : 'control';
     const id = nanoid();
     wsService.add({ id, socket, role });
 

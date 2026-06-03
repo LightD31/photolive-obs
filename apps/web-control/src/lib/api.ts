@@ -9,7 +9,7 @@ import type {
   PhotographerWithSecretDto,
   SettingsDto,
 } from '@photolive/shared';
-import { clearToken, getToken } from './auth';
+import { emitUnauthorized } from './auth';
 
 export type AppSettingsResponse = {
   settings: AppSettingsFile;
@@ -41,12 +41,12 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken();
   const res = await fetch(path, {
     ...init,
+    // Send the httpOnly session cookie; auth is no longer a JS-held token.
+    credentials: 'include',
     headers: {
       ...(init.body != null ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
   });
@@ -57,10 +57,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       /* ignore */
     }
-    // Stale token: drop it and bounce back to LoginGate so the user can re-enter.
-    if (res.status === 401 && getToken()) {
-      clearToken();
-      window.location.reload();
+    // Session expired/invalid: tell the AuthGate to show the login screen.
+    if (res.status === 401) {
+      emitUnauthorized();
     }
     throw new ApiError(`API ${res.status}`, res.status, body);
   }

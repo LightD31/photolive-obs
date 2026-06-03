@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -138,6 +139,11 @@ async function bootApp(): Promise<void> {
     getLogsDir: () => logsDir,
   });
 
+  // Per-launch local-owner secret. Handed to the server (authorizes first-run
+  // setup + silent auto-login) and to the renderer via the preload bootstrap.
+  // Never persisted: a fresh secret each launch, in memory only.
+  const localAuthSecret = randomBytes(32).toString('base64url');
+
   try {
     bootlog('starting server', { port: config.port, host: config.host });
     serverHandle = await startServer({
@@ -145,6 +151,7 @@ async function bootApp(): Promise<void> {
       dataDir,
       settingsPath: settings.path,
       initialSettings: settings.settings,
+      localAuthSecret,
     });
     bootlog('server started');
   } catch (err) {
@@ -159,7 +166,7 @@ async function bootApp(): Promise<void> {
 
   const bootstrapPayload = Buffer.from(
     JSON.stringify({
-      token: settings.settings.authToken,
+      localAuthSecret,
       dataDir,
       resolvedDataDirSource: dataDirSource,
       serverUrl: `http://127.0.0.1:${config.port}`,

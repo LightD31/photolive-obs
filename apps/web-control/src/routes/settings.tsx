@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { api } from '@/lib/api';
-import { setToken } from '@/lib/auth';
 import { isElectron, openLogs, pickFolder, relaunch, revealDataDir } from '@/lib/electron';
 import { cn } from '@/lib/utils';
 import type { AppSettingsFile, AppSettingsPatch } from '@photolive/shared';
@@ -560,9 +559,9 @@ function SectionAuth({
 
   const rotate = useMutation({
     mutationFn: () => api.appSettings.rotateToken(),
-    onSuccess: (res) => {
-      setToken(res.newToken);
-      // Reload so every authenticated component (websocket, queries) reconnects with the new token.
+    onSuccess: () => {
+      // Reload so the slideshow/OBS clients reconnect with the new display
+      // token. The operator session (cookie) is unaffected by the rotation.
       window.location.reload();
     },
   });
@@ -570,10 +569,10 @@ function SectionAuth({
   const display = revealed ?? current.authToken;
 
   return (
-    <Section title="Authentication">
+    <Section title="Display token">
       <Field
-        label="Bearer token"
-        hint="Sent as Authorization: Bearer <token>. Photographers don't see this — it's only for the operator UI and the slideshow's WebSocket."
+        label="Token"
+        hint="View-only token for the audience slideshow / OBS browser source / Chromecast — pass it as ?token=… in the slideshow URL. It can't change anything. Operators sign in with a username & password instead."
         control={
           <div className="flex items-center gap-2">
             <code
@@ -614,7 +613,7 @@ function SectionAuth({
 
       <Field
         label="Rotate"
-        hint="Generates a fresh 256-bit token and invalidates the old one immediately. All connected clients must re-authenticate."
+        hint="Generates a fresh 256-bit display token and invalidates the old one immediately. Slideshow / OBS clients must reconnect with the new token; operator logins are unaffected."
         control={
           confirmingRotate ? (
             <div className="flex items-center gap-2">

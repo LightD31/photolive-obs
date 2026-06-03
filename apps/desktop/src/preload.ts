@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 type Bootstrap = {
-  token: string;
+  localAuthSecret: string;
   dataDir: string;
   resolvedDataDirSource: string;
   serverUrl: string;

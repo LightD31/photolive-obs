@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { LoginGate } from './components/LoginGate';
+import { AuthGate } from './components/AuthGate';
 import { routeTree } from './routeTree.gen';
 import './index.css';
 
@@ -38,9 +38,9 @@ if (!root) throw new Error('#root not found');
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <LoginGate>
+      <AuthGate>
         <RouterProvider router={router} />
-      </LoginGate>
+      </AuthGate>
     </QueryClientProvider>
   </React.StrictMode>,
 );
