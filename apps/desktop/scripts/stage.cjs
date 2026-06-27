@@ -37,6 +37,17 @@ sh(`pnpm --filter @photolive/server deploy --prod "${serverRuntime}"`, {
   cwd: repoRoot,
 });
 
+// 1a. Drop source-only config the deploy carries over. tsconfig*.json has a
+//     relative `extends` that no longer resolves once copied here; it's dead
+//     weight in a runtime artifact (we ship compiled dist/) and trips Vite's
+//     tsconfig scanner when the web apps rebuild against the workspace tree.
+for (const f of fs.readdirSync(serverRuntime)) {
+  if (/^tsconfig.*\.json$/.test(f)) {
+    fs.rmSync(path.join(serverRuntime, f), { force: true });
+    console.log(`[stage] removed source-only ${f} from server-runtime`);
+  }
+}
+
 // 1b. Flatten the isolated tree into real directories. electron-builder
 //     dereferences the top-level links when copying server-runtime as
 //     extraResources, which would strand transitive deps that only live under
