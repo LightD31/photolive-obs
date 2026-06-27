@@ -247,7 +247,8 @@ function CreateEventDialog({
   const qc = useQueryClient();
   const [name, setName] = React.useState('');
   const [slug, setSlug] = React.useState('');
-  const [photosDir, setPhotosDir] = React.useState('./data/photos');
+  const [photosDir, setPhotosDir] = React.useState('');
+  const photosDirTouched = React.useRef(false);
   const [displayMode, setDisplayMode] = React.useState('auto');
   const [error, setError] = React.useState<string | null>(null);
 
@@ -255,7 +256,8 @@ function CreateEventDialog({
     if (!open) {
       setName('');
       setSlug('');
-      setPhotosDir('./data/photos');
+      setPhotosDir('');
+      photosDirTouched.current = false;
       setDisplayMode('auto');
       setError(null);
     }
@@ -275,6 +277,12 @@ function CreateEventDialog({
     // intentionally not depending on slug — only mirror name changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
+
+  React.useEffect(() => {
+    // Default the photos dir to the slug — the server creates it as a subfolder
+    // of its configured photos root. Stop mirroring once the operator edits it.
+    if (!photosDirTouched.current) setPhotosDir(slug);
+  }, [slug]);
 
   const create = useMutation({
     mutationFn: () => api.events.create({ name, slug, photosDir, displayMode }),
@@ -330,10 +338,18 @@ function CreateEventDialog({
             <Input
               id="photosDir"
               value={photosDir}
-              onChange={(e) => setPhotosDir(e.target.value)}
+              onChange={(e) => {
+                photosDirTouched.current = true;
+                setPhotosDir(e.target.value);
+              }}
+              placeholder={slug || 'event-slug'}
               required
               className="font-mono"
             />
+            <p className="text-xs text-zinc-500">
+              Relative names are created as a subfolder of the server's photos folder. Use an
+              absolute path (e.g. a network share) for a custom location.
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="displayMode">Curation mode</Label>

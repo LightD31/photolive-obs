@@ -61,7 +61,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     if (res.status === 401) {
       emitUnauthorized();
     }
-    throw new ApiError(`API ${res.status}`, res.status, body);
+    // Prefer the server's human-readable `error` string when present, so dialogs
+    // show "an event with this slug already exists" instead of a bare "API 409".
+    const serverError =
+      body && typeof body === 'object' && typeof (body as { error?: unknown }).error === 'string'
+        ? (body as { error: string }).error
+        : null;
+    throw new ApiError(serverError ?? `API ${res.status}`, res.status, body);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

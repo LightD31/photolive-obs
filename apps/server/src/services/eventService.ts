@@ -1,5 +1,5 @@
 import { mkdirSync, rmSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import type { DisplayMode, EventDto } from '@photolive/shared';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -8,6 +8,18 @@ import { db } from '../db/index.js';
 import { events, auditLog, images, photographers, settings } from '../db/schema.js';
 import { logger } from '../logger.js';
 import { auditService } from './auditService.js';
+
+/**
+ * Resolve an operator-supplied photos directory to an absolute path. Absolute
+ * inputs are honoured as-is (custom locations, network shares); relative inputs
+ * are resolved under the configured `photosRoot` — NOT `process.cwd()`. In the
+ * packaged Electron app cwd is the (read-only) install dir or `C:\Windows\System32`,
+ * so `resolve('./data/photos')` used to land on an unwritable path and the
+ * `mkdirSync` below threw EACCES/EPERM, surfacing as a 500 on event creation.
+ */
+function resolvePhotosDir(input: string): string {
+  return isAbsolute(input) ? resolve(input) : resolve(config.photosRoot, input);
+}
 
 function rowToDto(row: typeof events.$inferSelect): EventDto {
   return {
@@ -46,7 +58,7 @@ export class EventService {
     displayMode?: DisplayMode;
   }): EventDto {
     const id = nanoid();
-    const photosDir = resolve(input.photosDir);
+    const photosDir = resolvePhotosDir(input.photosDir);
     mkdirSync(photosDir, { recursive: true });
 
     db.insert(events)
@@ -88,7 +100,7 @@ export class EventService {
     const update: Partial<typeof events.$inferInsert> = {};
     if (patch.name !== undefined) update.name = patch.name;
     if (patch.photosDir !== undefined) {
-      const dir = resolve(patch.photosDir);
+      const dir = resolvePhotosDir(patch.photosDir);
       mkdirSync(dir, { recursive: true });
       update.photosDir = dir;
     }
