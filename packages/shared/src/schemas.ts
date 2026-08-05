@@ -92,9 +92,9 @@ export const slugSchema = z
   .string()
   .min(1)
   .max(64)
-  .regex(/^[a-z0-9][a-z0-9-]*$/, 'lowercase letters, digits, and hyphens only');
+  .regex(/^[a-z0-9][a-z0-9-]*$/, 'use only lowercase letters, digits and hyphens');
 
-export const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'must be #RRGGBB');
+export const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'use the format #RRGGBB');
 
 export const eventCreateSchema = z.object({
   name: z.string().min(1).max(120),
@@ -150,11 +150,11 @@ export const captionSchema = z.object({
 export const usernameSchema = z
   .string()
   .trim()
-  .min(3, 'at least 3 characters')
+  .min(3, 'use 3 characters minimum')
   .max(64)
-  .regex(/^[a-zA-Z0-9._-]+$/, 'letters, digits, dot, underscore, hyphen only');
+  .regex(/^[a-zA-Z0-9._-]+$/, 'use only letters, digits, a dot, an underscore or a hyphen');
 
-export const passwordSchema = z.string().min(8, 'at least 8 characters').max(256);
+export const passwordSchema = z.string().min(8, 'use 8 characters minimum').max(256);
 
 export const loginSchema = z.object({
   username: usernameSchema,

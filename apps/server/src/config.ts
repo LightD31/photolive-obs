@@ -194,7 +194,7 @@ export function setConfig(next: Config): void {
 export function getConfig(): Config {
   if (!current) {
     throw new Error(
-      'config has not been initialized — call setConfig(buildConfigFromEnv(...)) or setConfig(buildConfigFromFile(...)) before importing services',
+      'the configuration is not initialized. Call setConfig(buildConfigFromEnv(...)) or setConfig(buildConfigFromFile(...)) before you import the services.',
     );
   }
   return current;

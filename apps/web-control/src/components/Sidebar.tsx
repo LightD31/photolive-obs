@@ -21,7 +21,7 @@ const NAV = [
   { to: '/live', label: 'Live', icon: Play },
   { to: '/event-settings', label: 'Event settings', icon: SlidersHorizontal },
   { to: '/settings', label: 'Settings', icon: Settings },
-  { to: '/audit', label: 'Audit', icon: FileText },
+  { to: '/audit', label: 'Action log', icon: FileText },
 ] as const;
 
 export function Sidebar(): JSX.Element {
@@ -71,7 +71,7 @@ export function Sidebar(): JSX.Element {
             }}
           >
             <LogOut className="h-3.5 w-3.5" />
-            Sign out
+            Log out
           </Button>
         </div>
       )}

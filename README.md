@@ -54,20 +54,29 @@ If a `.env` from the old build is found next to the executable (or in `/etc/phot
 3. Configure the A7IV's "Auto FTP" with these credentials. Photos taken on that body are attributed to that photographer in the DB and (optionally) on the slideshow overlay.
 4. Recommended: in the camera's "Setting the image size to be transferred for JPEG/HEIF images" menu, pick **Small** for sub-second upload latency. The server still generates display + thumb renditions; a 2 MP source is plenty for 1080p audience screens.
 
-## Curation modes
+## Selection modes
 
-Per event, set one of:
+Per event, set one of (the **Selection mode** field in the *New event* dialog):
 
 - `auto` — every ingested image enters the slideshow.
-- `auto-skip-blurry` — images with `sharpness_score` below a threshold are auto-excluded; one-click re-include from the queue.
-- `approval` — every image lands in a pending tray; operator approves before the audience sees it.
+- `auto-skip-blurry` — images with `sharpness_score` below the **Sharpness limit** are auto-excluded; one-click re-include from the queue.
+- `approval` — every image lands in the **To approve** tab of the queue; the operator approves it before the audience sees it.
 
 ## OBS integration
 
 Two ways:
 
-- **Browser source** (always works): point OBS at `http://<your-machine>:3001/slideshow/?token=<your-token>`. Token is in the desktop app under Settings → Authentication. Use `Settings → Network → Bind host = 0.0.0.0` for LAN access from another OBS box.
+- **Browser source** (always works): point OBS at `http://<your-machine>:3001/slideshow/?token=<your-token>`. Token is in the desktop app under Settings → Display token. Use `Settings → Network → Bind host = 0.0.0.0` for LAN access from another OBS box.
 - **WebSocket** (optional): set `OBS WebSocket URL` and `Password` in Settings → OBS WebSocket. The server can then drive scene switches; reload the OBS connection live without a server restart.
+
+## Writing strings
+
+Every operator- and audience-facing string in this repo is written in **ASD-STE100**
+(Simplified Technical English). A French translation, when it happens, follows
+**le Français Rationalisé du GIFAS**. The rules, the glossary, and what is out of
+scope (enum values, camera menu paths, code comments) are in
+[`docs/string-style-guide.md`](docs/string-style-guide.md). Read it before you add
+a label, a hint, or an error message.
 
 ## Workspace layout
 

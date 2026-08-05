@@ -44,7 +44,7 @@ export function AuthGate({ children }: { children: React.ReactNode }): JSX.Eleme
   if (state === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-sm text-zinc-500">
-        Checking session…
+        Please wait…
       </div>
     );
   }
@@ -86,14 +86,14 @@ function LoginForm({ onDone }: { onDone: () => void }): JSX.Element {
     const res = await login(username, password);
     setSubmitting(false);
     if (res.ok) onDone();
-    else setError(res.error ?? 'Login failed');
+    else setError(res.error ?? 'The system could not log you in.');
   };
 
   return (
-    <Shell subtitle="Sign in to the control panel">
+    <Shell subtitle="Log in to the control panel">
       <Field
         id="username"
-        label="Username"
+        label="User name"
         value={username}
         onChange={setUsername}
         autoFocus
@@ -115,7 +115,7 @@ function LoginForm({ onDone }: { onDone: () => void }): JSX.Element {
         disabled={submitting || !username || !password}
         onClick={submit}
       >
-        {submitting ? 'Signing in…' : 'Sign in'}
+        {submitting ? 'Please wait…' : 'Log in'}
       </Button>
     </Shell>
   );
@@ -134,17 +134,18 @@ function SetupForm({ onDone }: { onDone: () => void }): JSX.Element {
     const res = await setup(username, password);
     setSubmitting(false);
     if (res.ok) onDone();
-    else setError(res.error ?? 'Setup failed');
+    else setError(res.error ?? 'The system could not make the account.');
   };
 
   return (
-    <Shell subtitle="Create the admin account">
+    <Shell subtitle="Make the administrator account">
       <p className="text-xs text-zinc-500">
-        First-time setup. Choose the operator login for this Photolive server.
+        This is the first start. Select the operator user name and password for this Photolive
+        server.
       </p>
       <Field
         id="username"
-        label="Username"
+        label="User name"
         value={username}
         onChange={setUsername}
         autoFocus
@@ -157,7 +158,7 @@ function SetupForm({ onDone }: { onDone: () => void }): JSX.Element {
         value={password}
         onChange={setPassword}
         autoComplete="new-password"
-        hint="At least 8 characters."
+        hint="Use 8 characters minimum."
         onEnter={submit}
       />
       {error ? <p className="text-xs text-red-400">{error}</p> : null}
@@ -167,7 +168,7 @@ function SetupForm({ onDone }: { onDone: () => void }): JSX.Element {
         disabled={submitting || !username || !password}
         onClick={submit}
       >
-        {submitting ? 'Creating…' : 'Create account'}
+        {submitting ? 'Please wait…' : 'Make the account'}
       </Button>
     </Shell>
   );

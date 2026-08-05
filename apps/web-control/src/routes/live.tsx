@@ -66,7 +66,7 @@ function LivePage(): JSX.Element {
       <>
         <PageHeader title="Live" />
         <div className="flex-1 px-6 py-4">
-          <EmptyState message="Activate an event first." />
+          <EmptyState message="Make an event active first." />
         </div>
       </>
     );
@@ -92,23 +92,28 @@ function LivePage(): JSX.Element {
 
         <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" onClick={() => send('prev')} title="Previous (←)">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => send('prev')}
+              title="Previous image (←)"
+            >
               <SkipBack className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
               onClick={() => send(state?.isPlaying ? 'pause' : 'resume')}
-              title={state?.isPlaying ? 'Pause (Space)' : 'Resume (Space)'}
+              title={state?.isPlaying ? 'Stop (Space)' : 'Continue (Space)'}
             >
               {state?.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
-            <Button size="icon" variant="ghost" onClick={() => send('next')} title="Next (→)">
+            <Button size="icon" variant="ghost" onClick={() => send('next')} title="Next image (→)">
               <SkipForward className="h-4 w-4" />
             </Button>
           </div>
           <div className="font-mono text-xs tabular-nums text-zinc-500">
-            queue: {state?.queueLength ?? 0} · pending: {state?.pendingCount ?? 0}
+            queue: {state?.queueLength ?? 0} · to approve: {state?.pendingCount ?? 0}
           </div>
         </div>
       </div>
@@ -161,7 +166,7 @@ function LatencyBadge({ ms }: { ms: number | null }): JSX.Element {
   return (
     <span className={cn('flex items-center gap-1.5 font-mono text-xs tabular-nums', tone)}>
       <Activity className="h-3.5 w-3.5" />
-      latency {formatLatency(ms)}
+      delay {formatLatency(ms)}
     </span>
   );
 }
@@ -179,7 +184,7 @@ function CaptionBox({
 
   const save = useMutation({
     mutationFn: () => {
-      if (!imageId) throw new Error('no image');
+      if (!imageId) throw new Error('there is no current image');
       return api.images.setCaption(imageId, text);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['queue'] }),
@@ -194,7 +199,7 @@ function CaptionBox({
       }}
     >
       <Input
-        placeholder={imageId ? 'Caption (Enter to save)' : 'No current image'}
+        placeholder={imageId ? 'Caption. Push Enter to save.' : 'There is no current image.'}
         disabled={!imageId}
         value={text}
         onChange={(e) => setText(e.target.value)}

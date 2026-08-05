@@ -42,7 +42,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const parsed = setupSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     if (userService.count() > 0) {
-      return reply.code(409).send({ error: 'setup already completed' });
+      return reply.code(409).send({ error: 'the setup is already complete' });
     }
     const user = userService.create({
       username: parsed.data.username,
@@ -59,7 +59,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const user = userService.verify(parsed.data.username, parsed.data.password);
-    if (!user) return reply.code(401).send({ error: 'invalid credentials' });
+    if (!user)
+      return reply.code(401).send({ error: 'the user name or the password is not correct' });
     const session = sessionService.create(user.id);
     setSessionCookie(request, reply, session.id);
     return { user };
@@ -70,7 +71,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/auth/bootstrap', async (request, reply) => {
     const secret = (request.body as { secret?: unknown } | undefined)?.secret;
     if (typeof secret !== 'string' || !authRuntime.isValidLocalSecret(secret)) {
-      return reply.code(403).send({ error: 'invalid bootstrap secret' });
+      return reply.code(403).send({ error: 'the bootstrap secret is not correct' });
     }
     if (userService.count() === 0) {
       // Fresh install: renderer should show the create-admin wizard, then call
@@ -78,7 +79,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return { setupRequired: true, user: null };
     }
     const user = userService.getOwner();
-    if (!user) return reply.code(500).send({ error: 'no owner account' });
+    if (!user) return reply.code(500).send({ error: 'there is no owner account' });
     const session = sessionService.create(user.id);
     setSessionCookie(request, reply, session.id);
     return { setupRequired: false, user };
@@ -92,7 +93,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/api/auth/me', async (request, reply) => {
     const ctx = request.authCtx;
-    if (!ctx || !('operator' in ctx)) return reply.code(401).send({ error: 'unauthorized' });
+    if (!ctx || !('operator' in ctx))
+      return reply.code(401).send({ error: 'you must log in first' });
     return { user: ctx.operator };
   });
 }

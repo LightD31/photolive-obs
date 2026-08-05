@@ -34,6 +34,13 @@ interface Connection {
 
 type AuthStatus = 'ok' | 'missing-token' | 'invalid-token';
 
+/** The label for each connection state. See docs/string-style-guide.md. */
+const CONNECTION_LABEL: Record<Connection['state'], string> = {
+  connecting: 'connection in progress',
+  open: 'connected',
+  closed: 'no connection',
+};
+
 export function App(): JSX.Element {
   const [event, setEvent] = React.useState<EventDto | null>(null);
   const [settings, setSettings] = React.useState<SettingsDto>(DEFAULT_SETTINGS);
@@ -218,7 +225,7 @@ export function App(): JSX.Element {
     return <AuthError status={authStatus} />;
   }
   if (!event) {
-    return <ConnectionState conn={conn} message="Waiting for active event…" />;
+    return <ConnectionState conn={conn} message="Wait for an active event…" />;
   }
 
   return (
@@ -335,7 +342,7 @@ function TimeAgo({ iso }: { iso: string }): JSX.Element {
   }, []);
   const ms = Date.now() - Date.parse(iso);
   let text = '';
-  if (ms < 60_000) text = 'just now';
+  if (ms < 60_000) text = 'less than 1 min ago';
   else if (ms < 3_600_000) text = `${Math.floor(ms / 60_000)} min ago`;
   else text = `${Math.floor(ms / 3_600_000)} h ago`;
   return <div className="absolute bottom-6 right-6 font-mono text-xs text-zinc-400">{text}</div>;
@@ -343,11 +350,12 @@ function TimeAgo({ iso }: { iso: string }): JSX.Element {
 
 function AuthError({ status }: { status: 'missing-token' | 'invalid-token' }): JSX.Element {
   const exampleUrl = `${window.location.origin}/?token=YOUR_TOKEN`;
-  const heading = status === 'missing-token' ? 'Token required' : 'Token rejected';
+  const heading =
+    status === 'missing-token' ? 'The token is necessary' : 'The server refused the token';
   const detail =
     status === 'missing-token'
-      ? 'Open the slideshow with a ?token=... query parameter. Find the value in the control panel under Settings → Display token.'
-      : 'The token in the URL was rejected by the server. Check it matches the current value under Settings → Display token (it may have been rotated).';
+      ? 'Open the slideshow with a ?token=... parameter in the address. Find the token in the control panel: Settings → Display token.'
+      : 'The server refused the token in the address. Make sure that it agrees with the token in Settings → Display token. An operator possibly replaced the token.';
   return (
     <div className="flex h-full w-full items-center justify-center bg-black p-8 text-zinc-300">
       <div className="flex max-w-xl flex-col gap-4">
@@ -376,9 +384,9 @@ function ConnectionState({
         <div className="text-sm">{message}</div>
         <div className="text-xs text-zinc-600">
           {conn.state === 'connecting'
-            ? 'connecting…'
+            ? `${CONNECTION_LABEL.connecting}…`
             : conn.state === 'closed'
-              ? 'disconnected (retrying…)'
+              ? `${CONNECTION_LABEL.closed} (the app tries again)`
               : ''}
         </div>
       </div>
@@ -398,7 +406,7 @@ function ConnectionDot({ conn }: { conn: Connection }): JSX.Element {
               : 'h-1.5 w-1.5 rounded-full bg-red-500'
         }
       />
-      {conn.state}
+      {CONNECTION_LABEL[conn.state]}
     </div>
   );
 }

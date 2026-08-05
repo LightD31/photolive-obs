@@ -34,7 +34,7 @@ function bootstrap(): Bootstrap {
   if (settingsPath) {
     const abs = resolve(settingsPath);
     if (!existsSync(abs)) {
-      console.error(`settings file not found: ${abs}`);
+      console.error(`the server could not find the settings file: ${abs}`);
       process.exit(1);
     }
     const raw = JSON.parse(readFileSync(abs, 'utf8'));
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   const server = await startServer(boot);
 
   const shutdown = async (signal: string): Promise<void> => {
-    console.log(`received ${signal}, shutting down`);
+    console.log(`the server received ${signal}. The server stops.`);
     await server.shutdown();
     process.exit(0);
   };
@@ -84,6 +84,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error('fatal startup error', err);
+  console.error('the server stopped during the start', err);
   process.exit(1);
 });

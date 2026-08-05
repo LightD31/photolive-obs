@@ -28,7 +28,7 @@ class ServerLifecycle {
 
   async reload(newConfig: Config): Promise<ReloadResult> {
     if (!this.slots.reload) {
-      throw new Error('serverLifecycle: reload not wired (server not started)');
+      throw new Error('serverLifecycle: the reload slot is empty. The server is not started.');
     }
     return this.slots.reload(newConfig);
   }

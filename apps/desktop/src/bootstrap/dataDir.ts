@@ -22,7 +22,7 @@ export type ResolvedDataDir = {
 export function resolveDataDir(override?: string | null): ResolvedDataDir {
   if (override) {
     if (!tryWritable(override)) {
-      throw new Error(`data directory is not writable: ${override}`);
+      throw new Error(`the data directory does not have write access: ${override}`);
     }
     return { dir: override, source: 'override' };
   }

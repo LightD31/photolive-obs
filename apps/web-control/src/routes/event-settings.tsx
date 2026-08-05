@@ -32,7 +32,7 @@ function SettingsPage(): JSX.Element {
       <>
         <PageHeader title="Settings" />
         <div className="flex-1 px-6 py-4">
-          <EmptyState message="Activate an event to edit its settings." />
+          <EmptyState message="Make an event active to change its settings." />
         </div>
       </>
     );
@@ -42,7 +42,7 @@ function SettingsPage(): JSX.Element {
     return (
       <>
         <PageHeader title="Settings" subtitle={activeEvent.data.name} />
-        <div className="flex-1 px-6 py-4 text-sm text-zinc-500">Loading…</div>
+        <div className="flex-1 px-6 py-4 text-sm text-zinc-500">Please wait…</div>
       </>
     );
   }
@@ -96,7 +96,7 @@ function SettingsForm({
               disabled={!dirty || save.isPending}
               onClick={() => save.mutate(draft)}
             >
-              {save.isPending ? 'Saving…' : 'Save'}
+              {save.isPending ? 'Please wait…' : 'Save'}
             </Button>
           </div>
         }
@@ -110,7 +110,7 @@ function SettingsForm({
 
             <Field
               label="Interval"
-              hint="Time on screen per image"
+              hint="The time on the screen for each image."
               control={
                 <div className="flex items-center gap-2">
                   <Input
@@ -178,35 +178,33 @@ function SettingsForm({
             </h2>
 
             <ToggleField
-              label="Show photographer attribution"
+              label="Show the name of the photographer"
               checked={draft.showPhotographer}
               onChange={(v) => setDraft({ ...draft, showPhotographer: v })}
             />
             <ToggleField
-              label="Show live caption"
+              label="Show the caption"
               checked={draft.showCaption}
               onChange={(v) => setDraft({ ...draft, showCaption: v })}
             />
             <ToggleField
-              label='Show "time since shot"'
+              label="Show the age of the image"
               checked={draft.showTimeAgo}
               onChange={(v) => setDraft({ ...draft, showTimeAgo: v })}
             />
             <ToggleField
-              label="Show event branding"
+              label="Show the name of the event"
               checked={draft.showBranding}
               onChange={(v) => setDraft({ ...draft, showBranding: v })}
             />
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              OBS / compositing
-            </h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">OBS</h2>
 
             <ToggleField
               label="Transparent background"
-              hint="Drops the black backdrop so an OBS Browser Source can composite the slideshow over the scene below. Letterboxing around portrait images becomes transparent too."
+              hint="This removes the black background. Thus an OBS browser source can show the slideshow above the scene below it. The borders around the vertical images also become transparent."
               checked={draft.transparentBackground}
               onChange={(v) => setDraft({ ...draft, transparentBackground: v })}
             />
@@ -218,8 +216,8 @@ function SettingsForm({
             </h2>
 
             <Field
-              label="Blur threshold"
-              hint="Used in auto-skip-blurry mode. Higher = stricter. Typical range 50–200."
+              label="Sharpness limit"
+              hint="An image with a sharpness score below this limit does not go to the slideshow. A higher value rejects more images. The usual range is 50 to 200."
               control={
                 <Input
                   type="number"

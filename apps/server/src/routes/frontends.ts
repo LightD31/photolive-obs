@@ -52,10 +52,12 @@ export async function frontendRoutes(app: FastifyInstance): Promise<void> {
       wildcard: false,
     });
     app.setNotFoundHandler(async (request, reply) => {
-      if (request.url.startsWith('/api/')) return reply.code(404).send({ error: 'not found' });
-      if (request.url.startsWith('/ws')) return reply.code(404).send({ error: 'not found' });
+      if (request.url.startsWith('/api/'))
+        return reply.code(404).send({ error: 'the server could not find this resource' });
+      if (request.url.startsWith('/ws'))
+        return reply.code(404).send({ error: 'the server could not find this resource' });
       if (request.url.startsWith('/renditions/'))
-        return reply.code(404).send({ error: 'not found' });
+        return reply.code(404).send({ error: 'the server could not find this resource' });
       // Browser auto-requests these; we don't ship them. 204 keeps the console clean.
       if (request.url === '/favicon.ico' || request.url === '/robots.txt') {
         return reply.code(204).send();
@@ -66,7 +68,8 @@ export async function frontendRoutes(app: FastifyInstance): Promise<void> {
           ? slideshowDist
           : controlDist;
       const indexPath = resolve(indexDir, 'index.html');
-      if (!existsSync(indexPath)) return reply.code(404).send({ error: 'not found' });
+      if (!existsSync(indexPath))
+        return reply.code(404).send({ error: 'the server could not find this resource' });
       return reply.type('text/html').send(readFileSync(indexPath));
     });
     logger.info({ controlDist }, 'serving web-control bundle at /');

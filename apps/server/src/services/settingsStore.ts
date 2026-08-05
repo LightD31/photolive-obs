@@ -29,7 +29,7 @@ export class SettingsStore {
   }
 
   getDataDir(): string {
-    if (!this.dataDir) throw new Error('settingsStore: dataDir not set');
+    if (!this.dataDir) throw new Error('settingsStore: the data directory is not set');
     return this.dataDir;
   }
 
@@ -46,7 +46,7 @@ export class SettingsStore {
       return parsed;
     }
     if (this.cached) return this.cached;
-    throw new Error('settingsStore: not initialised');
+    throw new Error('settingsStore: the store is not initialized');
   }
 
   /**
