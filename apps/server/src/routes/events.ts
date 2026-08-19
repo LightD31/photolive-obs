@@ -16,14 +16,16 @@ import { wsService } from '../services/wsService.js';
 function replyEventWriteError(reply: FastifyReply, err: unknown): FastifyReply {
   const msg = err instanceof Error ? err.message : String(err);
   if (/UNIQUE constraint failed: events\.slug/i.test(msg)) {
-    return reply.code(409).send({ error: 'an event with this slug already exists' });
+    return reply.code(409).send({ error: 'this slug is already in use by a different event' });
   }
   const code = (err as NodeJS.ErrnoException)?.code;
   if (code && ['EACCES', 'EPERM', 'EROFS', 'ENOENT', 'ENOTDIR'].includes(code)) {
-    return reply.code(400).send({ error: `cannot create photos directory (${code}): ${msg}` });
+    return reply.code(400).send({
+      error: `the server could not make the photo directory (${code}): ${msg}`,
+    });
   }
   logger.error({ err }, 'event write failed');
-  return reply.code(500).send({ error: 'failed to save event' });
+  return reply.code(500).send({ error: 'the server could not save the event' });
 }
 
 export async function eventRoutes(app: FastifyInstance): Promise<void> {
@@ -33,7 +35,7 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Params: { id: string } }>('/api/events/:id', async (req, reply) => {
     const event = eventService.get(req.params.id);
-    if (!event) return reply.code(404).send({ error: 'not found' });
+    if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
     return { event };
   });
 
@@ -62,14 +64,14 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
     } catch (err) {
       return replyEventWriteError(reply, err);
     }
-    if (!event) return reply.code(404).send({ error: 'not found' });
+    if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
     wsService.broadcast('event.updated', { event });
     return { event };
   });
 
   app.post<{ Params: { id: string } }>('/api/events/:id/activate', async (req, reply) => {
     const event = eventService.setActive(req.params.id);
-    if (!event) return reply.code(404).send({ error: 'not found' });
+    if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
     await fileWatcherService.watchActiveEvent();
     slideshowService.reload();
     wsService.broadcast('event.activated', { event });
@@ -78,20 +80,20 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
 
   app.post<{ Params: { id: string } }>('/api/events/:id/archive', async (req, reply) => {
     const event = eventService.archive(req.params.id);
-    if (!event) return reply.code(404).send({ error: 'not found' });
+    if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
     return { event };
   });
 
   app.post<{ Params: { id: string } }>('/api/events/:id/unarchive', async (req, reply) => {
     const event = eventService.unarchive(req.params.id);
-    if (!event) return reply.code(404).send({ error: 'not found' });
+    if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
     return { event };
   });
 
   app.delete<{ Params: { id: string } }>('/api/events/:id', async (req, reply) => {
     const wasActive = eventService.get(req.params.id)?.isActive ?? false;
     const ok = eventService.delete(req.params.id);
-    if (!ok) return reply.code(404).send({ error: 'not found' });
+    if (!ok) return reply.code(404).send({ error: 'the server could not find the event' });
     // If we just deleted the active event, the watcher and slideshow need to drop their state.
     if (wasActive) {
       await fileWatcherService.watchActiveEvent();

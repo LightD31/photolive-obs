@@ -64,7 +64,7 @@ function EventsPage(): JSX.Element {
 
       <div className="flex-1 overflow-auto px-6 py-4">
         {events.isLoading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <p className="text-sm text-zinc-500">Please wait…</p>
         ) : events.data && events.data.length > 0 ? (
           <div className="rounded-md border border-zinc-800">
             <Table>
@@ -73,7 +73,7 @@ function EventsPage(): JSX.Element {
                   <TH>Name</TH>
                   <TH>Slug</TH>
                   <TH>Mode</TH>
-                  <TH>Created</TH>
+                  <TH>Made at</TH>
                   <TH>State</TH>
                   <TH className="text-right">Actions</TH>
                 </tr>
@@ -93,7 +93,7 @@ function EventsPage(): JSX.Element {
                       ) : event.isActive ? (
                         <Badge tone="active">active</Badge>
                       ) : (
-                        <Badge tone="neutral">inactive</Badge>
+                        <Badge tone="neutral">not active</Badge>
                       )}
                     </TD>
                     <TD className="text-right">
@@ -105,7 +105,7 @@ function EventsPage(): JSX.Element {
                             onClick={() => activate.mutate(event.id)}
                           >
                             <Power className="h-3 w-3" />
-                            Activate
+                            Make active
                           </Button>
                         )}
                         {!event.archivedAt ? (
@@ -122,17 +122,17 @@ function EventsPage(): JSX.Element {
                             size="sm"
                             variant="ghost"
                             onClick={() => unarchive.mutate(event.id)}
-                            title="Restore from archive (does not activate)"
+                            title="Move the event out of the archive. The event does not become active."
                           >
                             <ArchiveRestore className="h-3 w-3" />
-                            Unarchive
+                            Restore
                           </Button>
                         )}
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => setConfirmDelete(event)}
-                          title="Delete permanently"
+                          title="Delete completely"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -145,11 +145,11 @@ function EventsPage(): JSX.Element {
           </div>
         ) : (
           <EmptyState
-            message="No events yet."
+            message="There are no events."
             action={
               <Button variant="primary" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />
-                Create the first event
+                Make the first event
               </Button>
             }
           />
@@ -192,16 +192,16 @@ function DeleteEventDialog({
     <Dialog open={Boolean(event)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete event permanently?</DialogTitle>
+          <DialogTitle>Delete the event completely?</DialogTitle>
           <DialogDescription>
-            This removes <strong>{event.name}</strong> and all its photographers, images, settings,
-            and audit history. The photos directory and rendered thumbnails on disk are also
-            deleted. This cannot be undone.
+            This deletes <strong>{event.name}</strong> with its photographers, images, settings and
+            log entries. This also deletes the photo directory and the thumbnail files from the
+            disk. You cannot undo this operation.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="confirm-slug">
-            Type the slug <span className="font-mono text-zinc-300">{event.slug}</span> to confirm
+            Write the slug <span className="font-mono text-zinc-300">{event.slug}</span> to continue
           </Label>
           <Input
             id="confirm-slug"
@@ -214,7 +214,9 @@ function DeleteEventDialog({
         </div>
         {remove.error ? (
           <p className="text-xs text-red-400">
-            {remove.error instanceof Error ? remove.error.message : 'Delete failed'}
+            {remove.error instanceof Error
+              ? remove.error.message
+              : 'The system could not delete the event.'}
           </p>
         ) : null}
         <DialogFooter>
@@ -229,7 +231,7 @@ function DeleteEventDialog({
             disabled={!matches || remove.isPending}
             onClick={() => remove.mutate(event.id)}
           >
-            {remove.isPending ? 'Deleting…' : 'Delete permanently'}
+            {remove.isPending ? 'Please wait…' : 'Delete completely'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -291,7 +293,7 @@ function CreateEventDialog({
       onOpenChange(false);
     },
     onError: (e) => {
-      setError(e instanceof Error ? e.message : 'Failed to create event');
+      setError(e instanceof Error ? e.message : 'The system could not make the event.');
     },
   });
 
@@ -301,8 +303,9 @@ function CreateEventDialog({
         <DialogHeader>
           <DialogTitle>New event</DialogTitle>
           <DialogDescription>
-            Photos arrive into <span className="font-mono text-zinc-300">photos dir</span>; one
-            event is active at a time.
+            The cameras send the photos to the{' '}
+            <span className="font-mono text-zinc-300">photos directory</span>. Only one event can be
+            active.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -347,22 +350,24 @@ function CreateEventDialog({
               className="font-mono"
             />
             <p className="text-xs text-zinc-500">
-              Relative names are created as a subfolder of the server's photos folder. Use an
-              absolute path (e.g. a network share) for a custom location.
+              A relative name makes a subfolder in the photo folder of the server. For a different
+              location, write a full path, for example a network folder.
             </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="displayMode">Curation mode</Label>
+            <Label htmlFor="displayMode">Selection mode</Label>
             <Select value={displayMode} onValueChange={setDisplayMode}>
               <SelectTrigger id="displayMode">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">auto — display everything</SelectItem>
+                <SelectItem value="auto">automatic — show all the images</SelectItem>
                 <SelectItem value="auto-skip-blurry">
-                  auto-skip-blurry — hide low-sharpness shots
+                  automatic, no blurred — hide the images that are not sharp
                 </SelectItem>
-                <SelectItem value="approval">approval — operator gates each image</SelectItem>
+                <SelectItem value="approval">
+                  approval — the operator approves each image
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -374,7 +379,7 @@ function CreateEventDialog({
               </Button>
             </DialogClose>
             <Button type="submit" variant="primary" disabled={create.isPending}>
-              {create.isPending ? 'Creating…' : 'Create'}
+              {create.isPending ? 'Please wait…' : 'Make'}
             </Button>
           </DialogFooter>
         </form>

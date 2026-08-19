@@ -80,7 +80,7 @@ export class EventService {
       payload: { name: input.name },
     });
     const row = db.select().from(events).where(eq(events.id, id)).get();
-    if (!row) throw new Error('event vanished after insert');
+    if (!row) throw new Error('the server could not find the event after the insert');
     logger.info({ eventId: id, name: input.name }, 'event created');
     return rowToDto(row);
   }

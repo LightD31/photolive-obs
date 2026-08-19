@@ -49,7 +49,7 @@ function PhotographersPage(): JSX.Element {
       <>
         <PageHeader title="Photographers" />
         <div className="flex-1 px-6 py-4">
-          <EmptyState message="Activate an event first to manage its photographers." />
+          <EmptyState message="Make an event active before you add photographers to it." />
         </div>
       </>
     );
@@ -101,7 +101,7 @@ function PhotographersPage(): JSX.Element {
                       {p.isActive ? (
                         <Badge tone="active">active</Badge>
                       ) : (
-                        <Badge tone="neutral">inactive</Badge>
+                        <Badge tone="neutral">not active</Badge>
                       )}
                     </TD>
                     <TD className="text-right">
@@ -110,26 +110,26 @@ function PhotographersPage(): JSX.Element {
                           size="sm"
                           variant="ghost"
                           onClick={() => setInfoView(p)}
-                          title="Show FTP info (host / username, no password)"
+                          title="Show the FTP data. The password does not show."
                         >
                           <Eye className="h-3 w-3" />
-                          Info
+                          Details
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           disabled={rotate.isPending}
                           onClick={() => rotate.mutate(p.id)}
-                          title="Generate a new FTP password (invalidates the old one)"
+                          title="Make a new FTP password. The server refuses the old password."
                         >
                           <RefreshCw className="h-3 w-3" />
-                          Rotate
+                          Replace
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => setConfirmDelete(p)}
-                          title="Delete photographer"
+                          title="Delete the photographer"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -142,11 +142,11 @@ function PhotographersPage(): JSX.Element {
           </div>
         ) : (
           <EmptyState
-            message="No photographers in this event yet."
+            message="This event has no photographers."
             action={
               <Button variant="primary" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />
-                Add the first one
+                Add the first photographer
               </Button>
             }
           />
@@ -155,7 +155,8 @@ function PhotographersPage(): JSX.Element {
 
       {rotate.error ? (
         <div className="px-6 pb-2 text-xs text-red-400">
-          Rotate failed: {rotate.error instanceof Error ? rotate.error.message : 'unknown error'}
+          The system could not replace the password:{' '}
+          {rotate.error instanceof Error ? rotate.error.message : 'unknown error'}
         </div>
       ) : null}
 
@@ -204,7 +205,7 @@ function CameraFtpSettings({
   return (
     <div className="space-y-3">
       <div className="rounded border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-400">
-        On the camera:{' '}
+        On the camera, go to:{' '}
         <span className="text-zinc-300">
           Network → FTP Transfer Func. → Server Setting → Server 1
         </span>
@@ -212,7 +213,7 @@ function CameraFtpSettings({
       <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
         <dt className="text-zinc-500">Display Name</dt>
         <dd className="font-mono text-zinc-50">
-          PhotoLive <span className="text-zinc-500 italic">(any label)</span>
+          PhotoLive <span className="text-zinc-500 italic">(any name)</span>
         </dd>
 
         <dt className="text-zinc-500">Host Name</dt>
@@ -231,7 +232,7 @@ function CameraFtpSettings({
         </dd>
 
         <dt className="text-zinc-500">Specify Directory</dt>
-        <dd className="font-mono text-zinc-500 italic">leave empty</dd>
+        <dd className="font-mono text-zinc-500 italic">keep empty</dd>
 
         <dt className="text-zinc-500">User</dt>
         <dd className="flex items-center gap-1.5 font-mono text-zinc-50">
@@ -246,15 +247,17 @@ function CameraFtpSettings({
             <CopyButton value={password} />
           </dd>
         ) : (
-          <dd className="text-zinc-500 italic">not retrievable — rotate to issue a new one</dd>
+          <dd className="text-zinc-500 italic">
+            not available. Replace the password to make a new one.
+          </dd>
         )}
 
         <dt className="text-zinc-500">Passive Mode</dt>
         <dd className="font-mono text-zinc-50">On</dd>
       </dl>
       <p className="text-xs text-zinc-400">
-        Then enable{' '}
-        <span className="text-zinc-300">Network → FTP Transfer Func. → FTP Function: On</span>.
+        Then set <span className="text-zinc-300">Network → FTP Transfer Func. → FTP Function</span>{' '}
+        to <span className="text-zinc-300">On</span>.
       </p>
     </div>
   );
@@ -273,10 +276,11 @@ function FtpInfoDialog({
     <Dialog open={Boolean(photographer)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>FTP info for {photographer.displayName}</DialogTitle>
+          <DialogTitle>FTP data for {photographer.displayName}</DialogTitle>
           <DialogDescription>
-            The password is hashed on the server and can't be retrieved. If you need to share
-            credentials again, click <strong>Rotate</strong> to generate a new password.
+            The server keeps only a hash of the password. Thus you cannot see the password again. To
+            give the password to the photographer again, select <strong>Replace</strong>. This makes
+            a new password.
           </DialogDescription>
         </DialogHeader>
         <CameraFtpSettings host={host} port={port} username={photographer.ftpUsername} />
@@ -317,15 +321,17 @@ function DeletePhotographerDialog({
     <Dialog open={Boolean(photographer)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete photographer?</DialogTitle>
+          <DialogTitle>Delete the photographer?</DialogTitle>
           <DialogDescription>
-            <strong>{photographer.displayName}</strong> will be removed and their FTP credentials
-            invalidated. Photos they already uploaded stay attributed to them historically.
+            The system deletes <strong>{photographer.displayName}</strong> and refuses their FTP
+            user name. The images that they sent keep their name.
           </DialogDescription>
         </DialogHeader>
         {remove.error ? (
           <p className="text-xs text-red-400">
-            {remove.error instanceof Error ? remove.error.message : 'Delete failed'}
+            {remove.error instanceof Error
+              ? remove.error.message
+              : 'The system could not delete the photographer.'}
           </p>
         ) : null}
         <DialogFooter>
@@ -340,7 +346,7 @@ function DeletePhotographerDialog({
             disabled={remove.isPending}
             onClick={() => remove.mutate(photographer.id)}
           >
-            {remove.isPending ? 'Deleting…' : 'Delete'}
+            {remove.isPending ? 'Please wait…' : 'Delete'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -383,10 +389,10 @@ function CreatePhotographerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add photographer</DialogTitle>
+          <DialogTitle>Add a photographer</DialogTitle>
           <DialogDescription>
-            FTP credentials are issued automatically. The password is shown <strong>once</strong>{' '}
-            after creation — you can rotate it anytime.
+            The server makes the FTP user name and the password automatically. The password shows{' '}
+            <strong>one time only</strong>. You can replace it when necessary.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -431,7 +437,7 @@ function CreatePhotographerDialog({
               </Button>
             </DialogClose>
             <Button type="submit" variant="primary" disabled={create.isPending}>
-              {create.isPending ? 'Creating…' : 'Create'}
+              {create.isPending ? 'Please wait…' : 'Add'}
             </Button>
           </DialogFooter>
         </form>
@@ -468,10 +474,9 @@ function SecretRevealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>FTP credentials for {photographer.displayName}</DialogTitle>
+          <DialogTitle>FTP user name and password for {photographer.displayName}</DialogTitle>
           <DialogDescription>
-            This is the only time the password is shown. Save it or scan the QR code from the
-            camera.
+            The password shows one time only. Write it down, or read the QR code with the camera.
           </DialogDescription>
         </DialogHeader>
         <CameraFtpSettings
@@ -484,7 +489,7 @@ function SecretRevealDialog({
           <div className="flex justify-center pt-2">
             <img
               src={qr}
-              alt="FTP credentials QR code"
+              alt="QR code with the FTP data"
               className="rounded border border-zinc-800"
             />
           </div>

@@ -49,7 +49,7 @@ class UserService {
       .values({ id, username, passwordHash, role: input.role ?? 'admin' })
       .run();
     const row = db.select().from(users).where(eq(users.id, id)).get();
-    if (!row) throw new Error('user insert failed');
+    if (!row) throw new Error('the server could not insert the user');
     return rowToDto(row);
   }
 

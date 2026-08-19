@@ -9,7 +9,7 @@ export function formatRelativeTime(iso: string | null): string {
   if (!iso) return '—';
   const ms = Date.now() - Date.parse(iso);
   if (!Number.isFinite(ms)) return '—';
-  if (ms < 5_000) return 'just now';
+  if (ms < 5_000) return 'less than 5 s ago';
   if (ms < 60_000) return `${Math.floor(ms / 1000)}s ago`;
   if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
   if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`;

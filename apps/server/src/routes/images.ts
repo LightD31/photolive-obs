@@ -12,7 +12,7 @@ export async function imageRoutes(app: FastifyInstance): Promise<void> {
     Querystring: { status?: string; limit?: number };
   }>('/api/events/:eventId/images', async (req, reply) => {
     const event = eventService.get(req.params.eventId);
-    if (!event) return reply.code(404).send({ error: 'event not found' });
+    if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
     const status = req.query.status
       ? (req.query.status.split(',').filter(Boolean) as ImageStatus[])
       : undefined;
@@ -29,7 +29,7 @@ export async function imageRoutes(app: FastifyInstance): Promise<void> {
     '/api/events/:eventId/images/pending',
     async (req, reply) => {
       const event = eventService.get(req.params.eventId);
-      if (!event) return reply.code(404).send({ error: 'event not found' });
+      if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
       return { images: imageService.pendingTray(req.params.eventId) };
     },
   );
@@ -38,26 +38,26 @@ export async function imageRoutes(app: FastifyInstance): Promise<void> {
     '/api/events/:eventId/images/queue',
     async (req, reply) => {
       const event = eventService.get(req.params.eventId);
-      if (!event) return reply.code(404).send({ error: 'event not found' });
+      if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
       return { images: imageService.approvedQueue(req.params.eventId) };
     },
   );
 
   app.get<{ Params: { eventId: string } }>('/api/events/:eventId/latency', async (req, reply) => {
     const event = eventService.get(req.params.eventId);
-    if (!event) return reply.code(404).send({ error: 'event not found' });
+    if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
     return { averageMs: imageService.averageIngestLatencyMs(req.params.eventId) };
   });
 
   app.get<{ Params: { id: string } }>('/api/images/:id', async (req, reply) => {
     const image = imageService.get(req.params.id);
-    if (!image) return reply.code(404).send({ error: 'not found' });
+    if (!image) return reply.code(404).send({ error: 'the server could not find the image' });
     return { image };
   });
 
   app.post<{ Params: { id: string } }>('/api/images/:id/approve', async (req, reply) => {
     const image = ingestService.approve(req.params.id);
-    if (!image) return reply.code(404).send({ error: 'not found' });
+    if (!image) return reply.code(404).send({ error: 'the server could not find the image' });
     return { image };
   });
 
@@ -65,7 +65,7 @@ export async function imageRoutes(app: FastifyInstance): Promise<void> {
     '/api/images/:id/reject',
     async (req, reply) => {
       const image = ingestService.reject(req.params.id, req.body?.reason);
-      if (!image) return reply.code(404).send({ error: 'not found' });
+      if (!image) return reply.code(404).send({ error: 'the server could not find the image' });
       return { image };
     },
   );
@@ -74,14 +74,14 @@ export async function imageRoutes(app: FastifyInstance): Promise<void> {
     '/api/images/:id/exclude',
     async (req, reply) => {
       const image = ingestService.exclude(req.params.id, req.body?.reason);
-      if (!image) return reply.code(404).send({ error: 'not found' });
+      if (!image) return reply.code(404).send({ error: 'the server could not find the image' });
       return { image };
     },
   );
 
   app.post<{ Params: { id: string } }>('/api/images/:id/include', async (req, reply) => {
     const image = ingestService.include(req.params.id);
-    if (!image) return reply.code(404).send({ error: 'not found' });
+    if (!image) return reply.code(404).send({ error: 'the server could not find the image' });
     return { image };
   });
 
@@ -89,7 +89,7 @@ export async function imageRoutes(app: FastifyInstance): Promise<void> {
     const parsed = captionSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const image = imageService.setCaption(req.params.id, parsed.data.text);
-    if (!image) return reply.code(404).send({ error: 'not found' });
+    if (!image) return reply.code(404).send({ error: 'the server could not find the image' });
     wsService.broadcast('image.updated', { image });
     return { image };
   });
@@ -98,7 +98,7 @@ export async function imageRoutes(app: FastifyInstance): Promise<void> {
     '/api/events/:eventId/queue',
     async (req, reply) => {
       const event = eventService.get(req.params.eventId);
-      if (!event) return reply.code(404).send({ error: 'event not found' });
+      if (!event) return reply.code(404).send({ error: 'the server could not find the event' });
       if (!Array.isArray(req.body?.imageIds)) {
         return reply.code(400).send({ error: 'imageIds must be an array' });
       }

@@ -84,7 +84,7 @@ async function bootApp(): Promise<void> {
     bootlog('resolveDataDir failed', { err: (err as Error).message });
     dialog.showErrorBox(
       'Photolive',
-      `Failed to locate a writable data directory.\n\n${(err as Error).message}`,
+      `The app could not find a data directory with write access.\n\n${(err as Error).message}`,
     );
     app.exit(1);
     return;
@@ -100,7 +100,10 @@ async function bootApp(): Promise<void> {
     });
   } catch (err) {
     bootlog('loadOrInitSettings failed', { err: (err as Error).message });
-    dialog.showErrorBox('Photolive', `Failed to load settings.json.\n\n${(err as Error).message}`);
+    dialog.showErrorBox(
+      'Photolive',
+      `The app could not read settings.json.\n\n${(err as Error).message}`,
+    );
     app.exit(1);
     return;
   }
@@ -110,9 +113,9 @@ async function bootApp(): Promise<void> {
     setImmediate(() => {
       dialog.showMessageBox({
         type: 'info',
-        title: 'Photolive — settings imported',
-        message: 'Imported existing photolive configuration',
-        detail: `Read your previous .env at ${settings.migratedFromEnv} and folded its values into ${settings.path}. You can edit them in Settings.`,
+        title: 'Photolive — the app read your settings',
+        message: 'The app read your existing Photolive configuration',
+        detail: `The app read your previous .env file at ${settings.migratedFromEnv}. It wrote the values into ${settings.path}. You can change them in Settings.`,
       });
     });
   }
@@ -125,7 +128,7 @@ async function bootApp(): Promise<void> {
     bootlog('loadServer failed', { err: (err as Error).message, stack: (err as Error).stack });
     dialog.showErrorBox(
       'Photolive',
-      `Failed to load the photolive server module.\n\n${(err as Error).message}`,
+      `The app could not load the Photolive server module.\n\n${(err as Error).message}`,
     );
     app.exit(1);
     return;
@@ -158,7 +161,7 @@ async function bootApp(): Promise<void> {
     bootlog('startServer failed', { err: (err as Error).message, stack: (err as Error).stack });
     dialog.showErrorBox(
       'Photolive',
-      `Failed to start the photolive server.\n\n${(err as Error).message}`,
+      `The app could not start the Photolive server.\n\n${(err as Error).message}`,
     );
     app.exit(1);
     return;
@@ -257,6 +260,9 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 bootApp().catch((err) => {
-  dialog.showErrorBox('Photolive', `Fatal startup error.\n\n${(err as Error).message ?? err}`);
+  dialog.showErrorBox(
+    'Photolive',
+    `The app stopped during the start.\n\n${(err as Error).message ?? err}`,
+  );
   app.exit(1);
 });

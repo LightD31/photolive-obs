@@ -52,7 +52,7 @@ export async function login(
     password,
   });
   if (ok && data?.user) return { ok: true, user: data.user };
-  return { ok: false, error: 'Invalid username or password' };
+  return { ok: false, error: 'The user name or the password is not correct.' };
 }
 
 export async function setup(
@@ -64,8 +64,10 @@ export async function setup(
     password,
   });
   if (ok && data?.user) return { ok: true, user: data.user };
-  if (status === 409) return { ok: false, error: 'An account already exists. Reload and sign in.' };
-  return { ok: false, error: 'Could not create the account' };
+  if (status === 409) {
+    return { ok: false, error: 'An account is already available. Load the page again and log in.' };
+  }
+  return { ok: false, error: 'The system could not make the account.' };
 }
 
 /**

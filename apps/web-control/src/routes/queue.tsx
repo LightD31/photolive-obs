@@ -23,7 +23,7 @@ function QueuePage(): JSX.Element {
       <>
         <PageHeader title="Queue" />
         <div className="flex-1 px-6 py-4">
-          <EmptyState message="Activate an event to view its queue." />
+          <EmptyState message="Make an event active to see its queue." />
         </div>
       </>
     );
@@ -60,9 +60,9 @@ function TabBar({
 
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: 'approved', label: 'Approved', count: counts.data?.approved ?? 0 },
-    { id: 'pending', label: 'Pending', count: counts.data?.pending ?? 0 },
-    { id: 'auto-skipped', label: 'Skipped', count: counts.data?.['auto-skipped'] ?? 0 },
-    { id: 'excluded', label: 'Excluded', count: counts.data?.excluded ?? 0 },
+    { id: 'pending', label: 'To approve', count: counts.data?.pending ?? 0 },
+    { id: 'auto-skipped', label: 'Blurred', count: counts.data?.['auto-skipped'] ?? 0 },
+    { id: 'excluded', label: 'Hidden', count: counts.data?.excluded ?? 0 },
   ];
 
   return (
@@ -102,7 +102,7 @@ function ImageGrid({ eventId, tab }: { eventId: string; tab: Tab }): JSX.Element
   });
 
   if (images.isLoading) {
-    return <p className="px-6 py-4 text-sm text-zinc-500">Loading…</p>;
+    return <p className="px-6 py-4 text-sm text-zinc-500">Please wait…</p>;
   }
 
   if (!images.data || images.data.length === 0) {
@@ -110,12 +110,12 @@ function ImageGrid({ eventId, tab }: { eventId: string; tab: Tab }): JSX.Element
       <EmptyState
         message={
           tab === 'pending'
-            ? 'Nothing pending. Approval-mode events will land photos here as they arrive.'
+            ? 'There are no images to approve. In the approval mode, each new image comes here first.'
             : tab === 'auto-skipped'
-              ? 'No images auto-skipped (yet).'
+              ? 'The system found no blurred images.'
               : tab === 'excluded'
-                ? 'No images excluded.'
-                : 'No approved images yet.'
+                ? 'There are no hidden images.'
+                : 'There are no approved images.'
         }
       />
     );
@@ -176,7 +176,9 @@ function ImageCell({ image, tab }: { image: ImageDto; tab: Tab }): JSX.Element {
         ) : null}
       </div>
       <div className="flex items-center justify-between gap-1 px-2 py-1.5 text-xs">
-        <span className="truncate text-zinc-400">{image.photographerName ?? 'unattributed'}</span>
+        <span className="truncate text-zinc-400">
+          {image.photographerName ?? 'no photographer'}
+        </span>
         <span className="shrink-0 font-mono text-[10px] tabular-nums text-zinc-500">
           {new Date(image.uploadedAt).toLocaleTimeString([], {
             hour: '2-digit',
@@ -204,14 +206,14 @@ function ImageCell({ image, tab }: { image: ImageDto; tab: Tab }): JSX.Element {
           <ActionBtn
             onClick={() => exclude.mutate()}
             icon={<EyeOff className="h-3.5 w-3.5" />}
-            label="Exclude"
+            label="Hide"
             tone="neutral"
           />
         ) : (
           <ActionBtn
             onClick={() => include.mutate()}
             icon={<Eye className="h-3.5 w-3.5" />}
-            label="Include"
+            label="Show"
             tone="neutral"
           />
         )}

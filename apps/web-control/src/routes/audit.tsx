@@ -21,9 +21,9 @@ function AuditPage(): JSX.Element {
   if (!activeEvent.data) {
     return (
       <>
-        <PageHeader title="Audit log" />
+        <PageHeader title="Action log" />
         <div className="flex-1 px-6 py-4">
-          <EmptyState message="Activate an event to see its audit log." />
+          <EmptyState message="Make an event active to see its action log." />
         </div>
       </>
     );
@@ -31,7 +31,7 @@ function AuditPage(): JSX.Element {
 
   return (
     <>
-      <PageHeader title="Audit log" subtitle={activeEvent.data.name} />
+      <PageHeader title="Action log" subtitle={activeEvent.data.name} />
       <div className="flex-1 overflow-auto px-6 py-4 font-mono text-xs">
         {audit.data && audit.data.length > 0 ? (
           <div className="rounded-md border border-zinc-800">
@@ -39,9 +39,9 @@ function AuditPage(): JSX.Element {
               <THead>
                 <tr>
                   <TH className="w-44">Time</TH>
-                  <TH className="w-24">Actor</TH>
+                  <TH className="w-24">User</TH>
                   <TH className="w-56">Action</TH>
-                  <TH>Payload</TH>
+                  <TH>Data</TH>
                 </tr>
               </THead>
               <TBody>
@@ -61,7 +61,7 @@ function AuditPage(): JSX.Element {
             </Table>
           </div>
         ) : (
-          <EmptyState message="No audit entries yet." />
+          <EmptyState message="There are no log entries." />
         )}
       </div>
     </>

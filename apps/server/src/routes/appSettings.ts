@@ -24,8 +24,8 @@ export async function appSettingsRoutes(app: FastifyInstance): Promise<void> {
   app.put('/api/app-settings', async (req, reply) => {
     if (!settingsStore.canMutate()) {
       return reply.code(409).send({
-        error: 'settings are not mutable in this mode',
-        hint: 'server bootstrapped from .env; edit .env and restart, or pass --settings <path>',
+        error: 'you cannot change the settings in this mode',
+        hint: 'the server started from a .env file. Change the .env file and start the server again, or use --settings <path>.',
       });
     }
 
@@ -60,14 +60,14 @@ export async function appSettingsRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/api/app-settings/rotate-token', async (_req, reply) => {
     if (!settingsStore.canMutate()) {
-      return reply.code(409).send({ error: 'settings are not mutable in this mode' });
+      return reply.code(409).send({ error: 'you cannot change the settings in this mode' });
     }
     const newToken = randomBytes(32).toString('base64url');
     const next = settingsStore.rotateToken(newToken);
     const reload = await serverLifecycle.reload(
       buildConfigFromFile(next, settingsStore.getDataDir()),
     );
-    logger.warn('auth token rotated; existing sessions will be invalidated');
+    logger.warn('display token replaced');
     return {
       settings: redact(next, false),
       newToken,

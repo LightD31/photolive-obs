@@ -73,10 +73,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     if (isPublicAuthRoute(request)) return;
     const ctx = authenticate(request);
     if (!ctx) {
-      return reply.code(401).send({ error: 'unauthorized' });
+      return reply.code(401).send({ error: 'you must log in first' });
     }
     if (!('operator' in ctx) && !isDisplayAllowed(request.method, request.url)) {
-      return reply.code(403).send({ error: 'forbidden' });
+      return reply.code(403).send({ error: 'you do not have permission for this operation' });
     }
     request.authCtx = ctx;
   });
@@ -217,17 +217,20 @@ export async function startServer(opts: StartServerOptions): Promise<StartedServ
     const oldConfig = config;
     const reasons: string[] = [];
 
-    if (oldConfig.port !== newConfig.port) reasons.push('Network port changed');
-    if (oldConfig.host !== newConfig.host) reasons.push('Network host changed');
-    if (oldConfig.databasePath !== newConfig.databasePath) reasons.push('Database path changed');
+    if (oldConfig.port !== newConfig.port) reasons.push('You changed the network port.');
+    if (oldConfig.host !== newConfig.host) reasons.push('You changed the network host.');
+    if (oldConfig.databasePath !== newConfig.databasePath)
+      reasons.push('You changed the database path.');
     if (!arraysEqual(oldConfig.allowedOrigins, newConfig.allowedOrigins)) {
-      reasons.push('Allowed origins changed (CORS)');
+      reasons.push('You changed the allowed CORS origins.');
     }
     if (oldConfig.photosRoot !== newConfig.photosRoot) {
-      reasons.push('Photos root changed (existing events keep their stored photosDir)');
+      reasons.push('You changed the photos root. The existing events keep their photo directory.');
     }
     if (oldConfig.renditionsRoot !== newConfig.renditionsRoot) {
-      reasons.push('Renditions root changed (existing renditions stay at the old path)');
+      reasons.push(
+        'You changed the renditions root. The existing renditions stay at the old path.',
+      );
     }
 
     // Hot-reloadable: install the new config, then poke each subsystem.
